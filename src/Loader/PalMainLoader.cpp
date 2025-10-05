@@ -100,6 +100,9 @@ namespace Palworld {
                 auto palFolder = modsPath / "pals";
                 LoadPalMods(palFolder);
 
+                auto npcFolder = modsPath / "npcs";
+                LoadHumanMods(npcFolder);
+
                 auto appearanceFolder = modsPath / "appearance";
                 LoadAppearanceMods(appearanceFolder);
 
