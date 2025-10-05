@@ -334,6 +334,9 @@ namespace Palworld {
                 auto palFolder = modsPath / "pals";
                 LoadPalMods(palFolder);
 
+                auto npcFolder = modsPath / "npcs";
+                LoadHumanMods(npcFolder);
+
                 auto appearanceFolder = modsPath / "appearance";
                 LoadAppearanceMods(appearanceFolder);
 
@@ -351,9 +354,6 @@ namespace Palworld {
 
                 auto blueprintFolder = modFolder.path() / "blueprints";
                 LoadBlueprintMods(blueprintFolder);
-
-                auto npcFolder = modsPath / "npcs";
-                LoadHumanMods(npcFolder);
 
             }
             catch (const std::exception&)
@@ -398,6 +398,13 @@ namespace Palworld {
             MonsterModLoader.Load(data);
         });
 	}
+
+    void PalMainLoader::LoadHumanMods(const std::filesystem::path& path)
+    {
+        ParseJsonFilesInPath(path, [&](nlohmann::json data) {
+            HumanModLoader.Load(data);
+        });
+    }
 
 	void PalMainLoader::LoadBuildingMods(const std::filesystem::path& path)
 	{
@@ -445,13 +452,6 @@ namespace Palworld {
     {
         ParseJsonFilesInPath(path, [&](nlohmann::json data) {
             SkinModLoader.Load(data);
-        });
-    }
-
-    void PalMainLoader::LoadHumanMods(const std::filesystem::path& path)
-    {
-        ParseJsonFilesInPath(path, [&](nlohmann::json data) {
-            HumanModLoader.Load(data);
         });
     }
 
