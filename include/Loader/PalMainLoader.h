@@ -85,6 +85,8 @@ namespace Palworld {
 
         void LoadSkinMods(const std::filesystem::path& path);
 
+        void LoadHumanMods(const std::filesystem::path& path);
+
         void LoadCustomEnums();
 
         void IterateModsFolder(const std::function<void(const std::filesystem::directory_entry&)>& callback);

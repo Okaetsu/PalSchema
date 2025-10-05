@@ -185,6 +185,10 @@ namespace Palworld {
                                     {
                                         BlueprintModLoader.Load(data);
                                     }
+                                    else if (folderType == "npcs")
+                                    {
+                                        HumanModLoader.Load(data);
+                                    }
                                     else if (folderType == "raw")
                                     {
                                         RawTableLoader.Reload(data);
@@ -347,6 +351,10 @@ namespace Palworld {
 
                 auto blueprintFolder = modFolder.path() / "blueprints";
                 LoadBlueprintMods(blueprintFolder);
+
+                auto npcFolder = modsPath / "npcs";
+                LoadHumanMods(npcFolder);
+
             }
             catch (const std::exception&)
             {
@@ -437,6 +445,13 @@ namespace Palworld {
     {
         ParseJsonFilesInPath(path, [&](nlohmann::json data) {
             SkinModLoader.Load(data);
+        });
+    }
+
+    void PalMainLoader::LoadHumanMods(const std::filesystem::path& path)
+    {
+        ParseJsonFilesInPath(path, [&](nlohmann::json data) {
+            HumanModLoader.Load(data);
         });
     }
 

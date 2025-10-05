@@ -10,6 +10,10 @@ namespace Palworld {
 
 		~PalHumanModLoader();
 
+		void Initialize();
+
 		virtual void Load(const nlohmann::json& json) override final;
+
+		UECustom::UDataTable* n_dataTable;
 	};
 }
