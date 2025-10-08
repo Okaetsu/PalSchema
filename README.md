@@ -9,6 +9,22 @@ In-depth installation guide can be found [here](https://okaetsu.github.io/PalSch
 
 Documentation for modders can be found [here](https://okaetsu.github.io/PalSchema/docs/gettingstarted)
 
+# Building from Source
+
+1. You must complete the **Build requirements** over at [UE4SS Docs](https://docs.ue4ss.com/#build-requirements) and make sure your GitHub account is linked to Epic Games for Unreal Engine source access.
+
+2. Create your own fork of PalSchema and clone it.
+
+3. Execute this command: `git submodule update --init --recursive`
+
+4. And then execute the following:
+```
+xmake f -m Game__Shipping__Win64 -y
+xmake project -k vsxmake2022 -m Game__Shipping__Win64 -y
+```
+
+Alternatively you can just run `generate_build_files.bat` in build_scripts instead of running the command in Step 4.
+
 # Mods using PalSchema
 
 I'll only include one mod per author to avoid cluttering the list too much.
