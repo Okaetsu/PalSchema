@@ -310,55 +310,8 @@ namespace Palworld {
 			}
 		}
 
-		/* Long & Short descriptions seem to be using default human description.
-		if (Data.contains("ShortDescription"))
-		{
-			auto FixedCharacterId = std::format(STR("PAL_SHORT_DESC_{}"), CharacterId.ToString());
-			auto TranslationRowStruct = n_palShortDescTable->GetRowStruct().Get();
-			auto TextProperty = TranslationRowStruct->GetPropertyByName(STR("TextData"));
-			if (TextProperty)
-			{
-				auto TranslationRowData = FMemory::Malloc(TranslationRowStruct->GetStructureSize());
-				TranslationRowStruct->InitializeStruct(TranslationRowData);
-
-				try
-				{
-					PropertyHelper::CopyJsonValueToContainer(TranslationRowData, TextProperty, Data.at("ShortDescription"));
-				}
-				catch (const std::exception& e)
-				{
-					FMemory::Free(TranslationRowData);
-					throw std::runtime_error(e.what());
-				}
-
-				n_palShortDescTable->AddRow(FName(FixedCharacterId, FNAME_Add), *reinterpret_cast<UECustom::FTableRowBase*>(TranslationRowData));
-			}
-		}
-
-		if (Data.contains("LongDescription"))
-		{
-			auto FixedCharacterId = std::format(STR("PAL_LONG_DESC_{}"), CharacterId.ToString());
-			auto TranslationRowStruct = n_palLongDescTable->GetRowStruct().Get();
-			auto TextProperty = TranslationRowStruct->GetPropertyByName(STR("TextData"));
-			if (TextProperty)
-			{
-				auto TranslationRowData = FMemory::Malloc(TranslationRowStruct->GetStructureSize());
-				TranslationRowStruct->InitializeStruct(TranslationRowData);
-
-				try
-				{
-					PropertyHelper::CopyJsonValueToContainer(TranslationRowData, TextProperty, Data.at("LongDescription"));
-				}
-				catch (const std::exception& e)
-				{
-					FMemory::Free(TranslationRowData);
-					throw std::runtime_error(e.what());
-				}
-
-				n_palLongDescTable->AddRow(FName(FixedCharacterId, FNAME_Add), *reinterpret_cast<UECustom::FTableRowBase*>(TranslationRowData));
-			}
-		}
-		*/
+		// Long & Short descriptions seem to be using default human description.
+		
 	}
 
 	//Edit Translations
@@ -379,36 +332,7 @@ namespace Palworld {
 			}
 		}
 
-		/*
-		if (Data.contains("ShortDescription"))
-		{
-			auto FixedCharacterId = std::format(STR("PAL_SHORT_DESC_{}"), CharacterId.ToString());
-			auto TranslationRowStruct = n_palShortDescTable->GetRowStruct().Get();
-			auto TextProperty = TranslationRowStruct->GetPropertyByName(STR("TextData"));
-			if (TextProperty)
-			{
-				auto Row = n_palShortDescTable->FindRowUnchecked(FName(FixedCharacterId, FNAME_Add));
-				if (Row)
-				{
-					PropertyHelper::CopyJsonValueToContainer(Row, TextProperty, Data.at("ShortDescription"));
-				}
-			}
-		}
+		// Long & Short descriptions seem to be using default human description.
 
-		if (Data.contains("LongDescription"))
-		{
-			auto FixedCharacterId = std::format(STR("PAL_LONG_DESC_{}"), CharacterId.ToString());
-			auto TranslationRowStruct = n_palLongDescTable->GetRowStruct().Get();
-			auto TextProperty = TranslationRowStruct->GetPropertyByName(STR("TextData"));
-			if (TextProperty)
-			{
-				auto Row = n_palLongDescTable->FindRowUnchecked(FName(FixedCharacterId, FNAME_Add));
-				if (Row)
-				{
-					PropertyHelper::CopyJsonValueToContainer(Row, TextProperty, Data.at("LongDescription"));
-				}
-			}
-		}
-		*/
 	}
 }
