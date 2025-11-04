@@ -1,181 +1,102 @@
-#include <filesystem>
-#include <fstream>
-#include <nlohmann/json.hpp>
-#include <DynamicOutput/DynamicOutput.hpp>
-#include <Helpers/String.hpp>
 #include "Utility/Config.h"
 #include "Utility/Logging.h"
-#include "UE4SSProgram.hpp"
+#include "Helpers/String.hpp"
+#include <fstream>
+#include <filesystem>
 
 namespace fs = std::filesystem;
-
-using namespace RC;
 
 namespace PS {
     void PSConfig::Load()
     {
-        if (s_config) return;
+        auto configPath = fs::current_path() / "Mods" / "PalSchema" / "config.json";
+        
+        if (!s_config)
+        {
+            s_config = std::make_unique<PSConfig>();
+        }
 
-        PS::Log<LogLevel::Normal>(STR("Loading config.json...\n"));
+        if (!fs::exists(configPath))
+        {
+            PS::Log<RC::LogLevel::Verbose>(STR("Config file not found, using defaults.\n"));
+            return;
+        }
 
         try
         {
-            s_config = std::make_unique<PSConfig>();
-
-            auto cwd = fs::path(UE4SSProgram::get_program().get_working_directory()) / "Mods" / "PalSchema" / "config";
-
-            if (!fs::exists(cwd))
-            {
-                fs::create_directories(cwd);
-            }
-
-            std::ifstream f(cwd / "config.json");
-            bool ShouldResave = false;
-
-            nlohmann::ordered_json data = {};
-            if (f.fail()) {
-                data["languageOverride"] = "";
-                data["enableAutoReload"] = false;
-                data["enableDebugLogging"] = false;
-                std::ofstream out_file(cwd / "config.json");
-                out_file << data.dump(4);
-                out_file.close();
-            }
-            else
-            {
-                data = nlohmann::ordered_json::parse(f);
-            }
-
-            if (!GetString(data, "languageOverride", "", s_config->m_languageOverride))
-            {
-                data["languageOverride"] = "";
-                ShouldResave = true;
-            }
-
-            if (!GetBool(data, "enableAutoReload", false, s_config->m_enableAutoReload))
-            {
-                data["enableAutoReload"] = false;
-                ShouldResave = true;
-            }
-
-            if (!GetBool(data, "enableDebugLogging", false, s_config->m_enableDebugLogging))
-            {
-                data["enableDebugLogging"] = false;
-                ShouldResave = true;
-            }
+            std::ifstream file(configPath);
+            nlohmann::ordered_json data = nlohmann::ordered_json::parse(file);
+            file.close();
 
             if (TryRemoveDeprecatedValues(data))
             {
-                ShouldResave = true;
+                // Save the cleaned config back
+                std::ofstream outFile(configPath);
+                outFile << data.dump(4);
+                outFile.close();
             }
 
-            if (ShouldResave)
-            {
-                std::ofstream out_file(cwd / "config.json");
-                out_file << data.dump(4);
-                out_file.close();
-            }
+            GetString(data, "languageOverride", "", s_config->m_languageOverride);
+            GetBool(data, "enableAutoReload", false, s_config->m_enableAutoReload);
+            GetBool(data, "enableDebugLogging", false, s_config->m_enableDebugLogging);
 
-            PS::Log<RC::LogLevel::Normal>(STR("PalSchema config loaded.\n"));
+            PS::Log<RC::LogLevel::Normal>(STR("Config loaded successfully.\n"));
         }
         catch (const std::exception& e)
         {
-            PS::Log<RC::LogLevel::Error>(STR("Failed to load PalSchema Config - {}\n"), RC::to_generic_string(e.what()));
+            PS::Log<RC::LogLevel::Error>(STR("Failed to load config: {}\n"), RC::to_generic_string(e.what()));
         }
     }
 
     std::string PSConfig::GetLanguageOverride()
     {
-        if (s_config)
-        {
-            return s_config->m_languageOverride;
-        }
-
-        PS::Log<RC::LogLevel::Error>(STR("PalSchema Config must be initialized first before accessing GetLanguageOverride!"));
-
-        return "";
+        return s_config ? s_config->m_languageOverride : "";
     }
 
     bool PSConfig::IsAutoReloadEnabled()
     {
-        if (s_config)
-        {
-            return s_config->m_enableAutoReload;
-        }
-
-        PS::Log<RC::LogLevel::Error>(STR("PalSchema Config must be initialized first before accessing IsAutoReloadEnabled!"));
-
-        return "";
+        return s_config ? s_config->m_enableAutoReload : false;
     }
 
     bool PSConfig::IsDebugLoggingEnabled()
     {
-        if (s_config)
-        {
-            return s_config->m_enableDebugLogging;
-        }
-
-        PS::Log<RC::LogLevel::Error>(STR("PalSchema Config must be initialized first before accessing IsDebugLoggingEnabled!"));
-
-        return false;
+        return s_config ? s_config->m_enableDebugLogging : false;
     }
 
     bool PSConfig::TryRemoveDeprecatedValues(nlohmann::ordered_json& Data)
     {
-        bool wasDeprecationPerformed = false;
-        for (auto& deprecatedValue : s_deprecatedValues)
+        bool removed = false;
+        for (const auto& key : s_deprecatedValues)
         {
-            if (Data.contains(deprecatedValue))
+            if (Data.contains(key))
             {
-                Data.erase(deprecatedValue);
-                wasDeprecationPerformed = true;
+                Data.erase(key);
+                removed = true;
+                PS::Log<RC::LogLevel::Warning>(STR("Removed deprecated config value: {}\n"), RC::to_generic_string(key));
             }
         }
-
-        return wasDeprecationPerformed;
+        return removed;
     }
 
     bool PSConfig::GetString(const nlohmann::ordered_json& Data, const std::string& Key, const std::string& DefaultValue, std::string& OutValue)
     {
-        if (!Data.contains(Key))
+        if (Data.contains(Key) && Data[Key].is_string())
         {
-            PS::Log<RC::LogLevel::Warning>(STR("{} in config.json was missing, adding to config.\n"), RC::to_generic_string(Key));
-            OutValue = DefaultValue;
-            return false;
+            OutValue = Data[Key].get<std::string>();
+            return true;
         }
-        else
-        {
-            if (!Data.at(Key).is_string())
-            {
-                PS::Log<RC::LogLevel::Warning>(STR("{} in config.json wasn't a string, fixing.\n"), RC::to_generic_string(Key));
-                OutValue = DefaultValue;
-                return false;
-            }
-        }
-
-        OutValue = Data[Key].get<std::string>();
-        return true;
+        OutValue = DefaultValue;
+        return false;
     }
 
     bool PSConfig::GetBool(const nlohmann::ordered_json& Data, const std::string& Key, const bool& DefaultValue, bool& OutValue)
     {
-        if (!Data.contains(Key))
+        if (Data.contains(Key) && Data[Key].is_boolean())
         {
-            PS::Log<RC::LogLevel::Warning>(STR("{} in config.json was missing, adding to config.\n"), RC::to_generic_string(Key));
-            OutValue = DefaultValue;
-            return false;
+            OutValue = Data[Key].get<bool>();
+            return true;
         }
-        else
-        {
-            if (!Data.at(Key).is_boolean())
-            {
-                PS::Log<RC::LogLevel::Warning>(STR("{} in config.json wasn't a boolean, fixing.\n"), RC::to_generic_string(Key));
-                OutValue = DefaultValue;
-                return false;
-            }
-        }
-
-        OutValue = Data[Key].get<bool>();
-        return true;
+        OutValue = DefaultValue;
+        return false;
     }
 }
