@@ -1,7 +1,7 @@
 #include "Unreal/UObjectGlobals.hpp"
 #include "Unreal/UScriptStruct.hpp"
 #include "Unreal/FProperty.hpp"
-#include "SDK/Classes/UDataTable.h"
+#include "Unreal/Engine/UDataTable.hpp"
 #include "SDK/Classes/KismetInternationalizationLibrary.h"
 #include "SDK/Structs/FPalCharacterIconDataRow.h"
 #include "SDK/Structs/FPalBPClassDataRow.h"
@@ -20,28 +20,28 @@ namespace Palworld {
 
 	void PalMonsterModLoader::Initialize()
 	{
-		m_dataTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_dataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Character/DT_PalMonsterParameter.DT_PalMonsterParameter"));
 
-		m_iconDataTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr, 
+		m_iconDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr, 
 			STR("/Game/Pal/DataTable/Character/DT_PalCharacterIconDataTable.DT_PalCharacterIconDataTable"));
 
-		m_palBpClassTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_palBpClassTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Character/DT_PalBPClass.DT_PalBPClass"));
 
-		m_wazaMasterLevelTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_wazaMasterLevelTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Waza/DT_WazaMasterLevel.DT_WazaMasterLevel"));
 
-		m_palDropItemTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_palDropItemTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Character/DT_PalDropItem.DT_PalDropItem"));
 
-		m_palNameTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_palNameTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Text/DT_PalNameText.DT_PalNameText"));
 
-		m_palShortDescTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_palShortDescTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Text/DT_PalShortDescriptionText.DT_PalShortDescriptionText"));
 
-		m_palLongDescTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_palLongDescTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Text/DT_PalLongDescriptionText.DT_PalLongDescriptionText"));
 
         PS::Log<LogLevel::Verbose>(STR("Initialized MonsterModLoader\n"));
@@ -109,7 +109,7 @@ namespace Palworld {
             *IsPalProp->ContainerPtrToValuePtr<bool>(MonsterRowData) = true;
         }
 
-		m_dataTable->AddRow(CharacterId, *reinterpret_cast<UECustom::FTableRowBase*>(MonsterRowData));
+		m_dataTable->AddRow(CharacterId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(MonsterRowData));
 
 		AddTranslations(CharacterId, properties);
 
@@ -222,7 +222,7 @@ namespace Palworld {
 				FMemory::Memcpy(LevelProperty->ContainerPtrToValuePtr<void>(WazaMasterLevelData), &Level, sizeof(int));
 			}
 
-			auto NewRow = reinterpret_cast<UECustom::FTableRowBase*>(WazaMasterLevelData);
+			auto NewRow = reinterpret_cast<RC::Unreal::FTableRowBase*>(WazaMasterLevelData);
 			auto NewRowName = std::format(STR("{}{}"), CharacterId.ToString(), Level);
 
 			m_wazaMasterLevelTable->AddRow(FName(NewRowName, FNAME_Add), *NewRow);
@@ -346,7 +346,7 @@ namespace Palworld {
 		}
 
 		auto RowName = std::format(STR("{}000"), CharacterId.ToString());
-		m_palDropItemTable->AddRow(FName(RowName, FNAME_Add), *reinterpret_cast<UECustom::FTableRowBase*>(PalDropItemData));
+		m_palDropItemTable->AddRow(FName(RowName, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(PalDropItemData));
 	}
 
 	void PalMonsterModLoader::AddTranslations(const RC::Unreal::FName& CharacterId, const nlohmann::json& Data)
@@ -371,7 +371,7 @@ namespace Palworld {
 					throw std::runtime_error(e.what());
 				}
 
-				m_palNameTable->AddRow(FName(FixedCharacterId, FNAME_Add), *reinterpret_cast<UECustom::FTableRowBase*>(TranslationRowData));
+				m_palNameTable->AddRow(FName(FixedCharacterId, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(TranslationRowData));
 			}
 		}
 
@@ -395,7 +395,7 @@ namespace Palworld {
 					throw std::runtime_error(e.what());
 				}
 
-				m_palShortDescTable->AddRow(FName(FixedCharacterId, FNAME_Add), *reinterpret_cast<UECustom::FTableRowBase*>(TranslationRowData));
+				m_palShortDescTable->AddRow(FName(FixedCharacterId, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(TranslationRowData));
 			}
 		}
 
@@ -419,7 +419,7 @@ namespace Palworld {
 					throw std::runtime_error(e.what());
 				}
 
-				m_palLongDescTable->AddRow(FName(FixedCharacterId, FNAME_Add), *reinterpret_cast<UECustom::FTableRowBase*>(TranslationRowData));
+				m_palLongDescTable->AddRow(FName(FixedCharacterId, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(TranslationRowData));
 			}
 		}
 	}

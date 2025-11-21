@@ -1,11 +1,10 @@
 #pragma once
 
-#include "SDK/Classes/UDataTable.h"
+#include "Unreal/Engine/UDataTable.hpp"
 #include "SDK/Classes/TSoftClassPtr.h"
-#include "SDK/Structs/FTableRowBase.h"
 
 namespace Palworld {
-    struct FPalNPCTalkFlowClassDataRow : public UECustom::FTableRowBase
+    struct FPalNPCTalkFlowClassDataRow : public RC::Unreal::FTableRowBase
     {
         FPalNPCTalkFlowClassDataRow(const RC::StringType& Path) : NPCTalkFlowClass(UECustom::TSoftClassPtr<RC::Unreal::UClass>(UECustom::FSoftObjectPath(Path)))
         {

@@ -12,8 +12,8 @@ namespace UECustom {
         return Class;
     }
 
-    TArray<RC::Unreal::TObjectPtr<UECustom::UDataTable>> UECustom::UCompositeDataTable::GetParentTables()
+    TArray<RC::Unreal::TObjectPtr<RC::Unreal::UDataTable>> UECustom::UCompositeDataTable::GetParentTables()
     {
-        return *Helper::Casting::ptr_cast<TArray<TObjectPtr<UECustom::UDataTable>>*>(this, 0xb0);
+        return *Helper::Casting::ptr_cast<TArray<TObjectPtr<RC::Unreal::UDataTable>>*>(this, 0xb0);
     }
 }

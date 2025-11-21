@@ -3,6 +3,10 @@
 #include "Loader/PalModLoaderBase.h"
 #include "nlohmann/json.hpp"
 
+namespace RC::Unreal {
+    class UDataTable;
+}
+
 namespace Palworld {
 	class PalHumanModLoader : public PalModLoaderBase {
 	public:
@@ -30,16 +34,16 @@ namespace Palworld {
 
 		void AddShop(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties);
 
-		UECustom::UDataTable* n_dataTable;
-		UECustom::UDataTable* n_iconDataTable;
-		UECustom::UDataTable* n_palBpClassTable;
-		UECustom::UDataTable* n_dropItemTable;
-		UECustom::UDataTable* n_npcNameTable;
-        UECustom::UDataTable* n_palShortDescTable;
-        UECustom::UDataTable* n_palLongDescTable;
-		UECustom::UDataTable* n_npcTalkFlowTable;
-		UECustom::UDataTable* n_ItemShopLotteryDataTable;
-		UECustom::UDataTable* n_ItemShopCreateDataTable;
-		UECustom::UDataTable* n_ItemShopSettingDataTable;
+		RC::Unreal::UDataTable* n_dataTable;
+		RC::Unreal::UDataTable* n_iconDataTable;
+		RC::Unreal::UDataTable* n_palBpClassTable;
+		RC::Unreal::UDataTable* n_dropItemTable;
+		RC::Unreal::UDataTable* n_npcNameTable;
+        RC::Unreal::UDataTable* n_palShortDescTable;
+        RC::Unreal::UDataTable* n_palLongDescTable;
+		RC::Unreal::UDataTable* n_npcTalkFlowTable;
+		RC::Unreal::UDataTable* n_ItemShopLotteryDataTable;
+		RC::Unreal::UDataTable* n_ItemShopCreateDataTable;
+		RC::Unreal::UDataTable* n_ItemShopSettingDataTable;
 	};
 }

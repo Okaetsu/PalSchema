@@ -5,11 +5,11 @@
 
 namespace RC::Unreal {
 	class UObject;
+    class UDataTable;
 }
 
 namespace UECustom {
 	class UDataAsset;
-	class UDataTable;
 }
 
 namespace Palworld {
@@ -23,17 +23,17 @@ namespace Palworld {
 
 		virtual void Load(const nlohmann::json& json) override final;
 	private:
-		UECustom::UDataTable* m_mapObjectAssignData{};
-		UECustom::UDataTable* m_mapObjectFarmCrop{};
-		UECustom::UDataTable* m_mapObjectItemProductDataTable{};
-		UECustom::UDataTable* m_mapObjectMasterDataTable{};
-		UECustom::UDataTable* m_mapObjectNameTable{};
-		UECustom::UDataTable* m_buildObjectDataTable{};
-		UECustom::UDataTable* m_buildObjectIconDataTable{};
-        UECustom::UDataTable* m_buildObjectDescTable{};
-		UECustom::UDataTable* m_technologyRecipeUnlockTable{};
-		UECustom::UDataTable* m_technologyNameTable{};
-		UECustom::UDataTable* m_technologyDescTable{};
+		RC::Unreal::UDataTable* m_mapObjectAssignData{};
+		RC::Unreal::UDataTable* m_mapObjectFarmCrop{};
+		RC::Unreal::UDataTable* m_mapObjectItemProductDataTable{};
+		RC::Unreal::UDataTable* m_mapObjectMasterDataTable{};
+		RC::Unreal::UDataTable* m_mapObjectNameTable{};
+		RC::Unreal::UDataTable* m_buildObjectDataTable{};
+		RC::Unreal::UDataTable* m_buildObjectIconDataTable{};
+        RC::Unreal::UDataTable* m_buildObjectDescTable{};
+		RC::Unreal::UDataTable* m_technologyRecipeUnlockTable{};
+		RC::Unreal::UDataTable* m_technologyNameTable{};
+		RC::Unreal::UDataTable* m_technologyDescTable{};
 
 		void Add(const RC::Unreal::FName& BuildingId, const nlohmann::json& Data);
 
@@ -55,9 +55,9 @@ namespace Palworld {
 
         void SetupTranslations(const RC::Unreal::FName& BuildingId, const nlohmann::json& Data);
 
-        void SetupTranslation(const RC::StringType& RowKey, UECustom::UDataTable* DataTable, const nlohmann::json& Value);
+        void SetupTranslation(const RC::StringType& RowKey, RC::Unreal::UDataTable* DataTable, const nlohmann::json& Value);
 
-        void ImportJson(const RC::Unreal::FName& BuildingId, const nlohmann::json& Data, UECustom::UDataTable* DataTable);
+        void ImportJson(const RC::Unreal::FName& BuildingId, const nlohmann::json& Data, RC::Unreal::UDataTable* DataTable);
 
         RC::StringType GetAssignIDSuffixByWorkType(const std::string& WorkType);
     private:

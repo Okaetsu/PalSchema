@@ -1,9 +1,9 @@
 #include "Unreal/UObjectGlobals.hpp"
 #include "Unreal/UClass.hpp"
 #include "Unreal/UScriptStruct.hpp"
+#include "Unreal/Engine/UDataTable.hpp"
 #include "SDK/Classes/PalNoteDataAsset.h"
 #include "SDK/Classes/PalNoteData.h"
-#include "SDK/Classes/UDataTable.h"
 #include "SDK/Helper/PropertyHelper.h"
 #include "Helpers/String.hpp"
 #include "Utility/Logging.h"
@@ -22,13 +22,13 @@ namespace Palworld {
 		m_helpGuideDataAsset = UObjectGlobals::StaticFindObject<UPalNoteDataAsset*>(nullptr, nullptr,
 			STR("/Game/Pal/DataAsset/HelpGuide/DA_HelpGuideDataAsset.DA_HelpGuideDataAsset"));
 
-		m_helpGuideMasterDataTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_helpGuideMasterDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/HelpGuide/DT_HelpGuideMasterDataTable.DT_HelpGuideMasterDataTable"));
 
-		m_helpGuideDescTextTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_helpGuideDescTextTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Text/DT_HelpGuideDescText.DT_HelpGuideDescText"));
 
-		m_helpGuideTextureDataTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_helpGuideTextureDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/HelpGuide/DT_HelpGuideTextureDataTable.DT_HelpGuideTextureDataTable"));
 
 		PS::Log<RC::LogLevel::Verbose>(STR("Initialized HelpGuideModLoader\n"));
@@ -185,7 +185,7 @@ namespace Palworld {
 					}
 				}
 
-				m_helpGuideMasterDataTable->AddRow(NoteId, *reinterpret_cast<UECustom::FTableRowBase*>(RowData));
+				m_helpGuideMasterDataTable->AddRow(NoteId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData));
 			}
 			catch (const std::exception& e)
 			{
@@ -233,7 +233,7 @@ namespace Palworld {
 					PropertyHelper::CopyJsonValueToContainer(RowData, Property, Data.at("TextData"));
 				}
 
-				m_helpGuideDescTextTable->AddRow(NoteId, *reinterpret_cast<UECustom::FTableRowBase*>(RowData));
+				m_helpGuideDescTextTable->AddRow(NoteId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData));
 			}
 			catch (const std::exception& e)
 			{
@@ -281,7 +281,7 @@ namespace Palworld {
 					PropertyHelper::CopyJsonValueToContainer(RowData, Property, Data.at("Texture"));
 				}
 
-				m_helpGuideTextureDataTable->AddRow(NoteId, *reinterpret_cast<UECustom::FTableRowBase*>(RowData));
+				m_helpGuideTextureDataTable->AddRow(NoteId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData));
 			}
 			catch (const std::exception& e)
 			{

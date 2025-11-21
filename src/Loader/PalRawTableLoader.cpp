@@ -3,7 +3,7 @@
 #include "Unreal/UScriptStruct.hpp"
 #include "Unreal/FProperty.hpp"
 #include "Unreal/NameTypes.hpp"
-#include "SDK/Classes/UDataTable.h"
+#include "Unreal/Engine/UDataTable.hpp"
 #include "SDK/Classes/UCompositeDataTable.h"
 #include "SDK/Structs/Custom/FManagedStruct.h"
 #include "SDK/Helper/PropertyHelper.h"
@@ -22,7 +22,7 @@ namespace Palworld {
 
 	void PalRawTableLoader::Initialize() {}
 
-    void PalRawTableLoader::OnDataTableChanged(UECustom::UDataTable* Table)
+    void PalRawTableLoader::OnDataTableChanged(RC::Unreal::UDataTable* Table)
     {
         if (!Table) return;
 
@@ -37,7 +37,7 @@ namespace Palworld {
         }
     }
 
-    void PalRawTableLoader::Apply(const RC::StringType& TableName, UECustom::UDataTable* Table)
+    void PalRawTableLoader::Apply(const RC::StringType& TableName, RC::Unreal::UDataTable* Table)
     {
         auto It = m_tableDataMap.find(TableName);
         if (It != m_tableDataMap.end())
@@ -69,7 +69,7 @@ namespace Palworld {
         }
     }
 
-    void PalRawTableLoader::Apply(const nlohmann::json& Data, UECustom::UDataTable* Table, LoadResult& OutResult)
+    void PalRawTableLoader::Apply(const nlohmann::json& Data, RC::Unreal::UDataTable* Table, LoadResult& OutResult)
     {
         auto Name = Table->GetNamePrivate().ToString();
         for (auto& [RowKey, RowData] : Data.items())
@@ -134,7 +134,7 @@ namespace Palworld {
         }
     }
 
-    void PalRawTableLoader::HandleFilters(UECustom::UDataTable* Table, const nlohmann::json& Data, LoadResult& OutResult)
+    void PalRawTableLoader::HandleFilters(RC::Unreal::UDataTable* Table, const nlohmann::json& Data, LoadResult& OutResult)
     {
         try
         {
@@ -152,7 +152,7 @@ namespace Palworld {
         }
     }
 
-    void PalRawTableLoader::AddRow(UECustom::UDataTable* Table, const FName& RowName, const nlohmann::json& Data, LoadResult& OutResult)
+    void PalRawTableLoader::AddRow(RC::Unreal::UDataTable* Table, const FName& RowName, const nlohmann::json& Data, LoadResult& OutResult)
     {
         auto RowStruct = Table->GetRowStruct().Get();
         FManagedStruct NewRowData(RowStruct);
@@ -160,7 +160,7 @@ namespace Palworld {
         try
         {
             ModifyRowProperties(Table, RowName, NewRowData.GetData(), Data, OutResult);
-            Table->AddRow(RowName, *reinterpret_cast<UECustom::FTableRowBase*>(NewRowData.GetData()));
+            Table->AddRow(RowName, *reinterpret_cast<RC::Unreal::FTableRowBase*>(NewRowData.GetData()));
             OutResult.SuccessfulAdditions++;
         }
         catch (const std::exception& e)
@@ -171,7 +171,7 @@ namespace Palworld {
         }
     }
 
-    void PalRawTableLoader::EditRow(UECustom::UDataTable* Table, const FName& RowName, uint8* Row, const nlohmann::json& Data, LoadResult& OutResult)
+    void PalRawTableLoader::EditRow(RC::Unreal::UDataTable* Table, const FName& RowName, uint8* Row, const nlohmann::json& Data, LoadResult& OutResult)
     {
         try
         {
@@ -187,13 +187,13 @@ namespace Palworld {
         }
     }
 
-    void PalRawTableLoader::DeleteRow(UECustom::UDataTable* Table, const RC::Unreal::FName& RowName, LoadResult& OutResult)
+    void PalRawTableLoader::DeleteRow(RC::Unreal::UDataTable* Table, const RC::Unreal::FName& RowName, LoadResult& OutResult)
     {
         Table->RemoveRow(RowName);
         OutResult.SuccessfulDeletions++;
     }
 
-    void PalRawTableLoader::ModifyRowProperties(UECustom::UDataTable* Table, const FName& RowName, void* RowPtr, const nlohmann::json& Data, 
+    void PalRawTableLoader::ModifyRowProperties(RC::Unreal::UDataTable* Table, const FName& RowName, void* RowPtr, const nlohmann::json& Data,
                                                 LoadResult& OutResult)
     {
         if (!Data.is_object())

@@ -1,5 +1,5 @@
 #include "Loader/PalModLoaderBase.h"
-#include "SDK/Classes/UDataTable.h"
+#include "Unreal/Engine/UDataTable.hpp"
 
 using namespace RC;
 using namespace RC::Unreal;
@@ -11,7 +11,7 @@ namespace Palworld {
 
 	PalModLoaderBase::~PalModLoaderBase() {}
 
-    void PalModLoaderBase::Apply(UECustom::UDataTable* Table) {}
+    void PalModLoaderBase::Apply(RC::Unreal::UDataTable* Table) {}
 
     void PalModLoaderBase::Load(const nlohmann::json& Data) {}
 

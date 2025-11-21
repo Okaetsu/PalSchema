@@ -1,8 +1,8 @@
 #include "Unreal/UObjectGlobals.hpp"
 #include "Unreal/UScriptStruct.hpp"
 #include "Unreal/FProperty.hpp"
+#include "Unreal/Engine/UDataTable.hpp"
 #include "Helpers/String.hpp"
-#include "SDK/Classes/UDataTable.h"
 #include "SDK/Helper/PropertyHelper.h"
 #include "Utility/Logging.h"
 #include "Loader/PalBuildingModLoader.h"
@@ -17,37 +17,37 @@ namespace Palworld {
 
 	void PalBuildingModLoader::Initialize()
 	{
-		m_mapObjectAssignData = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_mapObjectAssignData = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/MapObject/DT_MapObjectAssignData.DT_MapObjectAssignData"));
 
-		m_mapObjectFarmCrop = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_mapObjectFarmCrop = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/MapObject/DT_MapObjectFarmCrop.DT_MapObjectFarmCrop"));
 
-		m_mapObjectItemProductDataTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_mapObjectItemProductDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/MapObject/DT_MapObjectItemProductDataTable.DT_MapObjectItemProductDataTable"));
 
-		m_mapObjectMasterDataTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_mapObjectMasterDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/MapObject/DT_MapObjectMasterDataTable.DT_MapObjectMasterDataTable"));
 
-        m_mapObjectNameTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+        m_mapObjectNameTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
             STR("/Game/Pal/DataTable/Text/DT_MapObjectNameText.DT_MapObjectNameText"));
 
-		m_buildObjectDataTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_buildObjectDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/MapObject/Building/DT_BuildObjectDataTable.DT_BuildObjectDataTable"));
 
-		m_buildObjectIconDataTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_buildObjectIconDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/MapObject/Building/DT_BuildObjectIconDataTable.DT_BuildObjectIconDataTable"));
 
-        m_buildObjectDescTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+        m_buildObjectDescTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
             STR("/Game/Pal/DataTable/Text/DT_BuildObjectDescText.DT_BuildObjectDescText"));
 
-        m_technologyRecipeUnlockTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+        m_technologyRecipeUnlockTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
             STR("/Game/Pal/DataTable/Technology/DT_TechnologyRecipeUnlock.DT_TechnologyRecipeUnlock"));
 
-        m_technologyNameTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+        m_technologyNameTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
             STR("/Game/Pal/DataTable/Text/DT_TechnologyNameText.DT_TechnologyNameText"));
 
-        m_technologyDescTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+        m_technologyDescTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
             STR("/Game/Pal/DataTable/Text/DT_TechnologyDescText.DT_TechnologyDescText"));
 
         PS::Log<LogLevel::Verbose>(STR("Initialized BuildingModLoader\n"));
@@ -134,7 +134,7 @@ namespace Palworld {
                     }
                 }
 
-                m_mapObjectMasterDataTable->AddRow(BuildingId, *static_cast<UECustom::FTableRowBase*>(RowData));
+                m_mapObjectMasterDataTable->AddRow(BuildingId, *static_cast<RC::Unreal::FTableRowBase*>(RowData));
             }
             catch (const std::exception& e)
             {
@@ -243,7 +243,7 @@ namespace Palworld {
                     }
                 }
 
-                m_buildObjectDataTable->AddRow(BuildingId, *static_cast<UECustom::FTableRowBase*>(RowData));
+                m_buildObjectDataTable->AddRow(BuildingId, *static_cast<RC::Unreal::FTableRowBase*>(RowData));
             }
             catch (const std::exception& e)
             {
@@ -284,7 +284,7 @@ namespace Palworld {
                     if (Property)
                     {
                         PropertyHelper::CopyJsonValueToContainer(RowData, Property, Data.at("IconTexture"));
-                        m_buildObjectIconDataTable->AddRow(BuildingId, *reinterpret_cast<UECustom::FTableRowBase*>(RowData));
+                        m_buildObjectIconDataTable->AddRow(BuildingId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData));
                     }
                 }
                 catch (const std::exception& e)
@@ -344,7 +344,7 @@ namespace Palworld {
 
         auto Suffix = GetAssignIDSuffixByWorkType(Data.at("WorkType"));
         auto RowFixedName = std::format(STR("{}{}"), BuildingId.ToString(), Suffix);
-        m_mapObjectAssignData->AddRow(FName(RowFixedName, FNAME_Add), *reinterpret_cast<UECustom::FTableRowBase*>(RowData));
+        m_mapObjectAssignData->AddRow(FName(RowFixedName, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData));
     }
 
 	void PalBuildingModLoader::SetupCropData(const RC::Unreal::FName& BuildingId, const nlohmann::json& Data)
@@ -388,7 +388,7 @@ namespace Palworld {
                 if (Data.contains("CropItemId"))
                 {
                     auto CropItemId = Data.at("CropItemId").get<std::string>();
-                    m_mapObjectFarmCrop->AddRow(FName(RC::to_generic_string(CropItemId), FNAME_Add), *static_cast<UECustom::FTableRowBase*>(RowData));
+                    m_mapObjectFarmCrop->AddRow(FName(RC::to_generic_string(CropItemId), FNAME_Add), *static_cast<RC::Unreal::FTableRowBase*>(RowData));
                 }
             }
             catch (const std::exception& e)
@@ -464,7 +464,7 @@ namespace Palworld {
                     }
                 }
 
-                m_technologyRecipeUnlockTable->AddRow(BuildingId, *static_cast<UECustom::FTableRowBase*>(RowData));
+                m_technologyRecipeUnlockTable->AddRow(BuildingId, *static_cast<RC::Unreal::FTableRowBase*>(RowData));
             }
             catch (const std::exception& e)
             {
@@ -508,7 +508,7 @@ namespace Palworld {
         }
     }
 
-    void PalBuildingModLoader::SetupTranslation(const RC::StringType& RowKey, UECustom::UDataTable* DataTable, const nlohmann::json& Value)
+    void PalBuildingModLoader::SetupTranslation(const RC::StringType& RowKey, RC::Unreal::UDataTable* DataTable, const nlohmann::json& Value)
     {
         auto TranslationRowStruct = DataTable->GetRowStruct().Get();
         auto TextProperty = TranslationRowStruct->GetPropertyByName(STR("TextData"));
@@ -529,7 +529,7 @@ namespace Palworld {
                 try
                 {
                     PropertyHelper::CopyJsonValueToContainer(TranslationRowData, TextProperty, Value);
-                    DataTable->AddRow(RowKeyName, *reinterpret_cast<UECustom::FTableRowBase*>(TranslationRowData));
+                    DataTable->AddRow(RowKeyName, *reinterpret_cast<RC::Unreal::FTableRowBase*>(TranslationRowData));
                 }
                 catch (const std::exception& e)
                 {
@@ -540,7 +540,7 @@ namespace Palworld {
         }
     }
 
-    void PalBuildingModLoader::ImportJson(const RC::Unreal::FName& BuildingId, const nlohmann::json& Data, UECustom::UDataTable* DataTable)
+    void PalBuildingModLoader::ImportJson(const RC::Unreal::FName& BuildingId, const nlohmann::json& Data, RC::Unreal::UDataTable* DataTable)
     {
         auto TableRow = DataTable->FindRowUnchecked(BuildingId);
         auto TableRowStruct = DataTable->GetRowStruct().Get();
@@ -576,7 +576,7 @@ namespace Palworld {
                         PropertyHelper::CopyJsonValueToContainer(RowData, Property, Data.at(PropertyName));
                     }
                 }
-                DataTable->AddRow(BuildingId, *reinterpret_cast<UECustom::FTableRowBase*>(RowData));
+                DataTable->AddRow(BuildingId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData));
             }
             catch (const std::exception& e)
             {

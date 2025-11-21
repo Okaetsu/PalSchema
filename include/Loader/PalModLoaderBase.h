@@ -4,7 +4,7 @@
 #include "nlohmann/json.hpp"
 #include <string>
 
-namespace UECustom {
+namespace RC::Unreal {
 	class UDataTable;
 }
 
@@ -15,7 +15,7 @@ namespace Palworld {
 
 		virtual ~PalModLoaderBase();
 
-        virtual void Apply(UECustom::UDataTable* Table);
+        virtual void Apply(RC::Unreal::UDataTable* Table);
 
 		virtual void Load(const nlohmann::json& Data);
 

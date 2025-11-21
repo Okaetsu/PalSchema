@@ -2,13 +2,13 @@
 
 #include "Unreal/UObject.hpp"
 
-namespace UECustom {
+namespace RC::Unreal {
     class UDataTable;
 }
 
 namespace Palworld {
     class UPalMasterDataTables : public RC::Unreal::UObject {
     public:
-        UECustom::UDataTable* GetItemRecipeDataTable();
+        RC::Unreal::UDataTable* GetItemRecipeDataTable();
     };
 }

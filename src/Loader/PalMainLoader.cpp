@@ -54,7 +54,7 @@ namespace Palworld {
             DatatableSerialize_Hook = safetyhook::create_inline(reinterpret_cast<void*>(DatatableSerializeFuncPtr),
                 OnDataTableSerialized);
 
-            DatatableSerializeCallbacks.push_back([&](UECustom::UDataTable* Table) {
+            DatatableSerializeCallbacks.push_back([&](RC::Unreal::UDataTable* Table) {
                 InitCore();
                 UECustom::UDataTableStore::Store(Table);
                 RawTableLoader.OnDataTableChanged(Table);
@@ -596,7 +596,7 @@ namespace Palworld {
         PS::Log<LogLevel::Verbose>(STR("Added extra .pak read directory at {}\n"), AbsolutePathWithSuffix);
     }
 
-    void PalMainLoader::OnDataTableSerialized(UECustom::UDataTable* This, RC::Unreal::FArchive* Archive)
+    void PalMainLoader::OnDataTableSerialized(RC::Unreal::UDataTable* This, RC::Unreal::FArchive* Archive)
     {
         DatatableSerialize_Hook.call(This, Archive);
 

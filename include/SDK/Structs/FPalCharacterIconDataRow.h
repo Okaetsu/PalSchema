@@ -1,12 +1,11 @@
 #pragma once
 
-#include "SDK/Classes/UDataTable.h"
+#include "Unreal/Engine/UDataTable.hpp"
 #include "SDK/Classes/TSoftObjectPtr.h"
 #include "SDK/Classes/Texture2D.h"
-#include "SDK/Structs/FTableRowBase.h"
 
 namespace Palworld {
-    struct FPalCharacterIconDataRow : public UECustom::FTableRowBase
+    struct FPalCharacterIconDataRow : public RC::Unreal::FTableRowBase
     {
         FPalCharacterIconDataRow(const RC::StringType& Path) : Icon(UECustom::TSoftObjectPtr<UECustom::UTexture2D>(UECustom::FSoftObjectPath(Path)))
         {

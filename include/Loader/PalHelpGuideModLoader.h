@@ -2,7 +2,10 @@
 
 #include "Loader/PalModLoaderBase.h"
 #include "SDK/Classes/PalNoteDataAsset.h"
-#include "SDK/Classes/UDataTable.h"
+
+namespace RC::Unreal {
+    class UDataTable;
+}
 
 namespace Palworld {
 	class PalHelpGuideModLoader : public PalModLoaderBase {
@@ -16,9 +19,9 @@ namespace Palworld {
 		virtual void Load(const nlohmann::json& Data) override final;
 	private:
 		UPalNoteDataAsset* m_helpGuideDataAsset{};
-		UECustom::UDataTable* m_helpGuideMasterDataTable{};
-		UECustom::UDataTable* m_helpGuideDescTextTable{};
-		UECustom::UDataTable* m_helpGuideTextureDataTable{};
+		RC::Unreal::UDataTable* m_helpGuideMasterDataTable{};
+		RC::Unreal::UDataTable* m_helpGuideDescTextTable{};
+		RC::Unreal::UDataTable* m_helpGuideTextureDataTable{};
 
 		void Add(const RC::Unreal::FName& NoteId, const nlohmann::json& Data);
 

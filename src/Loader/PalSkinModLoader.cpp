@@ -4,9 +4,9 @@
 #include "Unreal/UScriptStruct.hpp"
 #include "Unreal/FProperty.hpp"
 #include "Unreal/Property/FNameProperty.hpp"
+#include "Unreal/Engine/UDataTable.hpp"
 #include "SDK/Classes/Custom/UObjectGlobals.h"
 #include "SDK/Classes/UDataAsset.h"
-#include "SDK/Classes/UDataTable.h"
 #include "SDK/Classes/KismetInternationalizationLibrary.h"
 #include "SDK/Structs/Custom/FManagedStruct.h"
 #include "SDK/Structs/FPalCharacterIconDataRow.h"
@@ -31,10 +31,10 @@ namespace Palworld {
 		m_skinDataAsset = UECustom::UObjectGlobals::StaticFindObject<UECustom::UDataAsset*>(nullptr, nullptr,
 			STR("/Game/Pal/DataAsset/Skin/DA_StaticSkinDataAsset.DA_StaticSkinDataAsset"));
 
-		m_skinIconTable = UECustom::UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/Character/DT_PalCharacterIconDataTable_SkinOverride.DT_PalCharacterIconDataTable_SkinOverride"));
+		m_skinIconTable = UECustom::UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
+            STR("/Game/Pal/DataTable/Character/DT_PalCharacterIconDataTable_SkinOverride.DT_PalCharacterIconDataTable_SkinOverride"));
 
-		m_skinTranslationTable = UECustom::UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+        m_skinTranslationTable = UECustom::UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Text/DT_UI_Common_Text.DT_UI_Common_Text"));
 
         PS::Log<LogLevel::Verbose>(STR("Initialized SkinModLoader\n"));
@@ -150,7 +150,7 @@ namespace Palworld {
 				throw std::runtime_error(e.what());
 			}
 
-			m_skinIconTable->AddRow(SkinId, *reinterpret_cast<UECustom::FTableRowBase*>(IconRowData.GetData()));
+			m_skinIconTable->AddRow(SkinId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(IconRowData.GetData()));
 		}
 
 		if (Data.contains("Name"))
@@ -225,7 +225,7 @@ namespace Palworld {
 				throw std::runtime_error(e.what());
 			}
 
-			m_skinTranslationTable->AddRow(FName(FixedSkinId, FNAME_Add), *reinterpret_cast<UECustom::FTableRowBase*>(TranslationRowData.GetData()));
+			m_skinTranslationTable->AddRow(FName(FixedSkinId, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(TranslationRowData.GetData()));
 		}
 	}
 

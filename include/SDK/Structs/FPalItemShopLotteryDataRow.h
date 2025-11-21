@@ -1,6 +1,6 @@
 #pragma once
 
-#include "SDK/Structs/FTableRowBase.h"
+#include "Unreal/Engine/UDataTable.hpp"
 #include "Unreal/Core/Containers/Array.hpp"
 #include "Unreal/NameTypes.hpp"
 
@@ -11,7 +11,7 @@ namespace Palworld {
 		int32_t Weight;
 	};
 
-	struct FPalItemShopLotteryDataRow : public UECustom::FTableRowBase
+	struct FPalItemShopLotteryDataRow : public RC::Unreal::FTableRowBase
 	{
 		RC::Unreal::TArray<FPalItemShopLotteryEntry> lotteryDataArray;
 	};

@@ -3,7 +3,7 @@
 #include "Loader/PalModLoaderBase.h"
 #include "SDK/Classes/PalStaticItemDataAsset.h"
 
-namespace UECustom {
+namespace RC::Unreal {
 	class UDataTable;
 }
 
@@ -37,8 +37,8 @@ namespace Palworld {
         void InitializeDummyTranslations();
 
 		UPalStaticItemDataAsset* m_itemDataAsset{};
-		UECustom::UDataTable* m_itemRecipeTable{};
-		UECustom::UDataTable* m_nameTranslationTable{};
-		UECustom::UDataTable* m_descriptionTranslationTable{};
+		RC::Unreal::UDataTable* m_itemRecipeTable{};
+		RC::Unreal::UDataTable* m_nameTranslationTable{};
+		RC::Unreal::UDataTable* m_descriptionTranslationTable{};
 	};
 }
