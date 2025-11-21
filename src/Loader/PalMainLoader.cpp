@@ -130,7 +130,8 @@ namespace Palworld {
 
     void PalMainLoader::SetupAutoReload()
     {
-        if (!PS::PSConfig::IsAutoReloadEnabled()) return;
+        auto config = PS::PSConfig::Get();
+        if (!config->IsAutoReloadEnabled()) return;
 
         PS::Log<LogLevel::Normal>(STR("Auto-reload is enabled.\n"));
 
