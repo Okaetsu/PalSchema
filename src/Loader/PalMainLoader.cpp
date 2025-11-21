@@ -100,6 +100,9 @@ namespace Palworld {
                 auto palFolder = modsPath / "pals";
                 LoadPalMods(palFolder);
 
+                auto npcFolder = modsPath / "npcs";
+                LoadHumanMods(npcFolder);
+
                 auto appearanceFolder = modsPath / "appearance";
                 LoadAppearanceMods(appearanceFolder);
 
@@ -177,6 +180,10 @@ namespace Palworld {
                                     {
                                         SkinModLoader.Load(data);
                                     }
+                                    else if (folderType == "helpguide")
+                                    {
+                                        HelpGuideModLoader.Load(data);
+                                    }
                                     else if (folderType == "translations")
                                     {
                                         LanguageModLoader.Load(data);
@@ -184,6 +191,10 @@ namespace Palworld {
                                     else if (folderType == "blueprints")
                                     {
                                         BlueprintModLoader.Load(data);
+                                    }
+                                    else if (folderType == "npcs")
+                                    {
+                                        HumanModLoader.Load(data);
                                     }
                                     else if (folderType == "raw")
                                     {
@@ -308,6 +319,7 @@ namespace Palworld {
         BuildingModLoader.Initialize();
         ItemModLoader.Initialize();
         SkinModLoader.Initialize();
+        HelpGuideModLoader.Initialize();
 
         Load();
 
@@ -330,6 +342,9 @@ namespace Palworld {
                 auto palFolder = modsPath / "pals";
                 LoadPalMods(palFolder);
 
+                auto npcFolder = modsPath / "npcs";
+                LoadHumanMods(npcFolder);
+
                 auto appearanceFolder = modsPath / "appearance";
                 LoadAppearanceMods(appearanceFolder);
 
@@ -342,11 +357,15 @@ namespace Palworld {
                 auto skinsFolder = modsPath / "skins";
                 LoadSkinMods(skinsFolder);
 
+                auto helpguideFolder = modsPath / "helpguide";
+                LoadHelpGuideMods(helpguideFolder);
+
                 auto translationsFolder = modsPath / "translations";
                 LoadLanguageMods(translationsFolder);
 
                 auto blueprintFolder = modFolder.path() / "blueprints";
                 LoadBlueprintMods(blueprintFolder);
+
             }
             catch (const std::exception&)
             {
@@ -390,6 +409,13 @@ namespace Palworld {
             MonsterModLoader.Load(data);
         });
 	}
+
+    void PalMainLoader::LoadHumanMods(const std::filesystem::path& path)
+    {
+        ParseJsonFilesInPath(path, [&](nlohmann::json data) {
+            HumanModLoader.Load(data);
+        });
+    }
 
 	void PalMainLoader::LoadBuildingMods(const std::filesystem::path& path)
 	{
@@ -437,6 +463,13 @@ namespace Palworld {
     {
         ParseJsonFilesInPath(path, [&](nlohmann::json data) {
             SkinModLoader.Load(data);
+        });
+    }
+
+    void PalMainLoader::LoadHelpGuideMods(const std::filesystem::path& path)
+    {
+        ParseJsonFilesInPath(path, [&](nlohmann::json data) {
+            HelpGuideModLoader.Load(data);
         });
     }
 

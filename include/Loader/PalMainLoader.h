@@ -12,6 +12,7 @@
 #include "Loader/PalRawTableLoader.h"
 #include "Loader/PalBlueprintModLoader.h"
 #include "Loader/PalEnumLoader.h"
+#include "Loader/PalHelpGuideModLoader.h"
 #include "FileWatch.hpp"
 
 namespace RC::Unreal {
@@ -49,6 +50,7 @@ namespace Palworld {
 		PalRawTableLoader RawTableLoader;
 		PalBlueprintModLoader BlueprintModLoader;
         PalEnumLoader EnumLoader;
+		PalHelpGuideModLoader HelpGuideModLoader;
 
         int m_errorCount = 0;
 
@@ -84,6 +86,10 @@ namespace Palworld {
         void LoadItemMods(const std::filesystem::path& path);
 
         void LoadSkinMods(const std::filesystem::path& path);
+
+        void LoadHumanMods(const std::filesystem::path& path);
+
+        void LoadHelpGuideMods(const std::filesystem::path& path);
 
         void LoadCustomEnums();
 
