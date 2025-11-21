@@ -64,7 +64,8 @@ namespace Palworld {
 
 	void PalLanguageModLoader::Initialize()
 	{
-        auto languageOverride = PS::PSConfig::GetLanguageOverride();
+        auto config = PS::PSConfig::Get();
+        auto languageOverride = config->GetLanguageOverride();
 
         if (languageOverride == "")
         {

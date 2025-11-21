@@ -20,7 +20,8 @@ namespace PS {
         }
         else if (optional_arg == RC::LogLevel::Verbose)
         {
-            if (!PS::PSConfig::IsDebugLoggingEnabled()) return;
+            auto config = PS::PSConfig::Get();
+            if (!config->IsDebugLoggingEnabled()) return;
 
             auto formatted_log = std::format(STR("[PalSchema] [debug] {}"), content);
             RC::Output::send<optional_arg>(formatted_log, fmt_args...);

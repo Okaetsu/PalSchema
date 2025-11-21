@@ -29,7 +29,8 @@ public:
             return;
         }
 
-        PS::PSConfig::Load();
+        auto config = PS::PSConfig::Get();
+        config->Load();
 
         PS::Log<LogLevel::Verbose>(STR("Initializing SignatureManager...\n"));
         Palworld::SignatureManager::Initialize();
