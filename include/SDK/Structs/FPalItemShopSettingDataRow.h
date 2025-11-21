@@ -1,11 +1,11 @@
 #pragma once
 
-#include "SDK/Structs/FTableRowBase.h"
+#include "Unreal/Engine/UDataTable.hpp"
 #include "Unreal/NameTypes.hpp"
 
 namespace Palworld {
 
-	struct FPalItemShopSettingDataRow : public UECustom::FTableRowBase
+	struct FPalItemShopSettingDataRow : public RC::Unreal::FTableRowBase
 	{
 		RC::Unreal::FName CurrencyItemID;
 

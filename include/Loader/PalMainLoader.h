@@ -17,10 +17,10 @@
 
 namespace RC::Unreal {
     class AGameModeBase;
+    class UDataTable;
 }
 
 namespace UECustom {
-    class UDataTable;
     class UCompositeDataTable;
 }
 
@@ -103,7 +103,7 @@ namespace Palworld {
 
         static void GetPakFolders(const RC::Unreal::TCHAR* CmdLine, RC::Unreal::TArray<RC::Unreal::FString>* OutPakFolders);
 
-        static void OnDataTableSerialized(UECustom::UDataTable* This, RC::Unreal::FArchive* Archive);
+        static void OnDataTableSerialized(RC::Unreal::UDataTable* This, RC::Unreal::FArchive* Archive);
 
         static void OnGameInstanceInit(RC::Unreal::UObject* This);
 
@@ -111,7 +111,7 @@ namespace Palworld {
 
         bool m_hasInit = false;
 
-        static inline std::vector<std::function<void(UECustom::UDataTable*)>> DatatableSerializeCallbacks;
+        static inline std::vector<std::function<void(RC::Unreal::UDataTable*)>> DatatableSerializeCallbacks;
         static inline std::vector<std::function<void(RC::Unreal::UObject*)>> GameInstanceInitCallbacks;
         static inline std::vector<std::function<void(RC::Unreal::UClass*)>> PostLoadCallbacks;
         static inline std::vector<std::function<void()>> GetPakFoldersCallback;

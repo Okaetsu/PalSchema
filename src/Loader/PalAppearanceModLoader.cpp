@@ -2,7 +2,7 @@
 #include "Unreal/UObjectGlobals.hpp"
 #include "Unreal/UScriptStruct.hpp"
 #include "Unreal/FProperty.hpp"
-#include "SDK/Classes/UDataTable.h"
+#include "Unreal/Engine/UDataTable.hpp"
 #include "SDK/Classes/KismetInternationalizationLibrary.h"
 #include "SDK/Classes/TSoftObjectPtr.h"
 #include "SDK/Classes/TSoftClassPtr.h"
@@ -26,25 +26,25 @@ namespace Palworld {
 
 	void PalAppearanceModLoader::Initialize()
 	{
-		m_hairTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_hairTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/CharacteCreation/DT_CharacterCreationMeshPresetTable_Hair.DT_CharacterCreationMeshPresetTable_Hair"));
 
-		m_headTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_headTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/CharacteCreation/DT_CharacterCreationMeshPresetTable_Head.DT_CharacterCreationMeshPresetTable_Head"));
 
-		m_eyesTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_eyesTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/CharacteCreation/DT_CharacterCreationEyeMaterialPresetTable.DT_CharacterCreationEyeMaterialPresetTable"));
 
-		m_bodyTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_bodyTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/CharacteCreation/DT_CharacterCreationMeshPresetTable_Body.DT_CharacterCreationMeshPresetTable_Body"));
 
-		m_presetTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_presetTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/CharacteCreation/DT_CharacterCreationMakeInfoPreset.DT_CharacterCreationMakeInfoPreset"));
 
-		m_colorPresetTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_colorPresetTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/CharacteCreation/DT_CharacterCreationColorPresetTable.DT_CharacterCreationColorPresetTable"));
 
-		m_equipmentTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		m_equipmentTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/CharacteCreation/DT_CharacterCreationMeshPresetTable_Equipments.DT_CharacterCreationMeshPresetTable_Equipments"));
 
         PS::Log<LogLevel::Verbose>(STR("Initialized AppearanceModLoader\n"));
@@ -103,7 +103,7 @@ namespace Palworld {
 		}
 	}
 
-	void PalAppearanceModLoader::Add(const RC::Unreal::FName& RowId, UECustom::UDataTable* DataTable, const nlohmann::json& Data, const std::vector<std::string>& RequiredFields)
+	void PalAppearanceModLoader::Add(const RC::Unreal::FName& RowId, RC::Unreal::UDataTable* DataTable, const nlohmann::json& Data, const std::vector<std::string>& RequiredFields)
 	{
 		auto RowStruct = DataTable->GetRowStruct().Get();
 
@@ -139,7 +139,7 @@ namespace Palworld {
 			}
 		}
 
-		DataTable->AddRow(RowId, *reinterpret_cast<UECustom::FTableRowBase*>(RowData));
+		DataTable->AddRow(RowId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData));
 	}
 
 	void PalAppearanceModLoader::AddColorPreset(const RC::Unreal::FName& ColorPresetId, const nlohmann::json& Data)
@@ -339,6 +339,6 @@ namespace Palworld {
 			}
 		}
 
-		m_equipmentTable->AddRow(EquipmentId, *reinterpret_cast<UECustom::FTableRowBase*>(EquipmentRowData));
+		m_equipmentTable->AddRow(EquipmentId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(EquipmentRowData));
 	}
 }

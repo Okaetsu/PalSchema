@@ -4,7 +4,7 @@
 #include "Loader/PalLanguageModLoader.h"
 #include "nlohmann/json.hpp"
 
-namespace UECustom {
+namespace RC::Unreal {
     class UDataTable;
 }
 
@@ -35,13 +35,13 @@ namespace Palworld {
 
         void EditTranslations(const RC::Unreal::FName& CharacterId, const nlohmann::json& Data);
 
-        UECustom::UDataTable* m_dataTable;
-        UECustom::UDataTable* m_iconDataTable;
-        UECustom::UDataTable* m_palBpClassTable;
-        UECustom::UDataTable* m_wazaMasterLevelTable;
-        UECustom::UDataTable* m_palDropItemTable;
-        UECustom::UDataTable* m_palNameTable;
-        UECustom::UDataTable* m_palShortDescTable;
-        UECustom::UDataTable* m_palLongDescTable;
+        RC::Unreal::UDataTable* m_dataTable;
+        RC::Unreal::UDataTable* m_iconDataTable;
+        RC::Unreal::UDataTable* m_palBpClassTable;
+        RC::Unreal::UDataTable* m_wazaMasterLevelTable;
+        RC::Unreal::UDataTable* m_palDropItemTable;
+        RC::Unreal::UDataTable* m_palNameTable;
+        RC::Unreal::UDataTable* m_palShortDescTable;
+        RC::Unreal::UDataTable* m_palLongDescTable;
     };
 }

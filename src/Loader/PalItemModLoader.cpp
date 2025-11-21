@@ -1,7 +1,7 @@
 #include "Unreal/UObjectGlobals.hpp"
 #include "Unreal/UClass.hpp"
 #include "Unreal/UScriptStruct.hpp"
-#include "SDK/Classes/UDataTable.h"
+#include "Unreal/Engine/UDataTable.hpp"
 #include "SDK/Classes/PalStaticItemDataTable.h"
 #include "SDK/Classes/PalStaticArmorItemData.h"
 #include "SDK/Classes/PalStaticConsumeItemData.h"
@@ -28,13 +28,13 @@ namespace Palworld {
 		m_itemDataAsset = UObjectGlobals::StaticFindObject<UPalStaticItemDataAsset*>(nullptr, nullptr,
 			STR("/Game/Pal/DataAsset/Item/DA_StaticItemDataAsset.DA_StaticItemDataAsset"));
 
-        m_itemRecipeTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+        m_itemRecipeTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
             STR("/Game/Pal/DataTable/Item/DT_ItemRecipeDataTable.DT_ItemRecipeDataTable"));
 
-        m_nameTranslationTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+        m_nameTranslationTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
             STR("/Game/Pal/DataTable/Text/DT_ItemNameText.DT_ItemNameText"));
 
-        m_descriptionTranslationTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+        m_descriptionTranslationTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
             STR("/Game/Pal/DataTable/Text/DT_ItemDescriptionText.DT_ItemDescriptionText"));
 
         PS::Log<LogLevel::Verbose>(STR("Initialized ItemModLoader\n"));
@@ -313,7 +313,7 @@ namespace Palworld {
 			FMemory::Memcpy(ProductIdProperty->ContainerPtrToValuePtr<void>(ItemRecipeData), &ItemId, sizeof(FName));
 		}
 
-		m_itemRecipeTable->AddRow(ItemId, *reinterpret_cast<UECustom::FTableRowBase*>(ItemRecipeData));
+		m_itemRecipeTable->AddRow(ItemId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(ItemRecipeData));
 
         PS::Log<LogLevel::Normal>(STR("Added new Recipe for Item '{}'.\n"), ItemId.ToString());
 	}
@@ -369,7 +369,7 @@ namespace Palworld {
 					throw std::runtime_error(e.what());
 				}
 
-				m_nameTranslationTable->AddRow(FName(FixedItemId, FNAME_Add), *reinterpret_cast<UECustom::FTableRowBase*>(TranslationRowData));
+				m_nameTranslationTable->AddRow(FName(FixedItemId, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(TranslationRowData));
 			}
 		}
 
@@ -393,7 +393,7 @@ namespace Palworld {
 					throw std::runtime_error(e.what());
 				}
 
-				m_descriptionTranslationTable->AddRow(FName(FixedItemId, FNAME_Add), *reinterpret_cast<UECustom::FTableRowBase*>(TranslationRowData));
+				m_descriptionTranslationTable->AddRow(FName(FixedItemId, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(TranslationRowData));
 			}
 		}
 	}

@@ -3,10 +3,6 @@
 #include "nlohmann/json.hpp"
 #include "Loader/PalModLoaderBase.h"
 
-namespace UECustom {
-	class UDataTable;
-}
-
 namespace Palworld {
 	class PalLanguageModLoader : public PalModLoaderBase {
 	public:

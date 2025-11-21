@@ -1,9 +1,10 @@
 #include "SDK/Classes/PalMasterDataTables.h"
+#include "Unreal/Engine/UDataTable.hpp"
 
 namespace Palworld {
-    UECustom::UDataTable* UPalMasterDataTables::GetItemRecipeDataTable()
+    RC::Unreal::UDataTable* UPalMasterDataTables::GetItemRecipeDataTable()
     {
-        auto DataTable = this->GetValuePtrByPropertyNameInChain<UECustom::UDataTable*>(STR("ItemRecipeDataTable"));
+        auto DataTable = this->GetValuePtrByPropertyNameInChain<RC::Unreal::UDataTable*>(STR("ItemRecipeDataTable"));
         if (DataTable)
         {
             return *DataTable;

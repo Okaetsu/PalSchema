@@ -4,11 +4,11 @@
 
 namespace RC::Unreal {
 	class UObject;
+    class UDataTable;
 }
 
 namespace UECustom {
 	class UDataAsset;
-	class UDataTable;
 }
 
 namespace Palworld {
@@ -23,8 +23,8 @@ namespace Palworld {
 		virtual void Load(const nlohmann::json& json) override final;
 	private:
 		UECustom::UDataAsset* m_skinDataAsset;
-		UECustom::UDataTable* m_skinIconTable;
-		UECustom::UDataTable* m_skinTranslationTable;
+		RC::Unreal::UDataTable* m_skinIconTable;
+		RC::Unreal::UDataTable* m_skinTranslationTable;
 
 		std::unordered_map<RC::StringType, RC::Unreal::UClass*> m_palSkinDataBaseClassCache;
 

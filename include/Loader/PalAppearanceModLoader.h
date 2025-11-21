@@ -6,11 +6,11 @@
 
 namespace RC::Unreal {
 	class UObject;
+	class UDataTable;
 }
 
 namespace UECustom {
 	class UDataAsset;
-	class UDataTable;
 }
 
 namespace Palworld {
@@ -24,15 +24,15 @@ namespace Palworld {
 
 		virtual void Load(const nlohmann::json& Data) override final;
 	private:
-		UECustom::UDataTable* m_hairTable;
-		UECustom::UDataTable* m_headTable;
-		UECustom::UDataTable* m_eyesTable;
-		UECustom::UDataTable* m_bodyTable;
-		UECustom::UDataTable* m_presetTable;
-		UECustom::UDataTable* m_colorPresetTable;
-		UECustom::UDataTable* m_equipmentTable;
+		RC::Unreal::UDataTable* m_hairTable;
+		RC::Unreal::UDataTable* m_headTable;
+		RC::Unreal::UDataTable* m_eyesTable;
+		RC::Unreal::UDataTable* m_bodyTable;
+		RC::Unreal::UDataTable* m_presetTable;
+		RC::Unreal::UDataTable* m_colorPresetTable;
+		RC::Unreal::UDataTable* m_equipmentTable;
 
-		void Add(const RC::Unreal::FName& RowId, UECustom::UDataTable* DataTable, const nlohmann::json& Data, const std::vector<std::string>& RequiredFields);
+		void Add(const RC::Unreal::FName& RowId, RC::Unreal::UDataTable* DataTable, const nlohmann::json& Data, const std::vector<std::string>& RequiredFields);
 
 		void AddColorPreset(const RC::Unreal::FName& ColorPresetId, const nlohmann::json& Data);
 

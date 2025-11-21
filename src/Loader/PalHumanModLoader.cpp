@@ -1,7 +1,7 @@
 #include "Unreal/UObjectGlobals.hpp"
 #include "Unreal/UScriptStruct.hpp"
 #include "Unreal/FProperty.hpp"
-#include "SDK/Classes/UDataTable.h"
+#include "Unreal/Engine/UDataTable.hpp"
 #include "SDK/Classes/KismetInternationalizationLibrary.h"
 #include "SDK/Helper/PropertyHelper.h"
 #include "Utility/Logging.h"
@@ -23,37 +23,37 @@ namespace Palworld {
 
 	void PalHumanModLoader::Initialize()
 	{
-		n_dataTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		n_dataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Character/DT_PalHumanParameter.DT_PalHumanParameter"));
 
-		n_iconDataTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr, 
+		n_iconDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr, 
 			STR("/Game/Pal/DataTable/Character/DT_PalCharacterIconDataTable.DT_PalCharacterIconDataTable"));
 
-		n_palBpClassTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		n_palBpClassTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Character/DT_PalBPClass.DT_PalBPClass"));
 
-		n_dropItemTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		n_dropItemTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Character/DT_PalDropItem.DT_PalDropItem"));
 
-		n_npcNameTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		n_npcNameTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Text/DT_HumanNameText.DT_HumanNameText"));
 
-		n_palShortDescTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		n_palShortDescTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Text/DT_PalShortDescriptionText.DT_PalShortDescriptionText"));
 
-		n_palLongDescTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		n_palLongDescTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Text/DT_PalLongDescriptionText.DT_PalLongDescriptionText"));
 
-		n_npcTalkFlowTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		n_npcTalkFlowTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/Blueprint/Component/NPCTalk/DT_NPCTalkFlow.DT_NPCTalkFlow"));
 
-		n_ItemShopLotteryDataTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		n_ItemShopLotteryDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/ItemShop/DT_ItemShopLotteryData.DT_ItemShopLotteryData"));
 
-		n_ItemShopCreateDataTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		n_ItemShopCreateDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/ItemShop/DT_ItemShopCreateData.DT_ItemShopCreateData"));
 
-		n_ItemShopSettingDataTable = UObjectGlobals::StaticFindObject<UECustom::UDataTable*>(nullptr, nullptr,
+		n_ItemShopSettingDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/ItemShop/DT_ItemShopSettingData.DT_ItemShopSettingData"));
 	}
 
@@ -112,7 +112,7 @@ namespace Palworld {
 			}
 		}
 
-		n_dataTable->AddRow(CharacterId, *reinterpret_cast<UECustom::FTableRowBase*>(NpcRowData));
+		n_dataTable->AddRow(CharacterId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(NpcRowData));
 
 		AddTranslations(CharacterId, properties);
 
@@ -297,7 +297,7 @@ namespace Palworld {
 		}
 
 		auto RowName = std::format(STR("{}000"), CharacterId.ToString());
-		n_dropItemTable->AddRow(FName(RowName, FNAME_Add), *reinterpret_cast<UECustom::FTableRowBase*>(NpcDropItemData));
+		n_dropItemTable->AddRow(FName(RowName, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(NpcDropItemData));
 	}
 
 	//Add New NPC Translations
@@ -323,7 +323,7 @@ namespace Palworld {
 					throw std::runtime_error(e.what());
 				}
 
-				n_npcNameTable->AddRow(FName(FixedCharacterId, FNAME_Add), *reinterpret_cast<UECustom::FTableRowBase*>(TranslationRowData));
+				n_npcNameTable->AddRow(FName(FixedCharacterId, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(TranslationRowData));
 			}
 		}
 
@@ -476,7 +476,7 @@ namespace Palworld {
 							PropertyHelper::CopyJsonValueToContainer(RowData, Property, CreateRowJson.at(PropertyName));
 						}
 					}
-					n_ItemShopCreateDataTable->AddRow(RowKeyName, *reinterpret_cast<UECustom::FTableRowBase*>(RowData));
+					n_ItemShopCreateDataTable->AddRow(RowKeyName, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData));
 					if (!n_ItemShopCreateDataTable->FindRowUnchecked(RowKeyName)) addSucceeded = false;
 				}
 				catch (const std::exception& e)
