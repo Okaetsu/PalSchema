@@ -506,7 +506,7 @@ namespace Palworld {
 
     std::string PropertyHelper::GetPropertyTypeAsUTF8String(FProperty* Property)
     {
-        auto PropertyType = RC::to_string(Property->GetCPPType().GetCharArray());
+        auto PropertyType = RC::to_string(*Property->GetCPPType());
         return PropertyType;
     }
 

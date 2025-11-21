@@ -1,8 +1,8 @@
 #include "Unreal/UClass.hpp"
 #include "Unreal/UObjectGlobals.hpp"
 #include "Unreal/UScriptStruct.hpp"
+#include "Unreal/Engine/UDataTable.hpp"
 #include "SDK/Structs/FPalLocalizedTextData.h"
-#include "SDK/Classes/UDataTable.h"
 #include "SDK/Classes/KismetInternationalizationLibrary.h"
 #include "SDK/Classes/Custom/UObjectGlobals.h"
 #include "SDK/Classes/Custom/UDataTableStore.h"
@@ -70,7 +70,7 @@ namespace Palworld {
         {
             PS::Log<LogLevel::Verbose>(STR("Fetching current language from Kismet Internationalization Library...\n"));
             auto language = Palworld::UKismetInternationalizationLibrary::GetCurrentLanguage();
-            m_currentLanguage = RC::to_string(language.GetCharArray());
+            m_currentLanguage = RC::to_string(*language);
             PS::Log<RC::LogLevel::Normal>(STR("Language override not set, using system language ({}).\n"), language.GetCharArray());
         }
         else
