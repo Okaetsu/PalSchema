@@ -97,29 +97,43 @@ namespace Palworld {
             {
                 PS::Log<RC::LogLevel::Normal>(STR("Reloading mod: {}\n"), modName);
 
-                auto palFolder = modsPath / "pals";
-                LoadPalMods(palFolder);
-
-                auto npcFolder = modsPath / "npcs";
-                LoadHumanMods(npcFolder);
-
-                auto appearanceFolder = modsPath / "appearance";
-                LoadAppearanceMods(appearanceFolder);
-
-                auto buildingsFolder = modsPath / "buildings";
-                LoadBuildingMods(buildingsFolder);
-
-                auto itemsFolder = modsPath / "items";
-                LoadItemMods(itemsFolder);
-
-                auto skinsFolder = modsPath / "skins";
-                LoadSkinMods(skinsFolder);
-
                 auto translationsFolder = modsPath / "translations";
                 LoadLanguageMods(translationsFolder);
 
+                auto palFolder = modsPath / "pals";
+                ParseJsonFilesInPath(palFolder, [&](const nlohmann::json& data) {
+                    MonsterModLoader.Load(data);
+                });
+
+                auto npcFolder = modsPath / "npcs";
+                ParseJsonFilesInPath(npcFolder, [&](const nlohmann::json& data) {
+                    HumanModLoader.Load(data);
+                });
+
+                auto appearanceFolder = modsPath / "appearance";
+                ParseJsonFilesInPath(appearanceFolder, [&](const nlohmann::json& data) {
+                    AppearanceModLoader.Load(data);
+                });
+
+                auto buildingsFolder = modsPath / "buildings";
+                ParseJsonFilesInPath(buildingsFolder, [&](const nlohmann::json& data) {
+                    BuildingModLoader.Load(data);
+                });
+
+                auto itemsFolder = modsPath / "items";
+                ParseJsonFilesInPath(itemsFolder, [&](const nlohmann::json& data) {
+                    ItemModLoader.Load(data);
+                });
+
+                auto skinsFolder = modsPath / "skins";
+                ParseJsonFilesInPath(skinsFolder, [&](const nlohmann::json& data) {
+                    SkinModLoader.Load(data);
+                });
+
                 auto blueprintFolder = modFolder.path() / "blueprints";
-                LoadBlueprintMods(blueprintFolder);
+                ParseJsonFilesInPath(blueprintFolder, [&](const nlohmann::json& data) {
+                    BlueprintModLoader.Load(data);
+                });
             }
             catch (const std::exception& e)
             {
@@ -250,10 +264,14 @@ namespace Palworld {
                 PS::Log<RC::LogLevel::Normal>(STR("Loading mod: {}\n"), modName);
 
                 auto rawFolder = modFolder.path() / "raw";
-                LoadRawTables(rawFolder);
+                ParseJsonFilesInPath(rawFolder, [&](const nlohmann::json& data) {
+                    RawTableLoader.Load(data);
+                });
 
                 auto blueprintFolder = modFolder.path() / "blueprints";
-                LoadBlueprintModsSafe(blueprintFolder);
+                ParseJsonFilesInPath(blueprintFolder, [&](const nlohmann::json& data) {
+                    BlueprintModLoader.LoadSafe(data);
+                });
             }
             catch (const std::exception&)
             {
@@ -341,32 +359,47 @@ namespace Palworld {
                 PS::Log<RC::LogLevel::Normal>(STR("Loading mod: {}\n"), modName);
                 
                 auto palFolder = modsPath / "pals";
-                LoadPalMods(palFolder);
+                ParseJsonFilesInPath(palFolder, [&](const nlohmann::json& data) {
+                    MonsterModLoader.Load(data);
+                });
 
                 auto npcFolder = modsPath / "npcs";
-                LoadHumanMods(npcFolder);
+                ParseJsonFilesInPath(npcFolder, [&](const nlohmann::json& data) {
+                    HumanModLoader.Load(data);
+                });
 
                 auto appearanceFolder = modsPath / "appearance";
-                LoadAppearanceMods(appearanceFolder);
+                ParseJsonFilesInPath(appearanceFolder, [&](const nlohmann::json& data) {
+                    AppearanceModLoader.Load(data);
+                });
 
                 auto buildingsFolder = modsPath / "buildings";
-                LoadBuildingMods(buildingsFolder);
+                ParseJsonFilesInPath(buildingsFolder, [&](const nlohmann::json& data) {
+                    BuildingModLoader.Load(data);
+                });
 
                 auto itemsFolder = modsPath / "items";
-                LoadItemMods(itemsFolder);
+                ParseJsonFilesInPath(itemsFolder, [&](const nlohmann::json& data) {
+                    ItemModLoader.Load(data);
+                });
 
                 auto skinsFolder = modsPath / "skins";
-                LoadSkinMods(skinsFolder);
+                ParseJsonFilesInPath(skinsFolder, [&](const nlohmann::json& data) {
+                    SkinModLoader.Load(data);
+                });
 
                 auto helpguideFolder = modsPath / "helpguide";
-                LoadHelpGuideMods(helpguideFolder);
+                ParseJsonFilesInPath(helpguideFolder, [&](const nlohmann::json& data) {
+                    HelpGuideModLoader.Load(data);
+                });
 
                 auto translationsFolder = modsPath / "translations";
                 LoadLanguageMods(translationsFolder);
 
                 auto blueprintFolder = modFolder.path() / "blueprints";
-                LoadBlueprintMods(blueprintFolder);
-
+                ParseJsonFilesInPath(blueprintFolder, [&](const nlohmann::json& data) {
+                    BlueprintModLoader.Load(data);
+                });
             }
             catch (const std::exception&)
             {
@@ -403,76 +436,6 @@ namespace Palworld {
 
         PS::Log<LogLevel::Verbose>(STR("Finished loading language mods.\n"));
 	}
-
-	void PalMainLoader::LoadPalMods(const std::filesystem::path& path)
-	{
-        ParseJsonFilesInPath(path, [&](nlohmann::json data) {
-            MonsterModLoader.Load(data);
-        });
-	}
-
-    void PalMainLoader::LoadHumanMods(const std::filesystem::path& path)
-    {
-        ParseJsonFilesInPath(path, [&](nlohmann::json data) {
-            HumanModLoader.Load(data);
-        });
-    }
-
-	void PalMainLoader::LoadBuildingMods(const std::filesystem::path& path)
-	{
-        ParseJsonFilesInPath(path, [&](nlohmann::json data) {
-            BuildingModLoader.Load(data);
-        });
-	}
-
-	void PalMainLoader::LoadAppearanceMods(const std::filesystem::path& path)
-	{
-        ParseJsonFilesInPath(path, [&](nlohmann::json data) {
-            AppearanceModLoader.Load(data);
-        });
-	}
-
-    void PalMainLoader::LoadRawTables(const std::filesystem::path& path)
-    {
-        ParseJsonFilesInPath(path, [&](nlohmann::json data) {
-            RawTableLoader.Load(data);
-        });
-    }
-
-    void PalMainLoader::LoadBlueprintMods(const std::filesystem::path& path)
-    {
-        ParseJsonFilesInPath(path, [&](nlohmann::json data) {
-            BlueprintModLoader.Load(data);
-        });
-    }
-
-    void PalMainLoader::LoadBlueprintModsSafe(const std::filesystem::path& path)
-    {
-        ParseJsonFilesInPath(path, [&](nlohmann::json data) {
-            BlueprintModLoader.LoadSafe(data);
-        });
-    }
-
-    void PalMainLoader::LoadItemMods(const std::filesystem::path& path)
-    {
-        ParseJsonFilesInPath(path, [&](nlohmann::json data) {
-            ItemModLoader.Load(data);
-        });
-    }
-
-    void PalMainLoader::LoadSkinMods(const std::filesystem::path& path)
-    {
-        ParseJsonFilesInPath(path, [&](nlohmann::json data) {
-            SkinModLoader.Load(data);
-        });
-    }
-
-    void PalMainLoader::LoadHelpGuideMods(const std::filesystem::path& path)
-    {
-        ParseJsonFilesInPath(path, [&](nlohmann::json data) {
-            HelpGuideModLoader.Load(data);
-        });
-    }
 
     void PalMainLoader::LoadCustomEnums()
     {

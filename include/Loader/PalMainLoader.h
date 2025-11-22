@@ -71,26 +71,6 @@ namespace Palworld {
 
 		void LoadLanguageMods(const std::filesystem::path& path);
 
-		void LoadPalMods(const std::filesystem::path& path);
-
-		void LoadBuildingMods(const std::filesystem::path& path);
-
-		void LoadRawTables(const std::filesystem::path& path);
-
-		void LoadBlueprintMods(const std::filesystem::path& path);
-
-		void LoadBlueprintModsSafe(const std::filesystem::path& path);
-
-		void LoadAppearanceMods(const std::filesystem::path& path);
-
-        void LoadItemMods(const std::filesystem::path& path);
-
-        void LoadSkinMods(const std::filesystem::path& path);
-
-        void LoadHumanMods(const std::filesystem::path& path);
-
-        void LoadHelpGuideMods(const std::filesystem::path& path);
-
         void LoadCustomEnums();
 
         void IterateModsFolder(const std::function<void(const std::filesystem::directory_entry&)>& callback);
