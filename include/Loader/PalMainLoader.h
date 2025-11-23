@@ -52,8 +52,6 @@ namespace Palworld {
         PalEnumLoader EnumLoader;
 		PalHelpGuideModLoader HelpGuideModLoader;
 
-        int m_errorCount = 0;
-
         std::unique_ptr<filewatch::FileWatch<std::wstring>> m_fileWatch;
 
         void SetupAutoReload();
@@ -67,13 +65,14 @@ namespace Palworld {
 
         void InitLoaders();
 
-		void Load();
+        // errorCallback(modName, error) is fired each time a mod fails to load properly due to an error.
+		void Load(const std::function<void(const std::filesystem::path::string_type&, const std::exception&)>& errorCallback);
 
 		void LoadLanguageMods(const std::filesystem::path& path);
 
         void LoadCustomEnums();
 
-        void IterateModsFolder(const std::function<void(const std::filesystem::directory_entry&)>& callback);
+        void IterateModsFolder(const std::function<void(const std::filesystem::path&, const std::filesystem::path::string_type&)>& callback);
 
         void ParseJsonFileInPath(const std::filesystem::path& path, const std::function<void(const nlohmann::json&)>& callback);
 

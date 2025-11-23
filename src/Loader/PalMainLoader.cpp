@@ -105,56 +105,14 @@ namespace Palworld {
 
     void PalMainLoader::ReloadMods()
     {
-        IterateModsFolder([&](const fs::directory_entry& modFolder) {
-            auto& modsPath = modFolder.path();
-            auto modName = modsPath.stem().native();
-            try
-            {
-                PS::Log<RC::LogLevel::Normal>(STR("Reloading mod: {}\n"), modName);
+        PS::Log<LogLevel::Normal>(STR("Reloading mods...\n"));
 
-                auto translationsFolder = modsPath / "translations";
-                LoadLanguageMods(translationsFolder);
+        auto loadErrorCallback = [](const fs::path::string_type& modName, const std::exception& e) {
+            PS::Log<LogLevel::Error>(STR("Failed to reload mod {} - {}\n"), modName, RC::to_generic_string(e.what()));
+        };
+        Load(loadErrorCallback);
 
-                auto palFolder = modsPath / "pals";
-                ParseJsonFilesInPath(palFolder, [&](const nlohmann::json& data) {
-                    MonsterModLoader.Load(data);
-                });
-
-                auto npcFolder = modsPath / "npcs";
-                ParseJsonFilesInPath(npcFolder, [&](const nlohmann::json& data) {
-                    HumanModLoader.Load(data);
-                });
-
-                auto appearanceFolder = modsPath / "appearance";
-                ParseJsonFilesInPath(appearanceFolder, [&](const nlohmann::json& data) {
-                    AppearanceModLoader.Load(data);
-                });
-
-                auto buildingsFolder = modsPath / "buildings";
-                ParseJsonFilesInPath(buildingsFolder, [&](const nlohmann::json& data) {
-                    BuildingModLoader.Load(data);
-                });
-
-                auto itemsFolder = modsPath / "items";
-                ParseJsonFilesInPath(itemsFolder, [&](const nlohmann::json& data) {
-                    ItemModLoader.Load(data);
-                });
-
-                auto skinsFolder = modsPath / "skins";
-                ParseJsonFilesInPath(skinsFolder, [&](const nlohmann::json& data) {
-                    SkinModLoader.Load(data);
-                });
-
-                auto blueprintFolder = modFolder.path() / "blueprints";
-                ParseJsonFilesInPath(blueprintFolder, [&](const nlohmann::json& data) {
-                    BlueprintModLoader.Load(data);
-                });
-            }
-            catch (const std::exception& e)
-            {
-                PS::Log<LogLevel::Error>(STR("Failed to reload mod {} - {}\n"), modName, RC::to_generic_string(e.what()));
-            }
-        });
+        PS::Log<LogLevel::Normal>(STR("Finished reloading mods.\n"));
     }
 
     void PalMainLoader::SetupAutoReload()
@@ -190,53 +148,53 @@ namespace Palworld {
                             try
                             {
                                 ParseJsonFileInPath(modFilePath, [&](const nlohmann::json& data) {
-                                    if (folderType == "pals")
+                                    if (folderType == constants::palsFolder)
                                     {
                                         MonsterModLoader.Load(data);
                                     }
-                                    else if (folderType == "appearance")
+                                    else if (folderType == constants::appearanceFolder)
                                     {
                                         AppearanceModLoader.Load(data);
                                     }
-                                    else if (folderType == "buildings")
+                                    else if (folderType == constants::buildingsFolder)
                                     {
                                         BuildingModLoader.Load(data);
                                     }
-                                    else if (folderType == "items")
+                                    else if (folderType == constants::itemsFolder)
                                     {
                                         ItemModLoader.Load(data);
                                     }
-                                    else if (folderType == "skins")
+                                    else if (folderType == constants::skinsFolder)
                                     {
                                         SkinModLoader.Load(data);
                                     }
-                                    else if (folderType == "helpguide")
+                                    else if (folderType == constants::helpguideFolder)
                                     {
                                         HelpGuideModLoader.Load(data);
                                     }
-                                    else if (folderType == "translations")
+                                    else if (folderType == constants::translationsFolder)
                                     {
                                         LanguageModLoader.Load(data);
                                     }
-                                    else if (folderType == "blueprints")
+                                    else if (folderType == constants::blueprintsFolder)
                                     {
                                         BlueprintModLoader.Load(data);
                                     }
-                                    else if (folderType == "npcs")
+                                    else if (folderType == constants::npcsFolder)
                                     {
                                         HumanModLoader.Load(data);
                                     }
-                                    else if (folderType == "raw")
+                                    else if (folderType == constants::rawFolder)
                                     {
                                         RawTableLoader.Reload(data);
                                     }
                                 });
 
-                                PS::Log<LogLevel::Normal>(STR("Reloaded mod {}\n"), modName);
+                                PS::Log<LogLevel::Normal>(STR("Auto-reloaded mod {}\n"), modName);
                             }
                             catch (const std::exception& e)
                             {
-                                PS::Log<LogLevel::Error>(STR("Failed to reload mod {} - {}\n"), modName, RC::to_generic_string(e.what()));
+                                PS::Log<LogLevel::Error>(STR("Failed to auto-reload mod {} - {}\n"), modName, RC::to_generic_string(e.what()));
                             }
                         }
                     });
@@ -269,34 +227,29 @@ namespace Palworld {
 
         LoadCustomEnums();
 
-        std::vector<fs::path::string_type> listOfModsWithErrors;
-
         PS::Log<LogLevel::Verbose>(STR("Loading raw tables and blueprint mods...\n"));
-        IterateModsFolder([&](const fs::directory_entry& modFolder) {
-            auto modName = modFolder.path().stem().native();
+        IterateModsFolder([&](const fs::path& modPath, const fs::path::string_type& modName)
+        {
             try
             {
                 PS::Log<RC::LogLevel::Normal>(STR("Loading mod: {}\n"), modName);
 
-                auto rawFolder = modFolder.path() / "raw";
+                auto rawFolder = modPath / constants::rawFolder;
                 ParseJsonFilesInPath(rawFolder, [&](const nlohmann::json& data) {
                     RawTableLoader.Load(data);
                 });
 
-                auto blueprintFolder = modFolder.path() / "blueprints";
+                auto blueprintFolder = modPath / constants::blueprintsFolder;
                 ParseJsonFilesInPath(blueprintFolder, [&](const nlohmann::json& data) {
                     BlueprintModLoader.LoadSafe(data);
                 });
             }
-            catch (const std::exception&)
+            catch (const std::exception& e)
             {
-                listOfModsWithErrors.push_back(modName);
+                PS::Log<LogLevel::Error>(STR("Failed to load mod {} - {}\n"), modName, RC::to_generic_string(e.what()));
             }
         });
         PS::Log<LogLevel::Verbose>(STR("Finished loading raw tables and blueprint mods.\n"));
-
-        auto errorCount = listOfModsWithErrors.size();
-        m_errorCount += errorCount;
 
         // Should in theory be more consistent than finding a signature for BlueprintGeneratedClass::PostLoad
         auto BlueprintGeneratedClass = UECustom::UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.BlueprintGeneratedClass"), false);
@@ -354,78 +307,78 @@ namespace Palworld {
         ItemModLoader.Initialize();
         SkinModLoader.Initialize();
         HelpGuideModLoader.Initialize();
-
-        Load();
-
         PS::Log<LogLevel::Verbose>(STR("Initialized Loaders\n"));
+        PS::Log<LogLevel::Normal>(STR("Loading mods...\n"));
+
+        auto loadErrorCallback = [](const fs::path::string_type& modName, const std::exception& e) {
+            PS::Log<LogLevel::Error>(STR("Failed to load mod {} - {}\n"), modName, RC::to_generic_string(e.what()));
+        };
+        Load(loadErrorCallback);
+
+        PS::Log<LogLevel::Normal>(STR("Finished loading mods.\n"));
     }
 
-    void PalMainLoader::Load()
+    void PalMainLoader::Load(const std::function<void(const fs::path::string_type&, const std::exception&)>& errorCallback)
 	{
-        std::vector<fs::path::string_type> listOfModsWithErrors;
-
-        PS::Log<LogLevel::Verbose>(STR("Loading mods...\n"));
-        IterateModsFolder([&](const fs::directory_entry& modFolder) {
-            auto& modsPath = modFolder.path();
-            auto modName = modsPath.stem().native();
-
+        IterateModsFolder([&](const fs::path& modPath, const fs::path::string_type& modName)
+        {
             try
             {
                 PS::Log<RC::LogLevel::Normal>(STR("Loading mod: {}\n"), modName);
+
+                auto translationsFolder = modPath / constants::translationsFolder;
+                LoadLanguageMods(translationsFolder);
                 
-                auto palFolder = modsPath / "pals";
+                auto palFolder = modPath / constants::palsFolder;
                 ParseJsonFilesInPath(palFolder, [&](const nlohmann::json& data) {
                     MonsterModLoader.Load(data);
                 });
 
-                auto npcFolder = modsPath / "npcs";
+                auto npcFolder = modPath / constants::npcsFolder;
                 ParseJsonFilesInPath(npcFolder, [&](const nlohmann::json& data) {
                     HumanModLoader.Load(data);
                 });
 
-                auto appearanceFolder = modsPath / "appearance";
+                auto appearanceFolder = modPath / constants::appearanceFolder;
                 ParseJsonFilesInPath(appearanceFolder, [&](const nlohmann::json& data) {
                     AppearanceModLoader.Load(data);
                 });
 
-                auto buildingsFolder = modsPath / "buildings";
+                auto buildingsFolder = modPath / constants::buildingsFolder;
                 ParseJsonFilesInPath(buildingsFolder, [&](const nlohmann::json& data) {
                     BuildingModLoader.Load(data);
                 });
 
-                auto itemsFolder = modsPath / "items";
+                auto itemsFolder = modPath / constants::itemsFolder;
                 ParseJsonFilesInPath(itemsFolder, [&](const nlohmann::json& data) {
                     ItemModLoader.Load(data);
                 });
 
-                auto skinsFolder = modsPath / "skins";
+                auto skinsFolder = modPath / constants::skinsFolder;
                 ParseJsonFilesInPath(skinsFolder, [&](const nlohmann::json& data) {
                     SkinModLoader.Load(data);
                 });
 
-                auto helpguideFolder = modsPath / "helpguide";
+                auto helpguideFolder = modPath / constants::helpguideFolder;
                 ParseJsonFilesInPath(helpguideFolder, [&](const nlohmann::json& data) {
                     HelpGuideModLoader.Load(data);
                 });
 
-                auto translationsFolder = modsPath / "translations";
-                LoadLanguageMods(translationsFolder);
+                auto rawFolder = modPath / constants::rawFolder;
+                ParseJsonFilesInPath(rawFolder, [&](const nlohmann::json& data) {
+                    RawTableLoader.Reload(data);
+                });
 
-                auto blueprintFolder = modFolder.path() / "blueprints";
+                auto blueprintFolder = modPath / constants::blueprintsFolder;
                 ParseJsonFilesInPath(blueprintFolder, [&](const nlohmann::json& data) {
                     BlueprintModLoader.Load(data);
                 });
             }
-            catch (const std::exception&)
+            catch (const std::exception& e)
             {
-                listOfModsWithErrors.push_back(modName);
+                errorCallback(modName, e);
             }
         });
-
-        auto errorCount = listOfModsWithErrors.size();
-        m_errorCount += errorCount;
-
-        PS::Log<LogLevel::Verbose>(STR("Finished loading mods.\n"));
 	}
 
 	void PalMainLoader::LoadLanguageMods(const std::filesystem::path& path)
@@ -457,10 +410,8 @@ namespace Palworld {
         EnumLoader.Initialize();
 
         PS::Log<LogLevel::Verbose>(STR("Loading custom enums...\n"));
-        IterateModsFolder([&](const fs::directory_entry& modFolder) {
-            auto& modsPath = modFolder.path();
-            auto modName = modsPath.stem().native();
-            auto enumsFolder = modFolder.path() / "enums";
+        IterateModsFolder([&](const fs::path& modPath, const fs::path::string_type& modName) {
+            auto enumsFolder = modPath / constants::enumsFolder;
             ParseJsonFilesInPath(enumsFolder, [&](nlohmann::json data) {
                 try
                 {
@@ -476,7 +427,7 @@ namespace Palworld {
         PS::Log<LogLevel::Verbose>(STR("Finished loading custom enums.\n"));
     }
 
-    void PalMainLoader::IterateModsFolder(const std::function<void(const std::filesystem::directory_entry&)>& callback)
+    void PalMainLoader::IterateModsFolder(const std::function<void(const std::filesystem::path&, const std::filesystem::path::string_type&)>& callback)
     {
         auto cwd = fs::path(UE4SSProgram::get_program().get_working_directory()) / "Mods" / "PalSchema" / "mods";
         if (fs::exists(cwd))
@@ -484,7 +435,9 @@ namespace Palworld {
             for (const auto& entry : fs::directory_iterator(cwd)) {
                 if (entry.is_directory())
                 {
-                    callback(entry);
+                    auto& path = entry.path();
+                    auto folderName = path.stem().native();
+                    callback(entry.path(), folderName);
                 }
             }
         }
