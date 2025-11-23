@@ -20,6 +20,21 @@ using namespace RC::Unreal;
 
 namespace fs = std::filesystem;
 
+namespace constants {
+    // FOLDERS //
+    constexpr std::string appearanceFolder      = "appearance";
+    constexpr std::string blueprintsFolder      = "blueprints";
+    constexpr std::string buildingsFolder       = "buildings";
+    constexpr std::string enumsFolder           = "enums";
+    constexpr std::string helpguideFolder       = "helpguide";
+    constexpr std::string itemsFolder           = "items";
+    constexpr std::string npcsFolder            = "npcs";
+    constexpr std::string palsFolder            = "pals";
+    constexpr std::string rawFolder             = "raw";
+    constexpr std::string skinsFolder           = "skins";
+    constexpr std::string translationsFolder    = "translations";
+}
+
 namespace Palworld {
     PalMainLoader::PalMainLoader() {}
 
