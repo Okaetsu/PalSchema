@@ -72,7 +72,7 @@ namespace Palworld {
             PS::Log<LogLevel::Verbose>(STR("Fetching current language from Kismet Internationalization Library...\n"));
             auto language = Palworld::UKismetInternationalizationLibrary::GetCurrentLanguage();
             m_currentLanguage = RC::to_string(*language);
-            PS::Log<RC::LogLevel::Normal>(STR("Language override not set, using system language ({}).\n"), language.GetCharArray());
+            PS::Log<RC::LogLevel::Normal>(STR("Language override not set, using system language ({}).\n"), *language);
         }
         else
         {

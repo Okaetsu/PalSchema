@@ -5,6 +5,7 @@
 #include "Unreal/NameTypes.hpp"
 #include "Unreal/Engine/UDataTable.hpp"
 #include "SDK/Classes/UCompositeDataTable.h"
+#include "SDK/Classes/Custom/UDataTableStore.h"
 #include "SDK/Structs/Custom/FManagedStruct.h"
 #include "SDK/Helper/PropertyHelper.h"
 #include "Utility/Logging.h"
@@ -118,11 +119,9 @@ namespace Palworld {
     {
         for (auto& [Key, Value] : Data.items())
         {
-            auto KeyWide = RC::to_generic_string(Key);
-            auto TableIt = m_tableMap.find(KeyWide);
-            if (TableIt != m_tableMap.end())
+            auto Table = UECustom::UDataTableStore::GetTableByName(Key);
+            if (Table)
             {
-                auto Table = TableIt->second;
                 auto Name = Table->GetNamePrivate().ToString();
                 LoadResult Result;
                 Apply(Value, Table, Result);

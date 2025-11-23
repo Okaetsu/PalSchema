@@ -40,7 +40,6 @@ namespace Palworld {
         void Reload(const nlohmann::json& Data);
     private:
         std::unordered_map<RC::StringType, std::vector<nlohmann::json>> m_tableDataMap;
-        std::unordered_map<RC::StringType, RC::Unreal::UDataTable*> m_tableMap;
 
         void HandleFilters(RC::Unreal::UDataTable* Table, const nlohmann::json& Data, LoadResult& OutResult);
 
