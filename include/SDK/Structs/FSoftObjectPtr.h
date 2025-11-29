@@ -15,7 +15,7 @@ namespace UECustom {
         {
         }
 
-        explicit FORCEINLINE FSoftObjectPtr(const FSoftObjectPtr& ObjectPtr) : TPersistentObjectPtr<FSoftObjectPath>(ObjectPtr.ObjectID)
+        FORCEINLINE FSoftObjectPtr(const FSoftObjectPtr& ObjectPtr) : TPersistentObjectPtr<FSoftObjectPath>(ObjectPtr.ObjectID)
         {
         }
     };

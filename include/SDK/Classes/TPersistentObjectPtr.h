@@ -1,6 +1,6 @@
 #pragma once
 
-#include "SDK/Structs/FWeakObjectPtr.h"
+#include "Unreal/FWeakObjectPtr.hpp"
 
 namespace UECustom {
     template<typename TObjectID>
@@ -17,15 +17,15 @@ namespace UECustom {
         {
         }
     public:
-        UECustom::FWeakObjectPtr WeakPtr;
+        RC::Unreal::FWeakObjectPtr WeakPtr;
         RC::Unreal::int32 TagAtLastTest;
         TObjectID ObjectID;
     public:
-        class UObject* Get() const
+        class RC::Unreal::UObject* Get() const
         {
             return WeakPtr.Get();
         }
-        class UObject* operator->() const
+        class RC::Unreal::UObject* operator->() const
         {
             return WeakPtr.Get();
         }

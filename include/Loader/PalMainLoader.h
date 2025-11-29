@@ -13,6 +13,7 @@
 #include "Loader/PalBlueprintModLoader.h"
 #include "Loader/PalEnumLoader.h"
 #include "Loader/PalHelpGuideModLoader.h"
+#include "Loader/PalResourceLoader.h"
 #include "FileWatch.hpp"
 
 namespace RC::Unreal {
@@ -51,6 +52,7 @@ namespace Palworld {
 		PalBlueprintModLoader BlueprintModLoader;
         PalEnumLoader EnumLoader;
 		PalHelpGuideModLoader HelpGuideModLoader;
+        PalResourceLoader ResourceLoader;
 
         std::unique_ptr<filewatch::FileWatch<std::wstring>> m_fileWatch;
 

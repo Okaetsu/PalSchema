@@ -310,10 +310,23 @@ namespace Palworld {
     void PropertyHelper::SetSoftObjectPropertyValueFromJsonValue(void* Data, RC::Unreal::FSoftObjectProperty* Property, const nlohmann::json& Value)
     {
         ValidateJsonValueType(Property, Value);
+        const std::string resourcePrefix = "$resource/";
 
         auto ParsedValue = Value.get<std::string>();
-        auto String = RC::to_generic_string(ParsedValue);
-        auto SoftObjectPtr = UECustom::TSoftObjectPtr<UObject>(UECustom::FSoftObjectPath(String));
+
+        RC::StringType PackagePath = RC::to_generic_string(ParsedValue);
+
+        if (ParsedValue.starts_with(resourcePrefix))
+        {
+            // Before: "$resource/modname/resourcename"
+            // After:  "modname/resourcename"
+            PackagePath = PackagePath.erase(0, resourcePrefix.length());
+
+            // "/Engine/Transient.PalSchema/Resources/modname/resourcename"
+            PackagePath = std::format(TEXT("/Engine/Transient.PalSchema/Resources/{}"), PackagePath);
+        }
+
+        auto SoftObjectPtr = UECustom::TSoftObjectPtr<UObject>(UECustom::FSoftObjectPath(PackagePath));
         FMemory::Memcpy(Data, &SoftObjectPtr, sizeof(UECustom::TSoftObjectPtr<UObject>));
     }
 
