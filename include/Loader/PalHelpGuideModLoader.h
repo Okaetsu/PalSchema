@@ -31,8 +31,6 @@ namespace Palworld {
 
 		void AddOrEditDescText(const RC::Unreal::FName& NoteId, const nlohmann::json& Data);
 
-		void AddOrEditTextureData(const RC::Unreal::FName& NoteId, const nlohmann::json& Data);
-
 		void DeleteRelatedData(const RC::Unreal::FName& NoteId);
 	};
 }
