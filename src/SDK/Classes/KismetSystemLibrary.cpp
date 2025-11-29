@@ -6,7 +6,20 @@ using namespace RC;
 using namespace RC::Unreal;
 
 namespace UECustom {
-	FSoftObjectPath UKismetSystemLibrary::MakeSoftObjectPath(const FString& Path)
+    void UKismetSystemLibrary::CollectGarbage()
+    {
+        static auto Function = UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, TEXT("/Script/Engine.KismetSystemLibrary:CollectGarbage"));
+
+        if (!Function)
+        {
+            PS::Log<LogLevel::Error>(STR("Function /Script/Engine.KismetSystemLibrary:CollectGarbage was invalid.\n"));
+            return;
+        }
+
+        GetDefaultObj()->ProcessEvent(Function, nullptr);
+    }
+
+    FSoftObjectPath UKismetSystemLibrary::MakeSoftObjectPath(const FString& Path)
 	{
 		static auto Function = UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, TEXT("/Script/Engine.KismetSystemLibrary:MakeSoftObjectPath"));
 
