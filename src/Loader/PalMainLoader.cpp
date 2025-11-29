@@ -33,6 +33,7 @@ namespace constants {
     constexpr std::string rawFolder             = "raw";
     constexpr std::string skinsFolder           = "skins";
     constexpr std::string translationsFolder    = "translations";
+    constexpr std::string resourcesFolder       = "resources";
 }
 
 namespace Palworld {
@@ -129,7 +130,20 @@ namespace Palworld {
                 if (change_type == filewatch::Event::modified)
                 {
                     auto ue4ssPath = fs::path(UE4SSProgram::get_program().get_working_directory());
-                    auto modFilePath = ue4ssPath / "Mods" / "PalSchema" / "mods" / path;
+                    auto modsPath = ue4ssPath / "Mods" / "PalSchema" / "mods";
+                    auto modFilePath = modsPath / path;
+
+                    auto subPath = fs::path(path);
+                    auto it = subPath.begin();
+                    if (std::distance(subPath.begin(), subPath.end()) < 2) {
+                        return;
+                    }
+
+                    auto modName = it->native();
+                    auto modPath = ue4ssPath / "Mods" / "PalSchema" / "mods" / modName;
+
+                    std::advance(it, 1);
+                    auto folderType = it->string();
 
                     std::ifstream f(modFilePath);
                     if (f.peek() == std::ifstream::traits_type::eof()) {
@@ -137,65 +151,59 @@ namespace Palworld {
                     }
                     f.close();
 
-                    UECustom::AsyncTask(UECustom::ENamedThreads::GameThread, [this, path, modFilePath]() {
-                        auto subPath = fs::path(path);
-                        auto it = subPath.begin();
-                        if (std::distance(subPath.begin(), subPath.end()) >= 2) {
-                            auto modName = it->native();
+                    UECustom::AsyncTask(UECustom::ENamedThreads::GameThread, [this, path, folderType, modName, modPath, modFilePath]() {
+                        try
+                        {
+                            ResourceLoader.Load(modPath);
 
-                            std::advance(it, 1);
-                            auto folderType = it->string();
-                            try
-                            {
-                                ParseJsonFileInPath(modFilePath, [&](const nlohmann::json& data) {
-                                    if (folderType == constants::palsFolder)
-                                    {
-                                        MonsterModLoader.Load(data);
-                                    }
-                                    else if (folderType == constants::appearanceFolder)
-                                    {
-                                        AppearanceModLoader.Load(data);
-                                    }
-                                    else if (folderType == constants::buildingsFolder)
-                                    {
-                                        BuildingModLoader.Load(data);
-                                    }
-                                    else if (folderType == constants::itemsFolder)
-                                    {
-                                        ItemModLoader.Load(data);
-                                    }
-                                    else if (folderType == constants::skinsFolder)
-                                    {
-                                        SkinModLoader.Load(data);
-                                    }
-                                    else if (folderType == constants::helpguideFolder)
-                                    {
-                                        HelpGuideModLoader.Load(data);
-                                    }
-                                    else if (folderType == constants::translationsFolder)
-                                    {
-                                        LanguageModLoader.Load(data);
-                                    }
-                                    else if (folderType == constants::blueprintsFolder)
-                                    {
-                                        BlueprintModLoader.Load(data);
-                                    }
-                                    else if (folderType == constants::npcsFolder)
-                                    {
-                                        HumanModLoader.Load(data);
-                                    }
-                                    else if (folderType == constants::rawFolder)
-                                    {
-                                        RawTableLoader.Reload(data);
-                                    }
-                                });
+                            ParseJsonFileInPath(modFilePath, [&](const nlohmann::json& data) {
+                                if (folderType == constants::palsFolder)
+                                {
+                                    MonsterModLoader.Load(data);
+                                }
+                                else if (folderType == constants::appearanceFolder)
+                                {
+                                    AppearanceModLoader.Load(data);
+                                }
+                                else if (folderType == constants::buildingsFolder)
+                                {
+                                    BuildingModLoader.Load(data);
+                                }
+                                else if (folderType == constants::itemsFolder)
+                                {
+                                    ItemModLoader.Load(data);
+                                }
+                                else if (folderType == constants::skinsFolder)
+                                {
+                                    SkinModLoader.Load(data);
+                                }
+                                else if (folderType == constants::helpguideFolder)
+                                {
+                                    HelpGuideModLoader.Load(data);
+                                }
+                                else if (folderType == constants::translationsFolder)
+                                {
+                                    LanguageModLoader.Load(data);
+                                }
+                                else if (folderType == constants::blueprintsFolder)
+                                {
+                                    BlueprintModLoader.Load(data);
+                                }
+                                else if (folderType == constants::npcsFolder)
+                                {
+                                    HumanModLoader.Load(data);
+                                }
+                                else if (folderType == constants::rawFolder)
+                                {
+                                    RawTableLoader.Reload(data);
+                                }
+                            });
 
-                                PS::Log<LogLevel::Normal>(STR("Auto-reloaded mod {}\n"), modName);
-                            }
-                            catch (const std::exception& e)
-                            {
-                                PS::Log<LogLevel::Error>(STR("Failed to auto-reload mod {} - {}\n"), modName, RC::to_generic_string(e.what()));
-                            }
+                            PS::Log<LogLevel::Normal>(STR("Auto-reloaded mod {}\n"), modName);
+                        }
+                        catch (const std::exception& e)
+                        {
+                            PS::Log<LogLevel::Error>(STR("Failed to auto-reload mod {} - {}\n"), modName, RC::to_generic_string(e.what()));
                         }
                     });
                 }
@@ -325,6 +333,8 @@ namespace Palworld {
             try
             {
                 PS::Log<RC::LogLevel::Normal>(STR("Loading mod: {}\n"), modName);
+
+                ResourceLoader.Load(modPath);
 
                 auto translationsFolder = modPath / constants::translationsFolder;
                 LoadLanguageMods(translationsFolder);
