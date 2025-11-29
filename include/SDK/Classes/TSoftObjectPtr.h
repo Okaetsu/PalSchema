@@ -24,7 +24,7 @@ namespace UECustom {
         {
         }
 
-        FSoftObjectPtr Get() const
+        const FSoftObjectPtr Get() const
         {
             return SoftObjectPtr;
         }
