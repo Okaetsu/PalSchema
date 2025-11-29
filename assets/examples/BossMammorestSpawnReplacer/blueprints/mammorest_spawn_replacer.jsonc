@@ -1,0 +1,25 @@
+// This replaces Alpha Mammorest's spawn at Plateau of Beginnings with an Alpha Cattiva
+{
+    // It's important to use the full path for Spawner blueprints, because otherwise the changes don't get applied properly.
+    // This is a Pal Schema limitation currently and it is unconfirmed when and if it will be fixed.
+    "/Game/Pal/Blueprint/Spawner/SheetsVariant/BP_PalSpawner_Sheets_81_1_grass_FBOSS_1.BP_PalSpawner_Sheets_81_1_grass_FBOSS_1_C": {
+
+        // In FModel you might see something like SpawnGroupList[12], make sure you call it SpawnGroupList here because the [numberhere] is something FModel adds.
+        "SpawnGroupList": [
+            {
+                "PalList": [
+                {
+                    "PalId": {
+                        // Alpha Cattiva's Id is BOSS_PinkCat
+                        "Key": "BOSS_PinkCat"
+                    },
+                    "Level": 38,
+                    "Level_Max": 38,
+                    "Num": 1,
+                    "Num_Max": 1
+                }
+                ]
+            }
+        ]
+    }
+}

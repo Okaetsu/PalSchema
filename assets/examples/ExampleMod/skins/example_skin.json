@@ -1,0 +1,11 @@
+{
+    "Mod_WeaselDragon_Skin005": {
+        "Name": "My First Chillet Skin",
+        "NormalCharacterClass": "/Game/Pal/Blueprint/Character/Monster/PalActorBP/PinkCat/BP_PinkCat_Skin001.BP_PinkCat_Skin001_C",
+        "BossCharacterClass": "/Game/Pal/Blueprint/Character/Monster/PalActorBP/PinkCat/BP_PinkCat_BOSS_Skin001.BP_PinkCat_BOSS_Skin001_C",
+        "SkinType": "Pal",
+        "TargetPalName": "WeaselDragon",
+        "bAutoGetItem": true,
+        "IconTexture": "/Game/Pal/Texture/PalIcon/SKin/T_PinkCat_Skin001_icon_normal.T_PinkCat_Skin001_icon_normal"
+    }
+}

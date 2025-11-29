@@ -1,0 +1,14 @@
+// In this example we replace Anubis with Lunaris because Lunaris is superior.
+{
+    // Name of the table we're editing
+    "DT_PalBPClass": {
+        // Name of the row we're editing inside the table. Anubis = Anubis, see list of IDs here: https://paldb.cc/en/Mods#Pals
+        "Anubis": {
+            "BPClass": "/Game/Pal/Blueprint/Character/Monster/PalActorBP/Mutant/BP_Mutant.BP_Mutant_C"
+        },
+        // Name of the row we're editing inside the table. Boss_Anubis = Anubis (Alpha), see list of IDs here: https://paldb.cc/en/Mods#Pals
+        "Boss_Anubis": {
+            "BPClass": "/Game/Pal/Blueprint/Character/Monster/PalActorBP/Mutant/BP_Mutant_BOSS.BP_Mutant_BOSS_C"
+        }
+    }
+}

@@ -1,0 +1,10 @@
+// This example buffs the Kindling suitability of Foxparks from 1 to 2
+{
+    // Name of the table we're editing
+    "DT_PalMonsterParameter": {
+        // Name of the row we're editing inside the table. Kitsunebi = Foxparks, see list of IDs here: https://paldb.cc/en/Mods#Pals
+        "Kitsunebi": {
+            "WorkSuitability_EmitFlame": 2
+        }
+    }
+}

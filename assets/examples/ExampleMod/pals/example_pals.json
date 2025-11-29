@@ -1,0 +1,24 @@
+{
+    "PinkCat": {
+        "Loot": [
+            {
+                "ItemId": "Wool",
+                "DropChance": 100.0,
+                "Min": 1,
+                "Max": 4
+            },
+            {
+                "ItemId": "Stone",
+                "DropChance": 100.0,
+                "Min": 5,
+                "Max": 10
+            },
+            {
+                "ItemId": "Accessory_CoolResist_1",
+                "DropChance": 50.0,
+                "Min": 1,
+                "Max": 1
+            }
+        ]
+    }
+}
