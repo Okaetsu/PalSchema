@@ -1,0 +1,119 @@
+{
+    "MyNewHair": {
+        "Type": "Hair",
+        "SkeletalMesh": "/Game/Pal/Model/Character/Player/Hair/Hair001/SK_Player_Hair001.SK_Player_Hair001",
+        "IconTexture": "/Game/Pal/Texture/UI/CharaCre/icon_hair/T_icon_characre_hair_000.T_icon_characre_hair_000",
+        "ABPAsset": "/Game/Pal/Blueprint/Character/Player/Imp_Hair/ABP_Player_Hair001_Implementation.ABP_Player_Hair001_Implementation_C"
+    },
+    "MyNewHair2": {
+        "Type": "Hair",
+        "SkeletalMesh": "/Game/Pal/Model/Character/Player/Hair/Hair001/SK_Player_Hair001.SK_Player_Hair001",
+        "IconTexture": "/Game/Pal/Texture/UI/CharaCre/icon_hair/T_icon_characre_hair_000.T_icon_characre_hair_000",
+        "ABPAsset": "/Game/Pal/Blueprint/Character/Player/Imp_Hair/ABP_Player_Hair001_Implementation.ABP_Player_Hair001_Implementation_C"
+    },
+    "MyNewHair3": {
+        "Type": "Hair",
+        "SkeletalMesh": "/Game/Pal/Model/Character/Player/Hair/Hair001/SK_Player_Hair001.SK_Player_Hair001",
+        "IconTexture": "/Game/Pal/Texture/UI/CharaCre/icon_hair/T_icon_characre_hair_000.T_icon_characre_hair_000",
+        "ABPAsset": "/Game/Pal/Blueprint/Character/Player/Imp_Hair/ABP_Player_Hair001_Implementation.ABP_Player_Hair001_Implementation_C"
+    },
+    "MyNewHead1": {
+        "Type": "Head",
+        "SkeletalMesh": "/Game/Pal/Model/Character/Player/Head/Head003/SK_Player_Female_Head003.SK_Player_Female_Head003",
+        "SkeletalMesh_MaleHead": "/Game/Pal/Model/Character/Player/Head/Head003/SK_Player_Male_Head003.SK_Player_Male_Head003",
+        "IconTexture": "/Game/Pal/Texture/UI/CharaCre/Icon_Face/T_icon_characre_face_002.T_icon_characre_face_002"
+    },
+    "Default_EquipBody": {
+        "Type": "Equipment",
+        "SkeletalMeshMap": [
+            {
+                "Key": "TypeA",
+                "Value": "/Game/Pal/Model/Character/Player/Outfit/SK_Player_Female_Outfit_Plastic001/SK_Player_Female_Outfit_Plastic001_v04.SK_Player_Female_Outfit_Plastic001_v04"
+            },
+            {
+                "Key": "TypeB",
+                "Value": "/Game/Pal/Model/Character/Player/Outfit/SK_Player_Male_Outfit_Plastic001/SK_Player_Male_Outfit_Plastic001_v04.SK_Player_Male_Outfit_Plastic001_v04"
+            }
+        ],
+        "ABPAssetMap": [
+            {
+              "Key": "TypeA",
+              "Value": "/Game/Pal/Blueprint/Character/Player/Imp_Cloth/ABP_F_OldCloth001_Implimentation.ABP_F_OldCloth001_Implimentation_C"
+            },
+            {
+              "Key": "TypeB",
+              "Value": "/Game/Pal/Blueprint/Character/Player/Imp_Cloth/ABP_M_OldCloth001_Implimentation.ABP_M_OldCloth001_Implimentation_C"
+            }
+        ]
+    },
+    "HeadEquip028": {
+        "Type": "Equipment",
+        "SkeletalMeshMap": [
+            {
+                "Key": "TypeA",
+                "Value": "/Game/Pal/Model/Character/Player/HeadEquip/HeadEquip028/SK_HeadEquip028.SK_HeadEquip028"
+            },
+            {
+                "Key": "TypeB",
+                "Value": "/Game/Pal/Model/Character/Player/HeadEquip/HeadEquip028/SK_HeadEquip028.SK_HeadEquip028"
+            }
+        ],
+        "ABPAssetMap": [
+            {
+                "Key": "TypeA",
+                "Value": "/Game/Pal/Blueprint/Character/Player/HairAttachAccessory/ABP_HeadEquip028.ABP_HeadEquip028_C"
+            },
+            {
+                "Key": "TypeB",
+                "Value": "/Game/Pal/Blueprint/Character/Player/HairAttachAccessory/ABP_HeadEquip028.ABP_HeadEquip028_C"
+            }
+        ],
+        "IsHairAttachAccessory": true,
+        "HairAttachSocketNameMap": [
+            {
+                "Key": "TypeA",
+                "Value": "Socket_HairAttach_HeadEquip_top04"
+            },
+            {
+                "Key": "TypeB",
+                "Value": "Socket_HairAttach_HeadEquip_top04"
+            }
+        ]
+    },
+    "Modded_Eyes001": {
+        "Type": "Eyes",
+        "EyeMaterialInstance": "/Game/Pal/Model/Character/Player/Eye/Eye001/MI_Player_Eye001.MI_Player_Eye001",
+        "IconTexture": "/Game/Pal/Texture/UI/CharaCre/Icon_Eyes/T_icon_characre_eyes_000.T_icon_characre_eyes_000",
+        "ShiftUIDisplayEyeColor": {
+            "R": 1.0,
+            "G": 0.0,
+            "B": 0.0,
+            "A": 0.941177
+        }
+    },
+    "Skin": {
+        "Type": "ColorPreset",
+        "Colors": {
+            "Items": [
+                {
+                    "R": 1.0,
+                    "G": 1.0,
+                    "B": 0.0,
+                    "A": 1.0
+                },
+                {
+                    "R": 1.0,
+                    "G": 0.0,
+                    "B": 0.0,
+                    "A": 1.0
+                },
+                {
+                    "R": 0.0,
+                    "G": 0.0,
+                    "B": 1.0,
+                    "A": 1.0
+                }
+            ]
+        }
+    }
+}

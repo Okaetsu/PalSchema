@@ -1,0 +1,31 @@
+// In this example, we're adding Ingots and Refined Ingots to the Small Settlement item merchant.
+// Note: When modifying shops, it works purely serverside, meaning that the clients won't need to install the mod unless you've added custom modded items.
+{
+    // Name of the table we're editing
+    "DT_ItemShopCreateData": {
+        // Name of the row we're editing inside the table
+        "Village_Shop_1": {
+            // Name of the property we're editing inside the row.
+            // Notice how we're using an object instead of an array here. This tells Pal Schema to append to the end of the array instead of replacing it with a new one.
+            "productDataArray": {
+                // When defining arrays as an object, no matter the table, it must always have an Items property and this is where your array items will go.
+                "Items": [
+                    {
+                        "StaticItemId": "CopperIngot",
+                        "ProductType": "EPalItemShopProductType::Normal",
+                        "OverridePrice": 500, // OverridePrice can be used to force a custom price on an item.
+                        "ProductNum": 1,
+                        "Stock": 0
+                    },
+                    {
+                        "StaticItemId": "IronIngot",
+                        "ProductType": "EPalItemShopProductType::Normal",
+                        "OverridePrice": 1000,
+                        "ProductNum": 1,
+                        "Stock": 0
+                    }
+                ]
+            }
+        }
+    }
+}

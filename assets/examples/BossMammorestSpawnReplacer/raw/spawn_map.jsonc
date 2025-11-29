@@ -1,0 +1,8 @@
+{
+    // We will want to modify the icon of the boss on the map as well.
+    "DT_BossSpawnerLoactionData": {
+        "0": {
+            "CharacterID": "PinkCat"
+        }
+    }
+}

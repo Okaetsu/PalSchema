@@ -1,0 +1,18 @@
+{
+    // Name of the table we're editing
+    "DT_PalDropItem": {
+        // Name of the row we're editing inside the table. ChickenPal = Chikipi, see list of IDs here: https://paldb.cc/en/Mods#Pals
+        // The 000 at the end indicates the level of the Pal that should drop this loot, 0 being all levels.
+        "ChickenPal000": {
+            // ItemId1 and ItemId2 are already occupied and in this example we'll leave those alone and just add a new entry instead.
+            // Why does the Chikipi have Pizza anyway? Let's not dive too deep into that and just go on with the example.
+            // See here for all possible Item IDs: https://paldb.cc/en/Mods#Items
+            // Just make sure to be careful about items that aren't in the game because if they're removed by the developers at any point, it'll make the save file unloadable.
+            "ItemId3": "Pizza",
+
+            "Rate3": 100.0, // Rate is the chance to drop in % so this would be 100% chance. We're making it 100% here just to make it easier to test.
+            "min3": 1, // Minimum amount to drop
+            "Max3": 1 // Maximum amount to drop
+        }
+    }
+}

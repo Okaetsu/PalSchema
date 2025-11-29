@@ -1,0 +1,42 @@
+{
+    "Raspberry2": {
+        "Type": "Consumable",
+        "IconTexture": "/Game/Others/InventoryItemIcon/Texture/T_itemicon_Food_Berries.T_itemicon_Food_Berries",
+        "TypeA": "Food",
+        "TypeB": "FoodDishVegetable",
+        "Rank": 1,
+        "Rarity": 1,
+        "Price": 9999,
+        "MaxStackCount": 9999,
+        "SortID": 999999,
+        "Weight": 0.2,
+        "VisualBlueprintClassSoft": "/Game/Pal/Blueprint/Item/VisualModel/BP_Item_BerryRed.BP_Item_BerryRed_C",
+        "RestoreSatiety": 999,
+        "RestoreHP": 999,
+        "CorruptionFactor": 0.0,
+        "Recipe": {
+            "Product_Count": 1,
+            "WorkAmount": 10.0,
+            "Material1_Count": 1,
+            "Material1_Id": "Stone"
+        }
+    },
+    "Sword_Test": {
+        "Type": "Weapon",
+        "MagazineSize": 1,
+        "SneakAttackRate": 1.0,
+        "AttackValue": 500,
+        "ItemBaseName": "Sword",
+        "IconTexture": "/Game/Others/InventoryItemIcon/Texture/T_itemicon_Weapon_Sword.T_itemicon_Weapon_Sword",
+        "TypeA": "Weapon",
+        "TypeB": "WeaponMelee",
+        "Rank": 1,
+        "Rarity": 4,
+        "Price": 480,
+        "MaxStackCount": 1,
+        "SortID": 211,
+        "actorClass": "/Game/Pal/Blueprint/Weapon/BP_Sword.BP_Sword_C",
+        "Weight": 6.0,
+        "Durability": 150.0
+    }
+}

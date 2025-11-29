@@ -1,0 +1,7 @@
+{
+    // Name of the Blueprint that we want to edit, make sure to include the _C at the end of the name.
+    "BP_PalGameSetting_C": {
+        // SprintSP = Stamina consumption multiplier when sprinting.
+        "SprintSP": 0.5
+    }
+}

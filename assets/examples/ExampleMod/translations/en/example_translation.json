@@ -1,0 +1,18 @@
+{
+    "DT_PalNameText": {
+        "PAL_NAME_Anubis": "Anubis (Modified by PalSchema)",
+        "PAL_NAME_PinkCat": "Cattiva (Modified by PalSchema)",
+        "PAL_NAME_MyCustomPal": "My Custom Pal",
+        "PAL_NAME_MyCustomPal5": "My Custom Pal 5"
+    },
+    "DT_ItemNameText": {
+        "ITEM_NAME_Wood": "Wood (Modified by PalSchema)",
+        "ITEM_NAME_Stone": "Stone (Modified by PalSchema)"
+    },
+    "DT_UI_Common_Text": {
+        "SKIN_NAME_WeaselDragon_Skin001": "Summer Chillet (Modified by PalSchema)"
+    },
+    "DT_NpcTalkText": {
+        "NOVICE_PALTIMER_3_1": "Dialog Example\r\nModified text for Expedition Survivor who resides at Plateau of Beginnings."
+    }
+}

@@ -1,0 +1,29 @@
+// In this example, we're replacing the inventory of Small Settlement entirely with our own.
+// Note: When modifying shops, it works purely serverside, meaning that the clients won't need to install the mod unless you've added custom modded items.
+{
+    // Name of the table we're editing
+    "DT_ItemShopCreateData": {
+        // Name of the row we're editing inside the table
+        "Village_Shop_1": {
+            // Name of the property we're editing inside the row.
+            // Since we're defining productDataArray as an array, it'll overwrite the inventory of the Settlement merchant with the array we've specified here.
+            // This means that the merchant will only have Ingots and Refined Ingots for sale.
+            "productDataArray": [
+                {
+                    "StaticItemId": "CopperIngot",
+                    "ProductType": "EPalItemShopProductType::Normal",
+                    "OverridePrice": 500, // OverridePrice can be used to force a custom price on an item.
+                    "ProductNum": 1,
+                    "Stock": 0
+                },
+                {
+                    "StaticItemId": "IronIngot",
+                    "ProductType": "EPalItemShopProductType::Normal",
+                    "OverridePrice": 1000,
+                    "ProductNum": 1,
+                    "Stock": 0
+                }
+            ]
+        }
+    }
+}
