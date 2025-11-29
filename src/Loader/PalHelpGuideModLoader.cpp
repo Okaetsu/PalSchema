@@ -2,6 +2,8 @@
 #include "Unreal/UClass.hpp"
 #include "Unreal/UScriptStruct.hpp"
 #include "Unreal/Engine/UDataTable.hpp"
+#include "Unreal/FText.hpp"
+#include "SDK/Structs/Custom/FManagedStruct.h"
 #include "SDK/Classes/PalNoteDataAsset.h"
 #include "SDK/Classes/PalNoteData.h"
 #include "SDK/Helper/PropertyHelper.h"
@@ -69,7 +71,6 @@ namespace Palworld {
 				// Always update the DataTables
 				AddOrEditMasterData(NoteId, Value);
 				AddOrEditDescText(NoteId, Value);
-				AddOrEditTextureData(NoteId, Value);
 			}
 		}
 	}
@@ -81,25 +82,23 @@ namespace Palworld {
 			throw std::runtime_error("ID was set to None");
 		}
 
-		// Find the actual PalNoteData class from the game
-		UClass* DatabaseClass = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Pal.PalNoteData"));
-		
-		if (!DatabaseClass)
-		{
-			throw std::runtime_error("Failed to find PalNoteData class. The class may have been renamed or removed.");
-		}
+		UClass* PalNoteDataClass = UPalNoteData::StaticClass();
+		if (!PalNoteDataClass)
+        {
+            throw std::runtime_error("Failed to find PalNoteData class. The class may have been renamed or removed.");
+        }
 
-		if (!DatabaseClass->GetPropertyByNameInChain(STR("TextId_Description")))
-		{
-			throw std::runtime_error("Property 'TextId_Description' has changed in DA_HelpGuideDataAsset. Update to Pal Schema is needed.");
-		}
+        if (!PalNoteDataClass->GetPropertyByNameInChain(STR("TextId_Description")))
+        {
+            throw std::runtime_error("Property 'TextId_Description' has changed in DA_HelpGuideDataAsset. Update to Pal Schema is needed.");
+        }
 
-		if (!DatabaseClass->GetPropertyByNameInChain(STR("Texture")))
+        if (!PalNoteDataClass->GetPropertyByNameInChain(STR("Texture")))
 		{
 			throw std::runtime_error("Property 'Texture' has changed in DA_HelpGuideDataAsset. Update to Pal Schema is needed.");
 		}
 
-		FStaticConstructObjectParameters ConstructParams(DatabaseClass, m_helpGuideDataAsset);
+		FStaticConstructObjectParameters ConstructParams(PalNoteDataClass, m_helpGuideDataAsset);
 		ConstructParams.Name = NAME_None;
 
 		auto NoteData = UObjectGlobals::StaticConstructObject<UPalNoteData*>(ConstructParams);
@@ -111,15 +110,11 @@ namespace Palworld {
 			*TextIdProperty = NoteId;
 		}
 
-		// Iterate through all properties and copy from JSON
-		for (auto& Property : DatabaseClass->ForEachPropertyInChain())
-		{
-			auto PropertyName = RC::to_string(Property->GetName());
-			if (Data.contains(PropertyName))
-			{
-				PropertyHelper::CopyJsonValueToContainer(reinterpret_cast<uint8_t*>(NoteData), Property, Data.at(PropertyName));
-			}
-		}
+        if (Data.contains("Texture"))
+        {
+            auto TextureProperty = NoteData->GetPropertyByNameInChain(STR("Texture"));
+            PropertyHelper::CopyJsonValueToContainer(reinterpret_cast<uint8_t*>(NoteData), TextureProperty, Data.at("Texture"));
+        }
 
 		m_helpGuideDataAsset->NoteDataMap.Add(NoteId, NoteData);
 	}
@@ -142,152 +137,83 @@ namespace Palworld {
 
 		auto TableRow = m_helpGuideMasterDataTable->FindRowUnchecked(NoteId);
 		auto TableRowStruct = m_helpGuideMasterDataTable->GetRowStruct().Get();
+        auto DescriptionProperty = TableRowStruct->GetPropertyByNameInChain(STR("TextId_Description"));
+        if (!DescriptionProperty)
+        {
+            PS::Log<RC::LogLevel::Error>(STR("Failed to add MasterData '{}': Property 'TextId_Description' doesn't exist in {}\n"), NoteId.ToString(), m_helpGuideMasterDataTable->GetName());
+            return;
+        }
 
 		if (TableRow)
 		{
-			// Edit existing row
-			try
-			{
-				if (Data.contains("TextId_Description"))
-				{
-					auto Property = TableRowStruct->GetPropertyByNameInChain(STR("TextId_Description"));
-					if (Property)
-					{
-						PropertyHelper::CopyJsonValueToContainer(TableRow, Property, Data.at("TextId_Description"));
-					}
-				}
-			}
-			catch (const std::exception& e)
-			{
-				PS::Log<RC::LogLevel::Error>(STR("Failed to modify MasterData '{}': {}\n"), NoteId.ToString(), RC::to_generic_string(e.what()));
-			}
+            auto Description = DescriptionProperty->ContainerPtrToValuePtr<FName>(TableRow);
+            *Description = NoteId;
 		}
 		else
 		{
-			// Add new row
-			auto RowData = FMemory::Malloc(TableRowStruct->GetStructureSize());
-			TableRowStruct->InitializeStruct(RowData);
+			auto RowData = FManagedStruct(TableRowStruct);
+            auto Description = DescriptionProperty->ContainerPtrToValuePtr<FName>(RowData.GetData());
+            *Description = NoteId;
 
-			try
-			{
-				// Set TextId_Description (default to NoteId if not provided)
-				auto Property = TableRowStruct->GetPropertyByNameInChain(STR("TextId_Description"));
-				if (Property)
-				{
-					if (Data.contains("TextId_Description"))
-					{
-						PropertyHelper::CopyJsonValueToContainer(RowData, Property, Data.at("TextId_Description"));
-					}
-					else
-					{
-						// Default to NoteId
-						PropertyHelper::CopyJsonValueToContainer(RowData, Property, RC::to_string(NoteId.ToString()));
-					}
-				}
-
-				m_helpGuideMasterDataTable->AddRow(NoteId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData));
-			}
-			catch (const std::exception& e)
-			{
-				FMemory::Free(RowData);
-				PS::Log<RC::LogLevel::Error>(STR("Failed to add MasterData '{}': {}\n"), NoteId.ToString(), RC::to_generic_string(e.what()));
-			}
+            m_helpGuideMasterDataTable->AddRow(NoteId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData.GetData()));
 		}
 	}
 
 	void PalHelpGuideModLoader::AddOrEditDescText(const RC::Unreal::FName& NoteId, const nlohmann::json& Data)
 	{
 		if (!m_helpGuideDescTextTable) return;
-		if (!Data.contains("TextData")) return; // Skip if no text data provided
+
+        std::string Title = "";
+        std::string Description = "";
+
+        if (Data.contains("Title") && Data.at("Title").is_string())
+        {
+            Title = Data.at("Title").get<std::string>();
+        }
+
+        if (Data.contains("Description") && Data.at("Description").is_string())
+        {
+            Description = Data.at("Description").get<std::string>();
+        }
+
+        if (Title == "")
+        {
+            Title = RC::to_string(NoteId.ToString());
+        }
+
+        if (!Title.ends_with("\r\n\r\n"))
+        {
+            Title = std::format("{}\r\n\r\n", Title);
+        }
 
 		auto TableRow = m_helpGuideDescTextTable->FindRowUnchecked(NoteId);
 		auto TableRowStruct = m_helpGuideDescTextTable->GetRowStruct().Get();
 
 		if (TableRow)
 		{
-			// Edit existing row
-			try
-			{
-				auto Property = TableRowStruct->GetPropertyByNameInChain(STR("TextData"));
-				if (Property)
-				{
-					PropertyHelper::CopyJsonValueToContainer(TableRow, Property, Data.at("TextData"));
-				}
-			}
-			catch (const std::exception& e)
-			{
-				PS::Log<RC::LogLevel::Error>(STR("Failed to modify DescText '{}': {}\n"), NoteId.ToString(), RC::to_generic_string(e.what()));
-			}
+            auto TextDataProperty = TableRowStruct->GetPropertyByNameInChain(STR("TextData"));
+            if (TextDataProperty)
+            {
+                auto TextData = TextDataProperty->ContainerPtrToValuePtr<FText>(TableRow);
+                auto FinalDescription = std::format("{}{}", Title, Description);
+                auto FinalDescriptionWide = RC::to_generic_string(FinalDescription);
+                *TextData = FText(FinalDescriptionWide.c_str());
+            }
 		}
 		else
 		{
-			// Add new row
-			auto RowData = FMemory::Malloc(TableRowStruct->GetStructureSize());
-			TableRowStruct->InitializeStruct(RowData);
+            auto RowData = FManagedStruct(TableRowStruct);
 
-			try
-			{
-				auto Property = TableRowStruct->GetPropertyByNameInChain(STR("TextData"));
-				if (Property)
-				{
-					PropertyHelper::CopyJsonValueToContainer(RowData, Property, Data.at("TextData"));
-				}
+            auto TextDataProperty = TableRowStruct->GetPropertyByNameInChain(STR("TextData"));
+            if (TextDataProperty)
+            {
+                auto TextData = TextDataProperty->ContainerPtrToValuePtr<FText>(RowData.GetData());
+                auto FinalDescription = std::format("{}{}", Title, Description);
+                auto FinalDescriptionWide = RC::to_generic_string(FinalDescription);
+                *TextData = FText(FinalDescriptionWide.c_str());
+            }
 
-				m_helpGuideDescTextTable->AddRow(NoteId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData));
-			}
-			catch (const std::exception& e)
-			{
-				FMemory::Free(RowData);
-				PS::Log<RC::LogLevel::Error>(STR("Failed to add DescText '{}': {}\n"), NoteId.ToString(), RC::to_generic_string(e.what()));
-			}
-		}
-	}
-
-	void PalHelpGuideModLoader::AddOrEditTextureData(const RC::Unreal::FName& NoteId, const nlohmann::json& Data)
-	{
-		if (!m_helpGuideTextureDataTable) return;
-		if (!Data.contains("Texture")) return; // Skip if no texture provided
-
-		auto TableRow = m_helpGuideTextureDataTable->FindRowUnchecked(NoteId);
-		auto TableRowStruct = m_helpGuideTextureDataTable->GetRowStruct().Get();
-
-		if (TableRow)
-		{
-			// Edit existing row
-			try
-			{
-				auto Property = TableRowStruct->GetPropertyByNameInChain(STR("Texture"));
-				if (Property)
-				{
-					PropertyHelper::CopyJsonValueToContainer(TableRow, Property, Data.at("Texture"));
-				}
-			}
-			catch (const std::exception& e)
-			{
-				PS::Log<RC::LogLevel::Error>(STR("Failed to modify TextureData '{}': {}\n"), NoteId.ToString(), RC::to_generic_string(e.what()));
-			}
-		}
-		else
-		{
-			// Add new row
-			auto RowData = FMemory::Malloc(TableRowStruct->GetStructureSize());
-			TableRowStruct->InitializeStruct(RowData);
-
-			try
-			{
-				auto Property = TableRowStruct->GetPropertyByNameInChain(STR("Texture"));
-				if (Property)
-				{
-					PropertyHelper::CopyJsonValueToContainer(RowData, Property, Data.at("Texture"));
-				}
-
-				m_helpGuideTextureDataTable->AddRow(NoteId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData));
-			}
-			catch (const std::exception& e)
-			{
-				FMemory::Free(RowData);
-				PS::Log<RC::LogLevel::Error>(STR("Failed to add TextureData '{}': {}\n"), NoteId.ToString(), RC::to_generic_string(e.what()));
-			}
+            m_helpGuideDescTextTable->AddRow(NoteId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData.GetData()));
 		}
 	}
 
