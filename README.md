@@ -17,13 +17,28 @@ Documentation for modders can be found [here](https://okaetsu.github.io/PalSchem
 
 3. Execute this command: `git submodule update --init --recursive`
 
-4. And then execute the following:
+4. Execute the following based on which build tool you're using (XMake or CMake):  
+
+XMake
+-----
 ```
 xmake f -m Game__Shipping__Win64 -y
 xmake project -k vsxmake2022 -m Game__Shipping__Win64 -y
 ```
 
-Alternatively you can just run `generate_build_files.bat` in build_scripts instead of running the command in Step 4.
+CMake
+-----
+Choose either MSVC or Ninja
+
+MSVC (multi-configuration, slower, allows switching configs without reconfiguring)
+```
+cmake -B build -G "Visual Studio 17 2022"
+```
+
+or with Ninja (single-configuration, faster)
+```
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Win64
+```
 
 # Mods using PalSchema
 
