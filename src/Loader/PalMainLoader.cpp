@@ -96,6 +96,17 @@ namespace Palworld {
             PS::Log<LogLevel::Error>(STR("Unable to apply dummy item fix, signature for UPalStaticItemDataTable::Get is outdated.\n"));
         }
 
+        auto StreamingCell_Activate_Signature = Palworld::SignatureManager::GetSignature("UWorldPartitionRuntimeLevelStreamingCell::Activate");
+        if (StreamingCell_Activate_Signature)
+        {
+            StreamingCell_Activate_Callbacks.push_back([&](UECustom::UWorldPartitionRuntimeLevelStreamingCell* Cell) {
+                HumanModLoader.OnCellLoaded(Cell);
+            });
+
+            UWorldPartitionRuntimeLevelStreamingCell_Activate_Hook = safetyhook::create_inline(reinterpret_cast<void*>(StreamingCell_Activate_Signature),
+                UWorldPartitionRuntimeLevelStreamingCell_Activate);
+        }
+
         SetupAlternativePakPathReader();
     }
 
@@ -581,5 +592,14 @@ namespace Palworld {
         // Instead, we'll generate a dummy item for that ItemId and return it.
         // Subsequent calls to this hook with the same ItemId will just return in the first if block since it was added to StaticItemDataAsset.
         return PalItemModLoader::AddDummyItem(This, ItemId);
+    }
+
+    void PalMainLoader::UWorldPartitionRuntimeLevelStreamingCell_Activate(UECustom::UWorldPartitionRuntimeLevelStreamingCell* This)
+    {
+        UWorldPartitionRuntimeLevelStreamingCell_Activate_Hook.call(This);
+        for (auto& Callback : StreamingCell_Activate_Callbacks)
+        {
+            Callback(This);
+        }
     }
 }

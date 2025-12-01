@@ -1,13 +1,24 @@
 #pragma once
 
+#include <set>
 #include "Loader/PalModLoaderBase.h"
 #include "nlohmann/json.hpp"
+#include "SDK/Structs/FVector.h"
 
 namespace RC::Unreal {
     class UDataTable;
 }
 
+namespace UECustom {
+    class UWorldPartitionRuntimeLevelStreamingCell;
+}
+
 namespace Palworld {
+    struct PalHumanSpawnParams {
+        RC::Unreal::FVector Location;
+        RC::Unreal::FName CharacterId;
+    };
+
 	class PalHumanModLoader : public PalModLoaderBase {
 	public:
 		PalHumanModLoader();
@@ -28,22 +39,32 @@ namespace Palworld {
 
 		void AddLoot(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties);
 
+		void AddSpawn(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties);
+
 		void AddTranslations(const RC::Unreal::FName& CharacterId, const nlohmann::json& Data);
 
         void EditTranslations(const RC::Unreal::FName& CharacterId, const nlohmann::json& Data);
 
 		void AddShop(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties);
 
-		RC::Unreal::UDataTable* n_dataTable;
-		RC::Unreal::UDataTable* n_iconDataTable;
-		RC::Unreal::UDataTable* n_palBpClassTable;
-		RC::Unreal::UDataTable* n_dropItemTable;
-		RC::Unreal::UDataTable* n_npcNameTable;
-        RC::Unreal::UDataTable* n_palShortDescTable;
-        RC::Unreal::UDataTable* n_palLongDescTable;
-		RC::Unreal::UDataTable* n_npcTalkFlowTable;
-		RC::Unreal::UDataTable* n_ItemShopLotteryDataTable;
-		RC::Unreal::UDataTable* n_ItemShopCreateDataTable;
-		RC::Unreal::UDataTable* n_ItemShopSettingDataTable;
+        // This is called whenever a world partition is loaded within the main world.
+        void OnCellLoaded(UECustom::UWorldPartitionRuntimeLevelStreamingCell* cell);
+
+        void SpawnNPC(UECustom::UWorldPartitionRuntimeLevelStreamingCell* cell, const PalHumanSpawnParams& params);
+
+        std::vector<PalHumanSpawnParams> m_spawns;
+        std::set<UECustom::FVector> m_occupiedLocations;
+
+		RC::Unreal::UDataTable* n_dataTable = nullptr;
+		RC::Unreal::UDataTable* n_iconDataTable = nullptr;
+		RC::Unreal::UDataTable* n_palBpClassTable = nullptr;
+		RC::Unreal::UDataTable* n_dropItemTable = nullptr;
+		RC::Unreal::UDataTable* n_npcNameTable = nullptr;
+        RC::Unreal::UDataTable* n_palShortDescTable = nullptr;
+        RC::Unreal::UDataTable* n_palLongDescTable = nullptr;
+		RC::Unreal::UDataTable* n_npcTalkFlowTable = nullptr;
+		RC::Unreal::UDataTable* n_ItemShopLotteryDataTable = nullptr;
+		RC::Unreal::UDataTable* n_ItemShopCreateDataTable = nullptr;
+		RC::Unreal::UDataTable* n_ItemShopSettingDataTable = nullptr;
 	};
 }
