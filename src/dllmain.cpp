@@ -62,30 +62,32 @@ public:
 
     auto on_ui_init() -> void override
     {
-        if (UE4SSProgram::settings_manager.Debug.DebugConsoleVisible)
+        if (!UE4SSProgram::settings_manager.Debug.DebugConsoleEnabled)
         {
-            PS::Log<LogLevel::Verbose>(STR("GUI Console is visible, enabling ImGui for PalSchema...\n"));
-
-            UE4SS_ENABLE_IMGUI()
-
-            PS::Log<LogLevel::Verbose>(STR("Registering Pal Schema tab in GUI Console...\n"));
-            register_tab(STR("Pal Schema"), [](CppUserModBase* instance) {
-                auto mod = dynamic_cast<PalSchema*>(instance);
-                if (!mod)
-                {
-                    return;
-                }
-
-                if (ImGui::Button("Reload Schema Mods"))
-                {
-                    UECustom::AsyncTask(UECustom::ENamedThreads::GameThread, [mod]() {
-                        mod->reload_mods();
-                    });
-                }
-            });
-
-            PS::Log<LogLevel::Verbose>(STR("Finished registering Pal Schema tab for GUI Console.\n"));
+            return;
         }
+
+        PS::Log<LogLevel::Verbose>(STR("GUI Console is enabled, enabling ImGui for PalSchema...\n"));
+
+        UE4SS_ENABLE_IMGUI()
+
+        PS::Log<LogLevel::Verbose>(STR("Registering Pal Schema tab in GUI Console...\n"));
+        register_tab(STR("Pal Schema"), [](CppUserModBase* instance) {
+            auto mod = dynamic_cast<PalSchema*>(instance);
+            if (!mod)
+            {
+                return;
+            }
+
+            if (ImGui::Button("Reload Schema Mods"))
+            {
+                UECustom::AsyncTask(UECustom::ENamedThreads::GameThread, [mod]() {
+                    mod->reload_mods();
+                    });
+            }
+        });
+
+        PS::Log<LogLevel::Verbose>(STR("Finished registering Pal Schema tab for GUI Console.\n"));
     }
 
     auto on_update() -> void override
