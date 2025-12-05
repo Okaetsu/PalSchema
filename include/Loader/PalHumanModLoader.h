@@ -19,6 +19,8 @@ namespace Palworld {
         RC::Unreal::FName CharacterId;
     };
 
+    class AMonoNPCSpawner;
+
 	class PalHumanModLoader : public PalModLoaderBase {
 	public:
 		PalHumanModLoader();
@@ -29,6 +31,9 @@ namespace Palworld {
 
 		virtual void Load(const nlohmann::json& json) override final;
 
+        // This is called whenever a world partition is loaded within the main world.
+        void OnCellLoaded(UECustom::UWorldPartitionRuntimeLevelStreamingCell* cell);
+    private:
 		void Add(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties);
 
         void Edit(uint8_t* TableRow, const RC::Unreal::FName& CharacterId, const nlohmann::json& properties);
@@ -47,12 +52,10 @@ namespace Palworld {
 
 		void AddShop(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties);
 
-        // This is called whenever a world partition is loaded within the main world.
-        void OnCellLoaded(UECustom::UWorldPartitionRuntimeLevelStreamingCell* cell);
-
         void SpawnNPC(UECustom::UWorldPartitionRuntimeLevelStreamingCell* cell, const PalHumanSpawnParams& params);
 
         std::vector<PalHumanSpawnParams> m_spawns;
+        std::vector<AMonoNPCSpawner*> m_spawners;
         std::set<UECustom::FVector> m_occupiedLocations;
 
 		RC::Unreal::UDataTable* n_dataTable = nullptr;

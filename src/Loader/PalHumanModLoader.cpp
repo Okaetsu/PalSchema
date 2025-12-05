@@ -12,13 +12,13 @@
 #include "SDK/Helper/PropertyHelper.h"
 #include "Utility/Logging.h"
 #include "Helpers/String.hpp"
+#include "SDK/Classes/AMonoNPCSpawner.h"
 #include "SDK/Structs/FPalCharacterIconDataRow.h"
 #include "SDK/Structs/FPalBPClassDataRow.h"
 #include "SDK/Structs/FPalNPCTalkFlowClassDataRow.h"
 #include "SDK/Structs/FPalItemShopLotteryDataRow.h"
 #include "SDK/Structs/FPalItemShopSettingDataRow.h"
 #include "Loader/PalHumanModLoader.h"
-#include <SDK/Classes/AMonoNPCSpawner.h>
 
 using namespace RC;
 using namespace RC::Unreal;
@@ -608,6 +608,12 @@ namespace Palworld {
         PS::Log<RC::LogLevel::Verbose>(STR("Spawning {} ...\n"), params.CharacterId.ToString());
 
         auto levelStreaming = cell->GetLevelStreaming();
+        if (!levelStreaming)
+        {
+            PS::Log<LogLevel::Error>(STR("Unable to get level streaming, failed to spawn {}\n"), params.CharacterId.ToString());
+            return;
+        }
+
         auto worldPartition = levelStreaming->GetOuterWorldPartition();
         if (!worldPartition)
         {
@@ -616,6 +622,11 @@ namespace Palworld {
         }
 
         static auto bpClass = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Game/Pal/Blueprint/Spawner/BP_MonoNPCSpawner.BP_MonoNPCSpawner_C"));
+        if (!bpClass)
+        {
+            PS::Log<LogLevel::Error>(STR("Unable to get class BP_MonoNPCSpawner, failed to spawn {}\n"), params.CharacterId.ToString());
+            return;
+        }
 
         auto world = worldPartition->GetWorld();
         PS::Log<RC::LogLevel::Verbose>(STR("World is {} ...\n"), world->GetFullName());
@@ -623,15 +634,11 @@ namespace Palworld {
         auto rotation = FRotator{};
         auto transform = FTransform(rotation, params.Location, { 1.0, 1.0, 1.0 });
 
-        auto actor = UGameplayStatics::BeginDeferredActorSpawnFromClass(world, bpClass, transform);
-        auto monoSpawner = static_cast<AMonoNPCSpawner*>(actor);
+        auto spawnedActor = world->SpawnActor(bpClass, &transform);
+        auto monoSpawner = static_cast<AMonoNPCSpawner*>(spawnedActor);
         monoSpawner->GetHumanName() = FName(STR("PalDealer"), FNAME_Add);
+        monoSpawner->GetCharaName() = FName(STR("PalDealer"), FNAME_Add);
         monoSpawner->GetLevel() = 55;
-        auto finalActor = static_cast<AMonoNPCSpawner*>(UGameplayStatics::FinishSpawningActor(actor, transform));
-        PS::Log<RC::LogLevel::Verbose>(STR("Spawner is {} ...\n"), finalActor->GetFullName());
-        finalActor->Spawn();
-
-        // TODO: investigate why npcs aren't appearing..?
-        // Spawner seems to spawn in just fine with the correct values..
+        m_spawners.push_back(monoSpawner);
     }
 }

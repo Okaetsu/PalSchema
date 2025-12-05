@@ -9,6 +9,8 @@ namespace Palworld {
 
         RC::Unreal::FName& GetHumanName();
 
+        RC::Unreal::FName& GetCharaName();
+
         void Spawn();
     };
 }

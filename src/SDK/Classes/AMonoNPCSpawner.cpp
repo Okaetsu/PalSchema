@@ -18,6 +18,12 @@ namespace Palworld {
         return *Value;
     }
 
+    RC::Unreal::FName& AMonoNPCSpawner::GetCharaName()
+    {
+        auto Value = this->GetValuePtrByPropertyNameInChain<RC::Unreal::FName>(TEXT("CharaName"));
+        return *Value;
+    }
+
     void AMonoNPCSpawner::Spawn()
     {
         auto Function = this->GetFunctionByNameInChain(TEXT("Spawn"));
