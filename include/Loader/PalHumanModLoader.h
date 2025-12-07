@@ -3,24 +3,12 @@
 #include <set>
 #include "Loader/PalModLoaderBase.h"
 #include "nlohmann/json.hpp"
-#include "SDK/Structs/FVector.h"
 
 namespace RC::Unreal {
     class UDataTable;
 }
 
-namespace UECustom {
-    class UWorldPartitionRuntimeLevelStreamingCell;
-}
-
 namespace Palworld {
-    struct PalHumanSpawnParams {
-        RC::Unreal::FVector Location;
-        RC::Unreal::FName CharacterId;
-    };
-
-    class AMonoNPCSpawner;
-
 	class PalHumanModLoader : public PalModLoaderBase {
 	public:
 		PalHumanModLoader();
@@ -30,9 +18,6 @@ namespace Palworld {
 		void Initialize();
 
 		virtual void Load(const nlohmann::json& json) override final;
-
-        // This is called whenever a world partition is loaded within the main world.
-        void OnCellLoaded(UECustom::UWorldPartitionRuntimeLevelStreamingCell* cell);
     private:
 		void Add(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties);
 
@@ -44,19 +29,11 @@ namespace Palworld {
 
 		void AddLoot(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties);
 
-		void AddSpawn(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties);
-
 		void AddTranslations(const RC::Unreal::FName& CharacterId, const nlohmann::json& Data);
 
         void EditTranslations(const RC::Unreal::FName& CharacterId, const nlohmann::json& Data);
 
 		void AddShop(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties);
-
-        void SpawnNPC(UECustom::UWorldPartitionRuntimeLevelStreamingCell* cell, const PalHumanSpawnParams& params);
-
-        std::vector<PalHumanSpawnParams> m_spawns;
-        std::vector<AMonoNPCSpawner*> m_spawners;
-        std::set<UECustom::FVector> m_occupiedLocations;
 
 		RC::Unreal::UDataTable* n_dataTable = nullptr;
 		RC::Unreal::UDataTable* n_iconDataTable = nullptr;

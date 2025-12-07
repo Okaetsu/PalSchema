@@ -29,8 +29,6 @@ namespace Palworld {
             { "FField::IsA", "48 8B 41 08 48 8B 4A 08 48 85 C9 74 08 48 85 48 10 0F 95 C0 C3" },
             // Important, we need this early.
             { "FName::Constructor", "48 89 5C 24 08 57 48 83 EC 30 48 8B D9 48 89 54 24 20" },
-            // UWorldPartitionRuntimeLevelStreamingCell
-            { "UWorldPartitionRuntimeLevelStreamingCell::Activate", "40 53 48 83 EC 20 E8 ?? ?? ?? ?? 48 8B D8 48 85 C0 74 3B 4C 8B 00 B2 01 48 8B C8 41 FF 90 B8 02 00 00 B2 01" },
         };
         static inline std::unordered_map<std::string, std::string> SignaturesCallResolve {
             // Don't ask, I know it's long..
@@ -44,6 +42,7 @@ namespace Palworld {
             // Raw Tables
             { "UDataTable::Serialize", "E8 ?? ?? ?? ?? 41 F6 06 01 0F 84 1D 03 00 00 48 89 5C 24 50" },
             { "UPalStaticItemDataTable::Get", "E8 ?? ?? ?? ?? 48 85 C0 74 0B 8B 40" },
+            { "UWorld::CleanupWorld", "E8 ?? ?? ?? ?? 8B 55 A7 FF C2 49 83 C5 08 89 55 A7" },
         };
     };
 }

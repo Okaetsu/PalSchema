@@ -6,9 +6,6 @@
 #include "Unreal/World.hpp"
 #include "Unreal/GameplayStatics.hpp"
 #include "SDK/Classes/KismetInternationalizationLibrary.h"
-#include "SDK/Classes/ULevelStreaming.h"
-#include "SDK/Classes/UWorldPartition.h"
-#include "SDK/Classes/UWorldPartitionRuntimeLevelStreamingCell.h"
 #include "SDK/Helper/PropertyHelper.h"
 #include "Utility/Logging.h"
 #include "Helpers/String.hpp"
@@ -109,10 +106,6 @@ namespace Palworld {
 			{
 				AddShop(CharacterId, value);
 			}
-            else if (KeyName == STR("SpawnLocations"))
-            {
-                AddSpawn(CharacterId, value);
-            }
 			else
 			{
 				auto Property = NpcRowStruct->GetPropertyByName(KeyName.c_str());
@@ -310,45 +303,6 @@ namespace Palworld {
 		auto RowName = std::format(STR("{}000"), CharacterId.ToString());
 		n_dropItemTable->AddRow(FName(RowName, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(NpcDropItemData));
 	}
-
-    void PalHumanModLoader::AddSpawn(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties)
-    {
-        if (!properties.is_array())
-        {
-            throw std::runtime_error(std::format("SpawnLocations in {} must be an array.", RC::to_string(CharacterId.ToString())));
-        }
-
-        for (auto& spawnLocation : properties)
-        {
-            if (!spawnLocation.contains("X") && !spawnLocation.at("X").is_number_float())
-            {
-                throw std::runtime_error(std::format("X for a Spawn Location in {} wasn't a float.", RC::to_string(CharacterId.ToString())));
-            }
-
-            if (!spawnLocation.contains("Y") && !spawnLocation.at("Y").is_number_float())
-            {
-                throw std::runtime_error(std::format("Y for a Spawn Location in {} wasn't a float.", RC::to_string(CharacterId.ToString())));
-            }
-
-            if (!spawnLocation.contains("Z") && !spawnLocation.at("Z").is_number_float())
-            {
-                throw std::runtime_error(std::format("Z for a Spawn Location in {} wasn't a float.", RC::to_string(CharacterId.ToString())));
-            }
-
-            auto X = spawnLocation.at("X").get<double>();
-            auto Y = spawnLocation.at("Y").get<double>();
-            auto Z = spawnLocation.at("Z").get<double>();
-
-            PS::Log<LogLevel::Verbose>(STR("Spawn Location for {} is X {:.3f}, Y {:.3f}, Z {:.3f}\n"), CharacterId.ToString(), X, Y, Z);
-
-            PalHumanSpawnParams params;
-            params.CharacterId = CharacterId;
-            params.Location = FVector{ X, Y, Z };
-
-            // Gets processed by PalHumanModLoader::OnCellLoaded later on.
-            m_spawns.push_back(params);
-        }
-    }
 
 	//Add New NPC Translations
 	void PalHumanModLoader::AddTranslations(const RC::Unreal::FName& CharacterId, const nlohmann::json& Data)
@@ -581,64 +535,4 @@ namespace Palworld {
 			PS::Log<RC::LogLevel::Error>(STR("Failed to fully add shop for {} (ShopTableId: {}) - some parts were not added correctly.\n"), CharacterId.ToString(), ShopTableId);
 		}
 	}
-
-    void PalHumanModLoader::OnCellLoaded(UECustom::UWorldPartitionRuntimeLevelStreamingCell* cell)
-    {
-        // This isn't perfect, but it should hopefully do the job for now until a better solution is found.
-        // Seems like cells can overlap each other (?) which means the spawner code can get called multiple times.
-        // I decided to make it so that there can only be one spawner per EXACT location since you wouldn't want them to overlap anyway.
-        // e.g. (0.001, 0.001, 0.001) can't have two spawners in this location, but a spawner with a location of (0.001, 0.001, 0.002) would be allowed.
-        auto& Box = cell->GetContentBounds();
-        for (auto& spawn : m_spawns)
-        {
-            if (Box.IsInside(spawn.Location))
-            {
-                auto loc = UECustom::FVector(spawn.Location);
-                if (!m_occupiedLocations.count(loc))
-                {
-                    m_occupiedLocations.insert(loc);
-                    SpawnNPC(cell, spawn);
-                }
-            }
-        }
-    }
-
-    void PalHumanModLoader::SpawnNPC(UECustom::UWorldPartitionRuntimeLevelStreamingCell* cell, const PalHumanSpawnParams& params)
-    {
-        PS::Log<RC::LogLevel::Verbose>(STR("Spawning {} ...\n"), params.CharacterId.ToString());
-
-        auto levelStreaming = cell->GetLevelStreaming();
-        if (!levelStreaming)
-        {
-            PS::Log<LogLevel::Error>(STR("Unable to get level streaming, failed to spawn {}\n"), params.CharacterId.ToString());
-            return;
-        }
-
-        auto worldPartition = levelStreaming->GetOuterWorldPartition();
-        if (!worldPartition)
-        {
-            PS::Log<LogLevel::Error>(STR("Unable to get world partition, failed to spawn {}\n"), params.CharacterId.ToString());
-            return;
-        }
-
-        static auto bpClass = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Game/Pal/Blueprint/Spawner/BP_MonoNPCSpawner.BP_MonoNPCSpawner_C"));
-        if (!bpClass)
-        {
-            PS::Log<LogLevel::Error>(STR("Unable to get class BP_MonoNPCSpawner, failed to spawn {}\n"), params.CharacterId.ToString());
-            return;
-        }
-
-        auto world = worldPartition->GetWorld();
-        PS::Log<RC::LogLevel::Verbose>(STR("World is {} ...\n"), world->GetFullName());
-
-        auto rotation = FRotator{};
-        auto transform = FTransform(rotation, params.Location, { 1.0, 1.0, 1.0 });
-
-        auto spawnedActor = world->SpawnActor(bpClass, &transform);
-        auto monoSpawner = static_cast<AMonoNPCSpawner*>(spawnedActor);
-        monoSpawner->GetHumanName() = FName(STR("PalDealer"), FNAME_Add);
-        monoSpawner->GetCharaName() = FName(STR("PalDealer"), FNAME_Add);
-        monoSpawner->GetLevel() = 55;
-        m_spawners.push_back(monoSpawner);
-    }
 }

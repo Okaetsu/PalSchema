@@ -14,6 +14,7 @@
 #include "Loader/PalEnumLoader.h"
 #include "Loader/PalHelpGuideModLoader.h"
 #include "Loader/PalResourceLoader.h"
+#include "Loader/PalSpawnLoader.h"
 #include "FileWatch.hpp"
 
 namespace RC::Unreal {
@@ -54,8 +55,15 @@ namespace Palworld {
         PalEnumLoader EnumLoader;
 		PalHelpGuideModLoader HelpGuideModLoader;
         PalResourceLoader ResourceLoader;
+        PalSpawnLoader SpawnLoader;
 
         std::unique_ptr<filewatch::FileWatch<std::wstring>> m_fileWatch;
+
+        void HookDatatableSerialize();
+
+        void HookStaticItemDataTable_Get();
+
+        void HookWorldCleanup();
 
         void SetupAutoReload();
 
@@ -91,14 +99,14 @@ namespace Palworld {
 
         static RC::Unreal::UObject* StaticItemDataTable_Get(UPalStaticItemDataTable* This, RC::Unreal::FName ItemId);
 
-        static void UWorldPartitionRuntimeLevelStreamingCell_Activate(UECustom::UWorldPartitionRuntimeLevelStreamingCell* This);
+        static void UWorld_CleanupWorld(RC::Unreal::UWorld* This, bool bSessionEnded, bool bCleanupResources, RC::Unreal::UWorld* NewWorld);
 
         bool m_hasInit = false;
 
         static inline std::vector<std::function<void(RC::Unreal::UDataTable*)>> DatatableSerializeCallbacks;
         static inline std::vector<std::function<void(RC::Unreal::UObject*)>> GameInstanceInitCallbacks;
         static inline std::vector<std::function<void(RC::Unreal::UClass*)>> PostLoadCallbacks;
-        static inline std::vector<std::function<void(UECustom::UWorldPartitionRuntimeLevelStreamingCell*)>> StreamingCell_Activate_Callbacks;
+        static inline std::vector<std::function<void(RC::Unreal::UWorld*)>> WorldCleanUp_Callbacks;
         static inline std::vector<std::function<void()>> GetPakFoldersCallback;
 
         static inline SafetyHookInline DatatableSerialize_Hook;
@@ -106,6 +114,6 @@ namespace Palworld {
         static inline SafetyHookInline PostLoad_Hook;
         static inline SafetyHookInline GetPakFolders_Hook;
         static inline SafetyHookInline StaticItemDataTable_Get_Hook;
-        static inline SafetyHookInline UWorldPartitionRuntimeLevelStreamingCell_Activate_Hook;
+        static inline SafetyHookInline WorldCleanUp_Hook;
 	};
 }
