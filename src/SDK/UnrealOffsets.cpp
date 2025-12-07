@@ -17,6 +17,7 @@
 #include "Unreal/ULocalPlayer.hpp"
 #include "Unreal/UStruct.hpp"
 #include "Unreal/UScriptStruct.hpp"
+#include "Unreal/Engine/UDataTable.hpp"
 #include "Unreal/World.hpp"
 #include "Unreal/Property/FArrayProperty.hpp"
 #include "Unreal/Property/FBoolProperty.hpp"
@@ -867,6 +868,20 @@ void Palworld::UnrealOffsets::ApplyMemberVariableLayout()
                 Unreal::FInterfaceProperty::MemberOffsets.emplace(STR("InterfaceClass"), static_cast<int32_t>(val));
             if (auto val = parser.get_int64(STR("FFieldPathProperty"), STR("PropertyClass"), -1); val != -1)
                 Unreal::FFieldPathProperty::MemberOffsets.emplace(STR("PropertyClass"), static_cast<int32_t>(val));
+            if (auto val = parser.get_int64(STR("UDataTable"), STR("RowStruct"), -1); val != -1)
+                Unreal::UDataTable::MemberOffsets.emplace(STR("RowStruct"), static_cast<int32_t>(val));
+            if (auto val = parser.get_int64(STR("UDataTable"), STR("RowMap"), -1); val != -1)
+                Unreal::UDataTable::MemberOffsets.emplace(STR("RowMap"), static_cast<int32_t>(val));
+            if (auto val = parser.get_int64(STR("UDataTable"), STR("bStripFromClientBuilds"), -1); val != -1)
+                Unreal::UDataTable::MemberOffsets.emplace(STR("bStripFromClientBuilds"), static_cast<int32_t>(val));
+            if (auto val = parser.get_int64(STR("UDataTable"), STR("bIgnoreExtraFields"), -1); val != -1)
+                Unreal::UDataTable::MemberOffsets.emplace(STR("bIgnoreExtraFields"), static_cast<int32_t>(val));
+            if (auto val = parser.get_int64(STR("UDataTable"), STR("bIgnoreMissingFields"), -1); val != -1)
+                Unreal::UDataTable::MemberOffsets.emplace(STR("bIgnoreMissingFields"), static_cast<int32_t>(val));
+            if (auto val = parser.get_int64(STR("UDataTable"), STR("ImportKeyField"), -1); val != -1)
+                Unreal::UDataTable::MemberOffsets.emplace(STR("ImportKeyField"), static_cast<int32_t>(val));
+            if (auto val = parser.get_int64(STR("UDataTable"), STR("bPreserveExistingValues"), -1); val != -1)
+                Unreal::UDataTable::MemberOffsets.emplace(STR("bPreserveExistingValues"), static_cast<int32_t>(val));
 
             PS::Log<LogLevel::Verbose>(STR("Offsets from MemberVariableLayout.ini applied.\n"));
         }
