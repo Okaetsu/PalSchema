@@ -1,0 +1,58 @@
+[
+    {
+        "Type": "MonoNPC", // Type should be either MonoNPC or Sheet
+        "NPCID": "PalDealer",
+        "OtomoId": "PinkCat", // This is the Pal that the NPC summons when it is attacked
+        "Level": 2,
+        "Location": { "X": -342040.178, "Y": 264211.779, "Z": 4050.933 },
+        "Rotation": { "Pitch": 0.0, "Yaw": 0.0, "Roll": 0.0 }
+    },
+    {
+        "Type": "Sheet",
+        "Location": { "X": -342040.178, "Y": 263611.779, "Z": 4050.933 },
+        "Rotation": { "Pitch": 0.0, "Yaw": 0.0, "Roll": 0.0 },
+        "SpawnerName": "PalSchema_Custom_Spawn001",
+        "SpawnGroupList": [
+            {
+                "Weight": 50,
+                "PalList": [
+                    {
+                        "PalId": "Plesiosaur",
+                        "Level": 25,
+                        "Level_Max": 30,
+                        "Num": 1,
+                        "Num_Max": 1
+                    },
+                    {
+                        "PalId": "SheepBall",
+                        "Level": 1,
+                        "Level_Max": 5,
+                        "Num": 1,
+                        "Num_Max": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "Type": "Sheet",
+        "Location": { "X": -342040.178, "Y": 262811.779, "Z": 4050.933 },
+        "Rotation": { "Pitch": 0.0, "Yaw": 0.0, "Roll": 0.0 },
+        "SpawnerName": "PalSchema_Custom_Boss_Spawn001",
+        "SpawnerType": "FieldBoss", // Should be FieldBoss if you want it to be a proper boss
+        "SpawnGroupList": [
+            {
+                "Weight": 50,
+                "PalList": [
+                    {
+                        "PalId": "BOSS_DarkMechaDragon",
+                        "Level": 25,
+                        "Level_Max": 25,
+                        "Num": 1,
+                        "Num_Max": 1
+                    }
+                ]
+            }
+        ]
+    }
+]
