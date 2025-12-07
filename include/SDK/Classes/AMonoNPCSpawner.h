@@ -11,6 +11,8 @@ namespace Palworld {
 
         RC::Unreal::FName& GetCharaName();
 
+        RC::Unreal::FName& GetOtomoName();
+
         void Spawn();
     };
 }

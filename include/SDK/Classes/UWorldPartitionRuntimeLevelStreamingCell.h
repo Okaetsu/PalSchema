@@ -11,5 +11,13 @@ namespace UECustom {
         FBox& GetContentBounds();
 
         ULevelStreaming* GetLevelStreaming();
+
+        bool& GetIsHLOD();
+
+        RC::Unreal::FVector& GetPosition();
+
+        float& GetExtent();
+
+        int& GetLevel();
     };
 }
