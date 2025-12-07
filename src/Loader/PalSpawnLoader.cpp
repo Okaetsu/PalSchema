@@ -75,7 +75,6 @@ namespace Palworld {
             spawnInfo.bExistsInWorld = false;
         }
 
-        m_spawns.clear();
         m_loadedCells.Empty();
 
         PS::Log<LogLevel::Verbose>(STR("Session ending, spawners have been cleaned up.\n"));

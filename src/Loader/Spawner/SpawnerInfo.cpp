@@ -12,8 +12,10 @@ namespace PS {
     {
         if (SpawnerActor && !SpawnerActor->IsUnreachable())
         {
+            PS::Log<LogLevel::Verbose>(STR("[{}] Preparing to destroy spawner actor.\n"), ModName);
             SpawnerActor->K2_DestroyActor();
             SpawnerActor = nullptr;
+            PS::Log<LogLevel::Verbose>(STR("[{}] Finished destroying spawner actor.\n"), ModName);
         }
 
         if (Cell)
