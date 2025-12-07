@@ -16,6 +16,7 @@ file(GLOB SRC_FILES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SDK/Classes/Custom/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SDK/Helper/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SDK/Structs/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/SDK/Structs/Reflected/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SDK/Structs/Custom/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/EnumSchemaDefinitionGenerator.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Utility/Config.cpp"
