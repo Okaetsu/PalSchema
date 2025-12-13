@@ -35,16 +35,16 @@ namespace Palworld {
 
 		void AddShop(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties);
 
-		RC::Unreal::UDataTable* n_dataTable = nullptr;
-		RC::Unreal::UDataTable* n_iconDataTable = nullptr;
-		RC::Unreal::UDataTable* n_palBpClassTable = nullptr;
-		RC::Unreal::UDataTable* n_dropItemTable = nullptr;
-		RC::Unreal::UDataTable* n_npcNameTable = nullptr;
-        RC::Unreal::UDataTable* n_palShortDescTable = nullptr;
-        RC::Unreal::UDataTable* n_palLongDescTable = nullptr;
-		RC::Unreal::UDataTable* n_npcTalkFlowTable = nullptr;
-		RC::Unreal::UDataTable* n_ItemShopLotteryDataTable = nullptr;
-		RC::Unreal::UDataTable* n_ItemShopCreateDataTable = nullptr;
-		RC::Unreal::UDataTable* n_ItemShopSettingDataTable = nullptr;
+		RC::Unreal::UDataTable* m_dataTable = nullptr;
+		RC::Unreal::UDataTable* m_iconDataTable = nullptr;
+		RC::Unreal::UDataTable* m_palBpClassTable = nullptr;
+		RC::Unreal::UDataTable* m_dropItemTable = nullptr;
+		RC::Unreal::UDataTable* m_npcNameTable = nullptr;
+        RC::Unreal::UDataTable* m_palShortDescTable = nullptr;
+        RC::Unreal::UDataTable* m_palLongDescTable = nullptr;
+		RC::Unreal::UDataTable* m_npcTalkFlowTable = nullptr;
+		RC::Unreal::UDataTable* m_ItemShopLotteryDataTable = nullptr;
+		RC::Unreal::UDataTable* m_ItemShopCreateDataTable = nullptr;
+		RC::Unreal::UDataTable* m_ItemShopSettingDataTable = nullptr;
 	};
 }
