@@ -9,7 +9,7 @@
 #include "SDK/Helper/PropertyHelper.h"
 #include "Utility/Logging.h"
 #include "Helpers/String.hpp"
-#include "SDK/Classes/AMonoNPCSpawner.h"
+#include "SDK/Structs/Custom/FManagedStruct.h"
 #include "SDK/Structs/FPalCharacterIconDataRow.h"
 #include "SDK/Structs/FPalBPClassDataRow.h"
 #include "SDK/Structs/FPalNPCTalkFlowClassDataRow.h"
@@ -82,8 +82,7 @@ namespace Palworld {
 	void PalHumanModLoader::Add(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties)
 	{
 		auto NpcRowStruct = m_dataTable->GetRowStruct().Get();
-		auto NpcRowData = FMemory::Malloc(NpcRowStruct->GetStructureSize());
-		NpcRowStruct->InitializeStruct(NpcRowData);
+        FManagedStruct NpcRowData{ NpcRowStruct };
 
 		for (auto& [key, value] : properties.items())
 		{
@@ -111,12 +110,12 @@ namespace Palworld {
 				auto Property = NpcRowStruct->GetPropertyByName(KeyName.c_str());
 				if (Property)
 				{
-					PropertyHelper::CopyJsonValueToContainer(NpcRowData, Property, value);
+					PropertyHelper::CopyJsonValueToContainer(NpcRowData.GetData(), Property, value);
 				}
 			}
 		}
 
-		m_dataTable->AddRow(CharacterId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(NpcRowData));
+		m_dataTable->AddRow(CharacterId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(NpcRowData.GetData()));
 
 		AddTranslations(CharacterId, properties);
 
@@ -187,18 +186,15 @@ namespace Palworld {
 	void PalHumanModLoader::AddLoot(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties)
 	{
 		auto RowStruct = m_dropItemTable->GetRowStruct().Get();
-
-		auto NpcDropItemData = FMemory::Malloc(RowStruct->GetStructureSize());
-		RowStruct->InitializeStruct(NpcDropItemData);
+        FManagedStruct NpcDropItemData{ RowStruct };
 
 		auto CharacterIdProperty = RowStruct->GetPropertyByName(STR("CharacterId"));
 		if (!CharacterIdProperty)
 		{
-			FMemory::Free(NpcDropItemData);
 			throw std::runtime_error("Property CharacterId doesn't exist in DT_PalDropItem, which means you should wait for an update as something in the table has changed.");
 		}
 
-		FMemory::Memcpy(CharacterIdProperty->ContainerPtrToValuePtr<void>(NpcDropItemData), &CharacterId, sizeof(FName));
+		FMemory::Memcpy(CharacterIdProperty->ContainerPtrToValuePtr<void>(NpcDropItemData.GetData()), &CharacterId, sizeof(FName));
 
 		auto Index = 1;
 		auto loot_array = properties.get<std::vector<nlohmann::json>>();
@@ -287,10 +283,10 @@ namespace Palworld {
 			auto Min = loot.at("Min");
 			auto Max = loot.at("Max");
 
-			PropertyHelper::CopyJsonValueToContainer(NpcDropItemData, ItemIdProperty, ItemId);
-			PropertyHelper::CopyJsonValueToContainer(NpcDropItemData, RateProperty, DropChance);
-			PropertyHelper::CopyJsonValueToContainer(NpcDropItemData, MinProperty, Min);
-			PropertyHelper::CopyJsonValueToContainer(NpcDropItemData, MaxProperty, Max);
+			PropertyHelper::CopyJsonValueToContainer(NpcDropItemData.GetData(), ItemIdProperty, ItemId);
+			PropertyHelper::CopyJsonValueToContainer(NpcDropItemData.GetData(), RateProperty, DropChance);
+			PropertyHelper::CopyJsonValueToContainer(NpcDropItemData.GetData(), MinProperty, Min);
+			PropertyHelper::CopyJsonValueToContainer(NpcDropItemData.GetData(), MaxProperty, Max);
 
 			Index++;
 
@@ -301,7 +297,7 @@ namespace Palworld {
 		}
 
 		auto RowName = std::format(STR("{}000"), CharacterId.ToString());
-		m_dropItemTable->AddRow(FName(RowName, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(NpcDropItemData));
+		m_dropItemTable->AddRow(FName(RowName, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(NpcDropItemData.GetData()));
 	}
 
 	//Add New NPC Translations
@@ -314,20 +310,17 @@ namespace Palworld {
 			auto TextProperty = TranslationRowStruct->GetPropertyByName(STR("TextData"));
 			if (TextProperty)
 			{
-				auto TranslationRowData = FMemory::Malloc(TranslationRowStruct->GetStructureSize());
-				TranslationRowStruct->InitializeStruct(TranslationRowData);
-
+                FManagedStruct TranslationRowData{ TranslationRowStruct };
 				try
 				{
-					PropertyHelper::CopyJsonValueToContainer(TranslationRowData, TextProperty, Data.at("Name"));
+					PropertyHelper::CopyJsonValueToContainer(TranslationRowData.GetData(), TextProperty, Data.at("Name"));
 				}
 				catch (const std::exception& e)
 				{
-					FMemory::Free(TranslationRowData);
 					throw std::runtime_error(e.what());
 				}
 
-				m_npcNameTable->AddRow(FName(FixedCharacterId, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(TranslationRowData));
+				m_npcNameTable->AddRow(FName(FixedCharacterId, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(TranslationRowData.GetData()));
 			}
 		}
 
@@ -468,8 +461,8 @@ namespace Palworld {
 			}
 			else
 			{
-				auto RowData = FMemory::Malloc(CreateRowStruct->GetStructureSize());
-				CreateRowStruct->InitializeStruct(RowData);
+                
+				FManagedStruct CreateRowData{ CreateRowStruct };
 				try
 				{
 					for (auto& Property : CreateRowStruct->ForEachPropertyInChain())
@@ -477,15 +470,14 @@ namespace Palworld {
 						auto PropertyName = RC::to_string(Property->GetName());
 						if (CreateRowJson.contains(PropertyName))
 						{
-							PropertyHelper::CopyJsonValueToContainer(RowData, Property, CreateRowJson.at(PropertyName));
+							PropertyHelper::CopyJsonValueToContainer(CreateRowData.GetData(), Property, CreateRowJson.at(PropertyName));
 						}
 					}
-					m_ItemShopCreateDataTable->AddRow(RowKeyName, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData));
+					m_ItemShopCreateDataTable->AddRow(RowKeyName, *reinterpret_cast<RC::Unreal::FTableRowBase*>(CreateRowData.GetData()));
 					if (!m_ItemShopCreateDataTable->FindRowUnchecked(RowKeyName)) addSucceeded = false;
 				}
 				catch (const std::exception& e)
 				{
-					FMemory::Free(RowData);
 					PS::Log<RC::LogLevel::Error>(STR("Failed to add Row '{}' to {}: {}\n"), RowKeyName.ToString(), m_ItemShopCreateDataTable->GetFullName(), RC::to_generic_string(e.what()));
 					addSucceeded = false;
 				}
