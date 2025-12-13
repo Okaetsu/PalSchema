@@ -14,7 +14,7 @@ We will be going through the structure of a spawner json and the required folder
 
 ## Folder Name
 
-The required name for the folder so it can be seen by PalSchema is `spawners`, meaning you want something like this `MyModName/spawners/spawn.json`.
+The required name for the folder so it can be seen by PalSchema is `spawns`, meaning you want something like this `MyModName/spawns/spawn.json`.
 
 ## JSON Structure
 
