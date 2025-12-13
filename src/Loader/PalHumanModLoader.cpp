@@ -9,7 +9,7 @@
 #include "SDK/Helper/PropertyHelper.h"
 #include "Utility/Logging.h"
 #include "Helpers/String.hpp"
-#include "SDK/Classes/AMonoNPCSpawner.h"
+#include "SDK/Structs/Custom/FManagedStruct.h"
 #include "SDK/Structs/FPalCharacterIconDataRow.h"
 #include "SDK/Structs/FPalBPClassDataRow.h"
 #include "SDK/Structs/FPalNPCTalkFlowClassDataRow.h"
@@ -27,37 +27,37 @@ namespace Palworld {
 
 	void PalHumanModLoader::Initialize()
 	{
-		n_dataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
+		m_dataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Character/DT_PalHumanParameter.DT_PalHumanParameter"));
 
-		n_iconDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr, 
+		m_iconDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr, 
 			STR("/Game/Pal/DataTable/Character/DT_PalCharacterIconDataTable.DT_PalCharacterIconDataTable"));
 
-		n_palBpClassTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
+		m_palBpClassTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Character/DT_PalBPClass.DT_PalBPClass"));
 
-		n_dropItemTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
+		m_dropItemTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Character/DT_PalDropItem.DT_PalDropItem"));
 
-		n_npcNameTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
+		m_npcNameTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Text/DT_HumanNameText.DT_HumanNameText"));
 
-		n_palShortDescTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
+		m_palShortDescTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Text/DT_PalShortDescriptionText.DT_PalShortDescriptionText"));
 
-		n_palLongDescTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
+		m_palLongDescTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/Text/DT_PalLongDescriptionText.DT_PalLongDescriptionText"));
 
-		n_npcTalkFlowTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
+		m_npcTalkFlowTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/Blueprint/Component/NPCTalk/DT_NPCTalkFlow.DT_NPCTalkFlow"));
 
-		n_ItemShopLotteryDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
+		m_ItemShopLotteryDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/ItemShop/DT_ItemShopLotteryData.DT_ItemShopLotteryData"));
 
-		n_ItemShopCreateDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
+		m_ItemShopCreateDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/ItemShop/DT_ItemShopCreateData.DT_ItemShopCreateData"));
 
-		n_ItemShopSettingDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
+		m_ItemShopSettingDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
 			STR("/Game/Pal/DataTable/ItemShop/DT_ItemShopSettingData.DT_ItemShopSettingData"));
 	}
 
@@ -66,7 +66,7 @@ namespace Palworld {
 		for (auto& [character_id, properties] : json.items())
 		{
 			auto CharacterId = FName(RC::to_generic_string(character_id), FNAME_Add);
-			auto TableRow = n_dataTable->FindRowUnchecked(CharacterId);
+			auto TableRow = m_dataTable->FindRowUnchecked(CharacterId);
 			if (TableRow)
 			{
 				Edit(TableRow, CharacterId, properties);
@@ -81,42 +81,41 @@ namespace Palworld {
 	//Add New NPC
 	void PalHumanModLoader::Add(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties)
 	{
-		auto NpcRowStruct = n_dataTable->GetRowStruct().Get();
-		auto NpcRowData = FMemory::Malloc(NpcRowStruct->GetStructureSize());
-		NpcRowStruct->InitializeStruct(NpcRowData);
+		auto NpcRowStruct = m_dataTable->GetRowStruct().Get();
+        FManagedStruct NpcRowData{ NpcRowStruct };
 
 		for (auto& [key, value] : properties.items())
 		{
-			auto KeyName = RC::to_generic_string(key);
-			if (KeyName == STR("IconAssetPath"))
+			if (key == "IconAssetPath")
 			{
 				auto IconPath = RC::to_generic_string(value.get<std::string>());
 				AddIcon(CharacterId, IconPath);
 			}
-			else if (KeyName == STR("BlueprintAssetPath"))
+			else if (key == "BlueprintAssetPath")
 			{
 				auto BlueprintPath = RC::to_generic_string(value.get<std::string>());
 				AddBlueprint(CharacterId, BlueprintPath);
 			}
-			else if (KeyName == STR("Loot"))
+			else if (key == "Loot")
 			{
 				AddLoot(CharacterId, value);
 			}
-			else if (KeyName == STR("Shop"))
+			else if (key == "Shop")
 			{
 				AddShop(CharacterId, value);
 			}
 			else
 			{
+                auto KeyName = RC::to_generic_string(key);
 				auto Property = NpcRowStruct->GetPropertyByName(KeyName.c_str());
 				if (Property)
 				{
-					PropertyHelper::CopyJsonValueToContainer(NpcRowData, Property, value);
+					PropertyHelper::CopyJsonValueToContainer(NpcRowData.GetData(), Property, value);
 				}
 			}
 		}
 
-		n_dataTable->AddRow(CharacterId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(NpcRowData));
+		m_dataTable->AddRow(CharacterId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(NpcRowData.GetData()));
 
 		AddTranslations(CharacterId, properties);
 
@@ -129,34 +128,34 @@ namespace Palworld {
 	{
 		PS::Log<RC::LogLevel::Normal>(STR("Called Edit NPC for {}"), CharacterId.ToString());
 
-		auto RowStruct = n_dataTable->GetRowStruct().Get();
+		auto RowStruct = m_dataTable->GetRowStruct().Get();
 		for (auto& [key, value] : properties.items())
 		{
-			auto KeyName = RC::to_generic_string(key);
-			if (KeyName == STR("IconAssetPath"))
+			if (key == "IconAssetPath")
 			{
-				auto IconTableRow = std::bit_cast<FPalCharacterIconDataRow*>(n_iconDataTable->FindRowUnchecked(CharacterId));
+				auto IconTableRow = std::bit_cast<FPalCharacterIconDataRow*>(m_iconDataTable->FindRowUnchecked(CharacterId));
 				if (IconTableRow)
 				{
 					auto IconPath = RC::to_generic_string(value.get<std::string>());
 					IconTableRow->Icon = UECustom::TSoftObjectPtr<UECustom::UTexture2D>(UECustom::FSoftObjectPath(IconPath));
 				}
 			}
-			else if (KeyName == STR("BlueprintAssetPath"))
+			else if (key == "BlueprintAssetPath")
 			{
-				auto BlueprintTableRow = std::bit_cast<FPalBPClassDataRow*>(n_palBpClassTable->FindRowUnchecked(CharacterId));
+				auto BlueprintTableRow = std::bit_cast<FPalBPClassDataRow*>(m_palBpClassTable->FindRowUnchecked(CharacterId));
 				if (BlueprintTableRow)
 				{
 					auto BlueprintPath = RC::to_generic_string(value.get<std::string>());
 					BlueprintTableRow->BPClass = UECustom::TSoftClassPtr<RC::Unreal::UClass>(UECustom::FSoftObjectPath(BlueprintPath));
 				}
 			}
-            else if (KeyName == STR("Loot"))
+            else if (key == "Loot")
             {
 				AddLoot(CharacterId, value);
             }
 			else
 			{
+                auto KeyName = RC::to_generic_string(key);
 				auto Property = RowStruct->GetPropertyByName(KeyName.c_str());
 				if (Property)
 				{
@@ -173,39 +172,34 @@ namespace Palworld {
 	void PalHumanModLoader::AddBlueprint(const RC::Unreal::FName& CharacterId, const RC::StringType& BlueprintPath)
 	{
 		FPalBPClassDataRow BlueprintDataRow{ BlueprintPath };
-		n_palBpClassTable->AddRow(CharacterId, BlueprintDataRow);
+		m_palBpClassTable->AddRow(CharacterId, BlueprintDataRow);
 	}
 
 	//Add Icon
 	void PalHumanModLoader::AddIcon(const RC::Unreal::FName& CharacterId, const RC::StringType& IconPath)
 	{
 		FPalCharacterIconDataRow IconDataRow{ IconPath };
-		n_iconDataTable->AddRow(CharacterId, IconDataRow);
+		m_iconDataTable->AddRow(CharacterId, IconDataRow);
 	}
 
 	//Add Loot Drops
 	void PalHumanModLoader::AddLoot(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties)
 	{
-		auto RowStruct = n_dropItemTable->GetRowStruct().Get();
-
-		auto NpcDropItemData = FMemory::Malloc(RowStruct->GetStructureSize());
-		RowStruct->InitializeStruct(NpcDropItemData);
+		auto RowStruct = m_dropItemTable->GetRowStruct().Get();
+        FManagedStruct NpcDropItemData{ RowStruct };
 
 		auto CharacterIdProperty = RowStruct->GetPropertyByName(STR("CharacterId"));
 		if (!CharacterIdProperty)
 		{
-			FMemory::Free(NpcDropItemData);
 			throw std::runtime_error("Property CharacterId doesn't exist in DT_PalDropItem, which means you should wait for an update as something in the table has changed.");
 		}
 
-		FMemory::Memcpy(CharacterIdProperty->ContainerPtrToValuePtr<void>(NpcDropItemData), &CharacterId, sizeof(FName));
+		FMemory::Memcpy(CharacterIdProperty->ContainerPtrToValuePtr<void>(NpcDropItemData.GetData()), &CharacterId, sizeof(FName));
 
 		auto Index = 1;
 		auto loot_array = properties.get<std::vector<nlohmann::json>>();
 		for (auto& loot : loot_array)
 		{
-			auto IndexString = std::to_wstring(Index);
-
 			if (!loot.contains("ItemId"))
 			{
 				PS::Log<RC::LogLevel::Error>(STR("ItemId was not specified in {}, skipping loot entry.\n"), CharacterId.ToString());
@@ -254,43 +248,43 @@ namespace Palworld {
 				continue;
 			}
 
-			auto ItemIdWithSuffix = std::format(STR("ItemId{}"), IndexString);
+			auto ItemIdWithSuffix = std::format(STR("ItemId{}"), Index);
 			auto ItemIdProperty = RowStruct->GetPropertyByName(ItemIdWithSuffix.c_str());
 			if (!ItemIdProperty)
 			{
 				throw std::runtime_error(std::format("Property 'ItemId{}' doesn't exist in DT_PalDropItem, Pal Schema needs an update.", Index));
 			}
 
-			auto RateWithSuffix = std::format(STR("Rate{}"), IndexString);
+			auto RateWithSuffix = std::format(STR("Rate{}"), Index);
 			auto RateProperty = RowStruct->GetPropertyByName(RateWithSuffix.c_str());
 			if (!RateProperty)
 			{
 				throw std::runtime_error(std::format("Property 'Rate{}' doesn't exist in DT_PalDropItem, Pal Schema needs an update.", Index));
 			}
 
-			auto MaxWithSuffix = std::format(STR("Max{}"), IndexString);
+			auto MaxWithSuffix = std::format(STR("Max{}"), Index);
 			auto MaxProperty = RowStruct->GetPropertyByName(MaxWithSuffix.c_str());
 			if (!MaxProperty)
 			{
 				throw std::runtime_error(std::format("Property 'Max{}' doesn't exist in DT_PalDropItem, Pal Schema needs an update.", Index));
 			}
 
-			auto MinWithSuffix = std::format(STR("min{}"), IndexString);
+			auto MinWithSuffix = std::format(STR("min{}"), Index);
 			auto MinProperty = RowStruct->GetPropertyByName(MinWithSuffix.c_str());
 			if (!MinProperty)
 			{
 				throw std::runtime_error(std::format("Property 'min{}' doesn't exist in DT_PalDropItem, Pal Schema needs an update.", Index));
 			}
 
-			auto ItemId = loot.at("ItemId");
-			auto DropChance = loot.at("DropChance");
-			auto Min = loot.at("Min");
-			auto Max = loot.at("Max");
+			auto& ItemId = loot.at("ItemId");
+			auto& DropChance = loot.at("DropChance");
+			auto& Min = loot.at("Min");
+			auto& Max = loot.at("Max");
 
-			PropertyHelper::CopyJsonValueToContainer(NpcDropItemData, ItemIdProperty, ItemId);
-			PropertyHelper::CopyJsonValueToContainer(NpcDropItemData, RateProperty, DropChance);
-			PropertyHelper::CopyJsonValueToContainer(NpcDropItemData, MinProperty, Min);
-			PropertyHelper::CopyJsonValueToContainer(NpcDropItemData, MaxProperty, Max);
+			PropertyHelper::CopyJsonValueToContainer(NpcDropItemData.GetData(), ItemIdProperty, ItemId);
+			PropertyHelper::CopyJsonValueToContainer(NpcDropItemData.GetData(), RateProperty, DropChance);
+			PropertyHelper::CopyJsonValueToContainer(NpcDropItemData.GetData(), MinProperty, Min);
+			PropertyHelper::CopyJsonValueToContainer(NpcDropItemData.GetData(), MaxProperty, Max);
 
 			Index++;
 
@@ -301,7 +295,7 @@ namespace Palworld {
 		}
 
 		auto RowName = std::format(STR("{}000"), CharacterId.ToString());
-		n_dropItemTable->AddRow(FName(RowName, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(NpcDropItemData));
+		m_dropItemTable->AddRow(FName(RowName, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(NpcDropItemData.GetData()));
 	}
 
 	//Add New NPC Translations
@@ -310,24 +304,21 @@ namespace Palworld {
 		if (Data.contains("Name"))
 		{
 			auto FixedCharacterId = std::format(STR("HUMAN_NAME_{}"), CharacterId.ToString());
-			auto TranslationRowStruct = n_npcNameTable->GetRowStruct().Get();
+			auto TranslationRowStruct = m_npcNameTable->GetRowStruct().Get();
 			auto TextProperty = TranslationRowStruct->GetPropertyByName(STR("TextData"));
 			if (TextProperty)
 			{
-				auto TranslationRowData = FMemory::Malloc(TranslationRowStruct->GetStructureSize());
-				TranslationRowStruct->InitializeStruct(TranslationRowData);
-
+                FManagedStruct TranslationRowData{ TranslationRowStruct };
 				try
 				{
-					PropertyHelper::CopyJsonValueToContainer(TranslationRowData, TextProperty, Data.at("Name"));
+					PropertyHelper::CopyJsonValueToContainer(TranslationRowData.GetData(), TextProperty, Data.at("Name"));
 				}
 				catch (const std::exception& e)
 				{
-					FMemory::Free(TranslationRowData);
 					throw std::runtime_error(e.what());
 				}
 
-				n_npcNameTable->AddRow(FName(FixedCharacterId, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(TranslationRowData));
+				m_npcNameTable->AddRow(FName(FixedCharacterId, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(TranslationRowData.GetData()));
 			}
 		}
 
@@ -341,11 +332,11 @@ namespace Palworld {
 		if (Data.contains("Name"))
 		{
 			auto FixedCharacterId = std::format(STR("HUMAN_NAME_{}"), CharacterId.ToString());
-			auto TranslationRowStruct = n_npcNameTable->GetRowStruct().Get();
+			auto TranslationRowStruct = m_npcNameTable->GetRowStruct().Get();
 			auto TextProperty = TranslationRowStruct->GetPropertyByName(STR("TextData"));
 			if (TextProperty)
 			{
-				auto Row = n_npcNameTable->FindRowUnchecked(FName(FixedCharacterId, FNAME_Add));
+				auto Row = m_npcNameTable->FindRowUnchecked(FName(FixedCharacterId, FNAME_Add));
 				if (Row)
 				{
 					PropertyHelper::CopyJsonValueToContainer(Row, TextProperty, Data.at("Name"));
@@ -396,10 +387,10 @@ namespace Palworld {
 
 		if (Data.at("CanSell").get<bool>()) {
 			FPalNPCTalkFlowClassDataRow NpcTalkFlowClassDataRow {STR("/Game/Pal/Blueprint/FlowGraph/NPCTalkFlow/Graph/FABP_CommonItemShop.FABP_CommonItemShop")};
-			if (n_npcTalkFlowTable)
+			if (m_npcTalkFlowTable)
 			{
-				n_npcTalkFlowTable->AddRow(CharacterId, NpcTalkFlowClassDataRow);
-				if (!n_npcTalkFlowTable->FindRowUnchecked(CharacterId)) addSucceeded = false;
+				m_npcTalkFlowTable->AddRow(CharacterId, NpcTalkFlowClassDataRow);
+				if (!m_npcTalkFlowTable->FindRowUnchecked(CharacterId)) addSucceeded = false;
 			}
 			else
 			{
@@ -408,10 +399,10 @@ namespace Palworld {
 			}
 		} else {
 			FPalNPCTalkFlowClassDataRow NpcTalkFlowClassDataRow {STR("/Game/Pal/Blueprint/FlowGraph/NPCTalkFlow/Graph/FABP_CommonItemShop_WithoutSell.FABP_CommonItemShop_WithoutSell")};
-			if (n_npcTalkFlowTable)
+			if (m_npcTalkFlowTable)
 			{
-				n_npcTalkFlowTable->AddRow(CharacterId, NpcTalkFlowClassDataRow);
-				if (!n_npcTalkFlowTable->FindRowUnchecked(CharacterId)) addSucceeded = false;
+				m_npcTalkFlowTable->AddRow(CharacterId, NpcTalkFlowClassDataRow);
+				if (!m_npcTalkFlowTable->FindRowUnchecked(CharacterId)) addSucceeded = false;
 			}
 			else
 			{
@@ -421,7 +412,7 @@ namespace Palworld {
 		}
 
 		auto ShopTableId = RC::to_generic_string(Data.at("ShopTableId").get<std::string>());
-		if (n_ItemShopLotteryDataTable)
+		if (m_ItemShopLotteryDataTable)
 		{
 			FPalItemShopLotteryEntry entry{};
 			entry.ShopGroupName = CharacterId;
@@ -430,22 +421,21 @@ namespace Palworld {
 			FPalItemShopLotteryDataRow row{};
 			row.lotteryDataArray.Add(entry);
 
-			n_ItemShopLotteryDataTable->AddRow(FName(ShopTableId, FNAME_Add), row);
-			if (!n_ItemShopLotteryDataTable->FindRowUnchecked(FName(ShopTableId, FNAME_Add))) addSucceeded = false;
+			m_ItemShopLotteryDataTable->AddRow(FName(ShopTableId, FNAME_Add), row);
+			if (!m_ItemShopLotteryDataTable->FindRowUnchecked(FName(ShopTableId, FNAME_Add))) addSucceeded = false;
 		}
 		else
 		{
 			PS::Log<RC::LogLevel::Warning>(STR("ItemShopLotteryDataTable not found, skipping adding lottery row for {}\n"), CharacterId.ToString());
 			addSucceeded = false;
 		}
-		if (n_ItemShopCreateDataTable)
+		if (m_ItemShopCreateDataTable)
 		{
 			auto CreateRowJson = nlohmann::json::object();
 			CreateRowJson["productDataArray"] = Data.at("Items");
 
-			auto RowKeyName = CharacterId;
-			auto ExistingCreateRow = n_ItemShopCreateDataTable->FindRowUnchecked(RowKeyName);
-			auto CreateRowStruct = n_ItemShopCreateDataTable->GetRowStruct().Get();
+			auto ExistingCreateRow = m_ItemShopCreateDataTable->FindRowUnchecked(CharacterId);
+			auto CreateRowStruct = m_ItemShopCreateDataTable->GetRowStruct().Get();
 			if (ExistingCreateRow)
 			{
 				try
@@ -458,18 +448,17 @@ namespace Palworld {
 							PropertyHelper::CopyJsonValueToContainer(ExistingCreateRow, Property, CreateRowJson.at(PropertyName));
 						}
 					}
-					if (!n_ItemShopCreateDataTable->FindRowUnchecked(RowKeyName)) addSucceeded = false;
+					if (!m_ItemShopCreateDataTable->FindRowUnchecked(CharacterId)) addSucceeded = false;
 				}
 				catch (const std::exception& e)
 				{
-					PS::Log<RC::LogLevel::Error>(STR("Failed to modify Row '{}' in {}: {}\n"), RowKeyName.ToString(), n_ItemShopCreateDataTable->GetFullName(), RC::to_generic_string(e.what()));
+					PS::Log<RC::LogLevel::Error>(STR("Failed to modify Row '{}' in {}: {}\n"), CharacterId.ToString(), m_ItemShopCreateDataTable->GetFullName(), RC::to_generic_string(e.what()));
 					addSucceeded = false;
 				}
 			}
 			else
 			{
-				auto RowData = FMemory::Malloc(CreateRowStruct->GetStructureSize());
-				CreateRowStruct->InitializeStruct(RowData);
+				FManagedStruct CreateRowData{ CreateRowStruct };
 				try
 				{
 					for (auto& Property : CreateRowStruct->ForEachPropertyInChain())
@@ -477,16 +466,15 @@ namespace Palworld {
 						auto PropertyName = RC::to_string(Property->GetName());
 						if (CreateRowJson.contains(PropertyName))
 						{
-							PropertyHelper::CopyJsonValueToContainer(RowData, Property, CreateRowJson.at(PropertyName));
+							PropertyHelper::CopyJsonValueToContainer(CreateRowData.GetData(), Property, CreateRowJson.at(PropertyName));
 						}
 					}
-					n_ItemShopCreateDataTable->AddRow(RowKeyName, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData));
-					if (!n_ItemShopCreateDataTable->FindRowUnchecked(RowKeyName)) addSucceeded = false;
+					m_ItemShopCreateDataTable->AddRow(CharacterId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(CreateRowData.GetData()));
+					if (!m_ItemShopCreateDataTable->FindRowUnchecked(CharacterId)) addSucceeded = false;
 				}
 				catch (const std::exception& e)
 				{
-					FMemory::Free(RowData);
-					PS::Log<RC::LogLevel::Error>(STR("Failed to add Row '{}' to {}: {}\n"), RowKeyName.ToString(), n_ItemShopCreateDataTable->GetFullName(), RC::to_generic_string(e.what()));
+					PS::Log<RC::LogLevel::Error>(STR("Failed to add Row '{}' to {}: {}\n"), CharacterId.ToString(), m_ItemShopCreateDataTable->GetFullName(), RC::to_generic_string(e.what()));
 					addSucceeded = false;
 				}
 			}
@@ -496,15 +484,15 @@ namespace Palworld {
 			PS::Log<RC::LogLevel::Warning>(STR("ItemShopCreateDataTable not found, skipping adding create-data row for {}\n"), CharacterId.ToString());
 			addSucceeded = false;
 		}
-		if (n_ItemShopSettingDataTable)
+		if (m_ItemShopSettingDataTable)
 		{
 			auto CurrencyStr = RC::to_generic_string(Data.at("Currency").get<std::string>());
 			FPalItemShopSettingDataRow settingRow{ CurrencyStr };
 
-			auto ExistingRow = n_ItemShopSettingDataTable->FindRowUnchecked(CharacterId);
+			auto ExistingRow = m_ItemShopSettingDataTable->FindRowUnchecked(CharacterId);
 			if (ExistingRow)
 			{
-				auto RowStruct = n_ItemShopSettingDataTable->GetRowStruct().Get();
+				auto RowStruct = m_ItemShopSettingDataTable->GetRowStruct().Get();
 				auto CurrencyProp = RowStruct->GetPropertyByName(STR("CurrencyItemID"));
 				if (CurrencyProp)
 				{
@@ -514,12 +502,12 @@ namespace Palworld {
 				{
 					PS::Log<RC::LogLevel::Warning>(STR("CurrencyItemID property not found in ItemShopSettingData row struct, skipping update for {}\n"), CharacterId.ToString());
 				}
-				if (!n_ItemShopSettingDataTable->FindRowUnchecked(CharacterId)) addSucceeded = false;
+				if (!m_ItemShopSettingDataTable->FindRowUnchecked(CharacterId)) addSucceeded = false;
 			}
 			else
 			{
-				n_ItemShopSettingDataTable->AddRow(CharacterId, settingRow);
-				if (!n_ItemShopSettingDataTable->FindRowUnchecked(CharacterId)) addSucceeded = false;
+				m_ItemShopSettingDataTable->AddRow(CharacterId, settingRow);
+				if (!m_ItemShopSettingDataTable->FindRowUnchecked(CharacterId)) addSucceeded = false;
 			}
 		}
 		else
