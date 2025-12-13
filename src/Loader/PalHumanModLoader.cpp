@@ -86,27 +86,27 @@ namespace Palworld {
 
 		for (auto& [key, value] : properties.items())
 		{
-			auto KeyName = RC::to_generic_string(key);
-			if (KeyName == STR("IconAssetPath"))
+			if (key == "IconAssetPath")
 			{
 				auto IconPath = RC::to_generic_string(value.get<std::string>());
 				AddIcon(CharacterId, IconPath);
 			}
-			else if (KeyName == STR("BlueprintAssetPath"))
+			else if (key == "BlueprintAssetPath")
 			{
 				auto BlueprintPath = RC::to_generic_string(value.get<std::string>());
 				AddBlueprint(CharacterId, BlueprintPath);
 			}
-			else if (KeyName == STR("Loot"))
+			else if (key == "Loot")
 			{
 				AddLoot(CharacterId, value);
 			}
-			else if (KeyName == STR("Shop"))
+			else if (key == "Shop")
 			{
 				AddShop(CharacterId, value);
 			}
 			else
 			{
+                auto KeyName = RC::to_generic_string(key);
 				auto Property = NpcRowStruct->GetPropertyByName(KeyName.c_str());
 				if (Property)
 				{
@@ -131,8 +131,7 @@ namespace Palworld {
 		auto RowStruct = m_dataTable->GetRowStruct().Get();
 		for (auto& [key, value] : properties.items())
 		{
-			auto KeyName = RC::to_generic_string(key);
-			if (KeyName == STR("IconAssetPath"))
+			if (key == "IconAssetPath")
 			{
 				auto IconTableRow = std::bit_cast<FPalCharacterIconDataRow*>(m_iconDataTable->FindRowUnchecked(CharacterId));
 				if (IconTableRow)
@@ -141,7 +140,7 @@ namespace Palworld {
 					IconTableRow->Icon = UECustom::TSoftObjectPtr<UECustom::UTexture2D>(UECustom::FSoftObjectPath(IconPath));
 				}
 			}
-			else if (KeyName == STR("BlueprintAssetPath"))
+			else if (key == "BlueprintAssetPath")
 			{
 				auto BlueprintTableRow = std::bit_cast<FPalBPClassDataRow*>(m_palBpClassTable->FindRowUnchecked(CharacterId));
 				if (BlueprintTableRow)
@@ -150,12 +149,13 @@ namespace Palworld {
 					BlueprintTableRow->BPClass = UECustom::TSoftClassPtr<RC::Unreal::UClass>(UECustom::FSoftObjectPath(BlueprintPath));
 				}
 			}
-            else if (KeyName == STR("Loot"))
+            else if (key == "Loot")
             {
 				AddLoot(CharacterId, value);
             }
 			else
 			{
+                auto KeyName = RC::to_generic_string(key);
 				auto Property = RowStruct->GetPropertyByName(KeyName.c_str());
 				if (Property)
 				{
@@ -200,8 +200,6 @@ namespace Palworld {
 		auto loot_array = properties.get<std::vector<nlohmann::json>>();
 		for (auto& loot : loot_array)
 		{
-			auto IndexString = std::to_wstring(Index);
-
 			if (!loot.contains("ItemId"))
 			{
 				PS::Log<RC::LogLevel::Error>(STR("ItemId was not specified in {}, skipping loot entry.\n"), CharacterId.ToString());
@@ -250,38 +248,38 @@ namespace Palworld {
 				continue;
 			}
 
-			auto ItemIdWithSuffix = std::format(STR("ItemId{}"), IndexString);
+			auto ItemIdWithSuffix = std::format(STR("ItemId{}"), Index);
 			auto ItemIdProperty = RowStruct->GetPropertyByName(ItemIdWithSuffix.c_str());
 			if (!ItemIdProperty)
 			{
 				throw std::runtime_error(std::format("Property 'ItemId{}' doesn't exist in DT_PalDropItem, Pal Schema needs an update.", Index));
 			}
 
-			auto RateWithSuffix = std::format(STR("Rate{}"), IndexString);
+			auto RateWithSuffix = std::format(STR("Rate{}"), Index);
 			auto RateProperty = RowStruct->GetPropertyByName(RateWithSuffix.c_str());
 			if (!RateProperty)
 			{
 				throw std::runtime_error(std::format("Property 'Rate{}' doesn't exist in DT_PalDropItem, Pal Schema needs an update.", Index));
 			}
 
-			auto MaxWithSuffix = std::format(STR("Max{}"), IndexString);
+			auto MaxWithSuffix = std::format(STR("Max{}"), Index);
 			auto MaxProperty = RowStruct->GetPropertyByName(MaxWithSuffix.c_str());
 			if (!MaxProperty)
 			{
 				throw std::runtime_error(std::format("Property 'Max{}' doesn't exist in DT_PalDropItem, Pal Schema needs an update.", Index));
 			}
 
-			auto MinWithSuffix = std::format(STR("min{}"), IndexString);
+			auto MinWithSuffix = std::format(STR("min{}"), Index);
 			auto MinProperty = RowStruct->GetPropertyByName(MinWithSuffix.c_str());
 			if (!MinProperty)
 			{
 				throw std::runtime_error(std::format("Property 'min{}' doesn't exist in DT_PalDropItem, Pal Schema needs an update.", Index));
 			}
 
-			auto ItemId = loot.at("ItemId");
-			auto DropChance = loot.at("DropChance");
-			auto Min = loot.at("Min");
-			auto Max = loot.at("Max");
+			auto& ItemId = loot.at("ItemId");
+			auto& DropChance = loot.at("DropChance");
+			auto& Min = loot.at("Min");
+			auto& Max = loot.at("Max");
 
 			PropertyHelper::CopyJsonValueToContainer(NpcDropItemData.GetData(), ItemIdProperty, ItemId);
 			PropertyHelper::CopyJsonValueToContainer(NpcDropItemData.GetData(), RateProperty, DropChance);
@@ -436,8 +434,7 @@ namespace Palworld {
 			auto CreateRowJson = nlohmann::json::object();
 			CreateRowJson["productDataArray"] = Data.at("Items");
 
-			auto RowKeyName = CharacterId;
-			auto ExistingCreateRow = m_ItemShopCreateDataTable->FindRowUnchecked(RowKeyName);
+			auto ExistingCreateRow = m_ItemShopCreateDataTable->FindRowUnchecked(CharacterId);
 			auto CreateRowStruct = m_ItemShopCreateDataTable->GetRowStruct().Get();
 			if (ExistingCreateRow)
 			{
@@ -451,17 +448,16 @@ namespace Palworld {
 							PropertyHelper::CopyJsonValueToContainer(ExistingCreateRow, Property, CreateRowJson.at(PropertyName));
 						}
 					}
-					if (!m_ItemShopCreateDataTable->FindRowUnchecked(RowKeyName)) addSucceeded = false;
+					if (!m_ItemShopCreateDataTable->FindRowUnchecked(CharacterId)) addSucceeded = false;
 				}
 				catch (const std::exception& e)
 				{
-					PS::Log<RC::LogLevel::Error>(STR("Failed to modify Row '{}' in {}: {}\n"), RowKeyName.ToString(), m_ItemShopCreateDataTable->GetFullName(), RC::to_generic_string(e.what()));
+					PS::Log<RC::LogLevel::Error>(STR("Failed to modify Row '{}' in {}: {}\n"), CharacterId.ToString(), m_ItemShopCreateDataTable->GetFullName(), RC::to_generic_string(e.what()));
 					addSucceeded = false;
 				}
 			}
 			else
 			{
-                
 				FManagedStruct CreateRowData{ CreateRowStruct };
 				try
 				{
@@ -473,12 +469,12 @@ namespace Palworld {
 							PropertyHelper::CopyJsonValueToContainer(CreateRowData.GetData(), Property, CreateRowJson.at(PropertyName));
 						}
 					}
-					m_ItemShopCreateDataTable->AddRow(RowKeyName, *reinterpret_cast<RC::Unreal::FTableRowBase*>(CreateRowData.GetData()));
-					if (!m_ItemShopCreateDataTable->FindRowUnchecked(RowKeyName)) addSucceeded = false;
+					m_ItemShopCreateDataTable->AddRow(CharacterId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(CreateRowData.GetData()));
+					if (!m_ItemShopCreateDataTable->FindRowUnchecked(CharacterId)) addSucceeded = false;
 				}
 				catch (const std::exception& e)
 				{
-					PS::Log<RC::LogLevel::Error>(STR("Failed to add Row '{}' to {}: {}\n"), RowKeyName.ToString(), m_ItemShopCreateDataTable->GetFullName(), RC::to_generic_string(e.what()));
+					PS::Log<RC::LogLevel::Error>(STR("Failed to add Row '{}' to {}: {}\n"), CharacterId.ToString(), m_ItemShopCreateDataTable->GetFullName(), RC::to_generic_string(e.what()));
 					addSucceeded = false;
 				}
 			}
