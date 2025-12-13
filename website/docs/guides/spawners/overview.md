@@ -38,7 +38,7 @@ These fields are only available when `Type` is set to `MonoNPC`.
 
 ### Sheet
 These fields are only available when `Type` is set to `Sheet`.
-- `SpawnerName`: Name of the spawner.
+- `SpawnerName`: Name of the spawner, make sure to specify this, it can be anything you want. Check [Additional Notes](#additional-notes) regarding implementation details of `SpawnerName`.
 - `SpawnerType`: Type specified in the `EPalSpawnerPlacementType` enum as a string, e.g. `FieldBoss` for a boss.
 - `SpawnGroupList`: Array of `SpawnGroup` objects.  
   - `SpawnGroup`:
@@ -51,3 +51,7 @@ These fields are only available when `Type` is set to `Sheet`.
         - `Level_Max`: Maximum level of the spawned character.
         - `Num`: Minimum number of characters to spawn at the same time.
         - `Num_Max`: Maximum number of characters to spawn at the same time.
+
+### Additional Notes
+
+- A small implementation detail regarding the `SpawnerName` field when adding spawns: PalSchema will automatically append the name of your mod to the front, so if the name of your mod's main folder is called `MySpawnerMod` and the `SpawnerName` is `Cattiva001`, the final name will be `MySpawnerMod_Cattiva001`. This is to prevent any name collisions with other mods that add spawns with the same name.
