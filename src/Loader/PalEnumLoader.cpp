@@ -1,4 +1,5 @@
 #include "Loader/PalEnumLoader.h"
+#include "Unreal/UClass.hpp"
 #include "Unreal/UEnum.hpp"
 #include "Helpers/String.hpp"
 #include "Utility/Logging.h"

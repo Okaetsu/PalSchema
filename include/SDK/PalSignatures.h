@@ -42,6 +42,7 @@ namespace Palworld {
             // Raw Tables
             { "UDataTable::Serialize", "E8 ?? ?? ?? ?? 41 F6 06 01 0F 84 1D 03 00 00 48 89 5C 24 50" },
             { "UPalStaticItemDataTable::Get", "E8 ?? ?? ?? ?? 48 85 C0 74 0B 8B 40" },
+            { "UWorld::CleanupWorld", "E8 ?? ?? ?? ?? 8B 55 A7 FF C2 49 83 C5 08 89 55 A7" },
         };
     };
 }

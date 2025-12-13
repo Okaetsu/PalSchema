@@ -1,6 +1,7 @@
 #include <fstream>
 #include <filesystem>
 #include "Unreal/UClass.hpp"
+#include "Unreal/UFunction.hpp"
 #include "Unreal/Hooks.hpp"
 #include "Utility/Config.h"
 #include "Utility/Logging.h"
@@ -8,6 +9,7 @@
 #include "SDK/Classes/Custom/UDataTableStore.h"
 #include "SDK/Classes/Custom/UObjectGlobals.h"
 #include "SDK/Classes/UCompositeDataTable.h"
+#include "SDK/Classes/UWorldPartitionRuntimeLevelStreamingCell.h"
 #include "SDK/Classes/PalUtility.h"
 #include "SDK/PalSignatures.h"
 #include "SDK/StaticClassStorage.h"
@@ -34,6 +36,7 @@ namespace constants {
     constexpr std::string skinsFolder           = "skins";
     constexpr std::string translationsFolder    = "translations";
     constexpr std::string resourcesFolder       = "resources";
+    constexpr std::string spawnsFolder          = "spawns";
 }
 
 namespace Palworld {
@@ -56,46 +59,21 @@ namespace Palworld {
         auto expected5 = StaticItemDataTable_Get_Hook.disable();
         StaticItemDataTable_Get_Hook = {};
 
+        auto expected6 = WorldCleanUp_Hook.disable();
+        WorldCleanUp_Hook = {};
+
         DatatableSerializeCallbacks.clear();
         GameInstanceInitCallbacks.clear();
         PostLoadCallbacks.clear();
         GetPakFoldersCallback.clear();
+        WorldCleanUp_Callbacks.clear();
     }
 
     void PalMainLoader::PreInitialize()
     {
-        auto DatatableSerializeFuncPtr = Palworld::SignatureManager::GetSignature("UDataTable::Serialize");
-        if (DatatableSerializeFuncPtr)
-        {
-            DatatableSerialize_Hook = safetyhook::create_inline(reinterpret_cast<void*>(DatatableSerializeFuncPtr),
-                OnDataTableSerialized);
-
-            DatatableSerializeCallbacks.push_back([&](RC::Unreal::UDataTable* Table) {
-                InitCore();
-                UECustom::UDataTableStore::Store(Table);
-                RawTableLoader.OnDataTableChanged(Table);
-            });
-
-            PS::Log<LogLevel::Verbose>(STR("Core pre-initialized.\n"));
-        }
-        else
-        {
-            PS::Log<LogLevel::Error>(STR("Unable to initialize PalSchema core, signature for UDataTable::Serialize is outdated.\n"));
-        }
-
-        auto StaticItemDataTable_GetFuncPtr = Palworld::SignatureManager::GetSignature("UPalStaticItemDataTable::Get");
-        if (StaticItemDataTable_GetFuncPtr)
-        {
-            StaticItemDataTable_Get_Hook = safetyhook::create_inline(reinterpret_cast<void*>(StaticItemDataTable_GetFuncPtr),
-                StaticItemDataTable_Get);
-
-            PS::Log<LogLevel::Verbose>(STR("Dummy item fix applied.\n"));
-        }
-        else
-        {
-            PS::Log<LogLevel::Error>(STR("Unable to apply dummy item fix, signature for UPalStaticItemDataTable::Get is outdated.\n"));
-        }
-
+        HookDatatableSerialize();
+        HookStaticItemDataTable_Get();
+        HookWorldCleanup();
         SetupAlternativePakPathReader();
     }
 
@@ -114,6 +92,59 @@ namespace Palworld {
         Load(loadErrorCallback);
 
         PS::Log<LogLevel::Normal>(STR("Finished reloading mods.\n"));
+    }
+
+    void PalMainLoader::HookDatatableSerialize()
+    {
+        auto DatatableSerializeFuncPtr = Palworld::SignatureManager::GetSignature("UDataTable::Serialize");
+        if (!DatatableSerializeFuncPtr)
+        {
+            PS::Log<LogLevel::Error>(STR("Unable to initialize PalSchema core, signature for UDataTable::Serialize is outdated.\n"));
+            return;
+        }
+
+        DatatableSerialize_Hook = safetyhook::create_inline(reinterpret_cast<void*>(DatatableSerializeFuncPtr),
+            OnDataTableSerialized);
+
+        DatatableSerializeCallbacks.push_back([&](RC::Unreal::UDataTable* Table) {
+            InitCore();
+            UECustom::UDataTableStore::Store(Table);
+            RawTableLoader.OnDataTableChanged(Table);
+        });
+
+        PS::Log<LogLevel::Verbose>(STR("Core pre-initialized.\n"));
+    }
+
+    void PalMainLoader::HookStaticItemDataTable_Get()
+    {
+        auto StaticItemDataTable_GetFuncPtr = Palworld::SignatureManager::GetSignature("UPalStaticItemDataTable::Get");
+        if (!StaticItemDataTable_GetFuncPtr)
+        {
+            PS::Log<LogLevel::Error>(STR("Unable to apply dummy item fix, signature for UPalStaticItemDataTable::Get is outdated.\n"));
+            return;
+        }
+
+        StaticItemDataTable_Get_Hook = safetyhook::create_inline(reinterpret_cast<void*>(StaticItemDataTable_GetFuncPtr),
+            StaticItemDataTable_Get);
+
+        PS::Log<LogLevel::Verbose>(STR("Dummy item fix applied.\n"));
+    }
+
+    void PalMainLoader::HookWorldCleanup()
+    {
+        auto World_CleanupWorld_FuncPtr = Palworld::SignatureManager::GetSignature("UWorld::CleanupWorld");
+        if (!World_CleanupWorld_FuncPtr)
+        {
+            PS::Log<LogLevel::Error>(STR("Unable to hook UWorld::CleanupWorld, signature is outdated. Custom spawns will not work.\n"));
+            return;
+        }
+
+        WorldCleanUp_Hook = safetyhook::create_inline(reinterpret_cast<void*>(World_CleanupWorld_FuncPtr),
+            UWorld_CleanupWorld);
+
+        WorldCleanUp_Callbacks.push_back([&](RC::Unreal::UWorld* WorldToCleanup) {
+            SpawnLoader.OnWorldCleanup(WorldToCleanup);
+        });
     }
 
     void PalMainLoader::SetupAutoReload()
@@ -196,6 +227,10 @@ namespace Palworld {
                                 else if (folderType == constants::rawFolder)
                                 {
                                     RawTableLoader.Reload(data);
+                                }
+                                else if (folderType == constants::spawnsFolder)
+                                {
+                                    SpawnLoader.Reload(modName, data);
                                 }
                             });
 
@@ -298,6 +333,18 @@ namespace Palworld {
         GameInstanceInit_Hook = safetyhook::create_inline(GameInstanceInitPtr,
             reinterpret_cast<void*>(OnGameInstanceInit));
 
+        auto onLevelShownFunction = UECustom::UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, STR("/Script/Engine.WorldPartitionRuntimeLevelStreamingCell:OnLevelShown"));
+        onLevelShownFunction->RegisterPostHook([&](UnrealScriptFunctionCallableContext& Context, void* CustomData) {
+            auto Cell = static_cast<UECustom::UWorldPartitionRuntimeLevelStreamingCell*>(Context.Context);
+            SpawnLoader.OnCellLoaded(Cell);
+        });
+
+        auto onLevelHiddenFunction = UECustom::UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, STR("/Script/Engine.WorldPartitionRuntimeLevelStreamingCell:OnLevelHidden"));
+        onLevelHiddenFunction->RegisterPostHook([&](UnrealScriptFunctionCallableContext& Context, void* CustomData) {
+            auto Cell = static_cast<UECustom::UWorldPartitionRuntimeLevelStreamingCell*>(Context.Context);
+            SpawnLoader.OnCellUnloaded(Cell);
+        });
+
         PS::Log<LogLevel::Verbose>(STR("Initialized Core\n"));
     }
 
@@ -315,6 +362,7 @@ namespace Palworld {
         ItemModLoader.Initialize();
         SkinModLoader.Initialize();
         HelpGuideModLoader.Initialize();
+        SpawnLoader.Initialize();
         PS::Log<LogLevel::Verbose>(STR("Initialized Loaders\n"));
         PS::Log<LogLevel::Normal>(STR("Loading mods...\n"));
 
@@ -382,6 +430,11 @@ namespace Palworld {
                 auto blueprintFolder = modPath / constants::blueprintsFolder;
                 ParseJsonFilesInPath(blueprintFolder, [&](const nlohmann::json& data) {
                     BlueprintModLoader.Load(data);
+                });
+
+                auto spawnsFolder = modPath / constants::spawnsFolder;
+                ParseJsonFilesInPath(spawnsFolder, [&](const nlohmann::json& data) {
+                    SpawnLoader.Load(modName, data);
                 });
             }
             catch (const std::exception& e)
@@ -581,5 +634,14 @@ namespace Palworld {
         // Instead, we'll generate a dummy item for that ItemId and return it.
         // Subsequent calls to this hook with the same ItemId will just return in the first if block since it was added to StaticItemDataAsset.
         return PalItemModLoader::AddDummyItem(This, ItemId);
+    }
+
+    void PalMainLoader::UWorld_CleanupWorld(UWorld* This, bool bSessionEnded, bool bCleanupResources, UWorld* NewWorld)
+    {
+        WorldCleanUp_Hook.call(This, bSessionEnded, bCleanupResources, NewWorld);
+        for (auto& Callback : WorldCleanUp_Callbacks)
+        {
+            Callback(This);
+        }
     }
 }
