@@ -17,17 +17,8 @@ Documentation for modders can be found [here](https://okaetsu.github.io/PalSchem
 
 3. Execute this command: `git submodule update --init --recursive`
 
-4. Execute the following based on which build tool you're using (XMake or CMake):  
+4. Execute the following:
 
-XMake
------
-```
-xmake f -m Game__Shipping__Win64 -y
-xmake project -k vsxmake2022 -m Game__Shipping__Win64 -y
-```
-
-CMake
------
 Choose either MSVC or Ninja
 
 MSVC (multi-configuration, slower, allows switching configs without reconfiguring)
