@@ -28,7 +28,7 @@ namespace Palworld {
 
     void PalSpawnLoader::Initialize()
     {
-        m_bossSpawnerLocationData = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
+        m_bossSpawnerLocationData = UECustom::UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
             STR("/Game/Pal/DataTable/UI/DT_BossSpawnerLoactionData.DT_BossSpawnerLoactionData"));
     }
 
@@ -252,7 +252,7 @@ namespace Palworld {
 
     void PalSpawnLoader::SpawnMonoNPC(UECustom::UWorldPartitionRuntimeLevelStreamingCell* cell, PS::SpawnerInfo& spawnerInfo)
     {
-        static auto bpClass = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Game/Pal/Blueprint/Spawner/BP_MonoNPCSpawner.BP_MonoNPCSpawner_C"));
+        static auto bpClass = UECustom::UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Game/Pal/Blueprint/Spawner/BP_MonoNPCSpawner.BP_MonoNPCSpawner_C"));
         if (!bpClass)
         {
             PS::Log<LogLevel::Error>(STR("Unable to get class BP_MonoNPCSpawner, failed to spawn {}\n"), spawnerInfo.NPCID.ToString());
@@ -283,7 +283,7 @@ namespace Palworld {
 
     void PalSpawnLoader::SpawnSheet(UECustom::UWorldPartitionRuntimeLevelStreamingCell* cell, PS::SpawnerInfo& spawnerInfo)
     {
-        static auto sheetBPClass = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Game/Pal/Blueprint/Spawner/BP_PalSpawner_Standard.BP_PalSpawner_Standard_C"));
+        static auto sheetBPClass = UECustom::UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Game/Pal/Blueprint/Spawner/BP_PalSpawner_Standard.BP_PalSpawner_Standard_C"));
         if (!sheetBPClass)
         {
             PS::Log<LogLevel::Error>(STR("Unable to get class BP_PalSpawner_Standard, failed to spawn sheet\n"));

@@ -1,6 +1,6 @@
 #include "SDK/Classes/PalStaticConsumeItemData.h"
-#include "Unreal/UObjectGlobals.hpp"
-#include "Unreal/UClass.hpp"
+#include "SDK/Classes/Custom/UObjectGlobals.h"
+#include "Unreal/CoreUObject/UObject/Class.hpp"
 
 using namespace RC;
 using namespace RC::Unreal;
@@ -8,7 +8,7 @@ using namespace RC::Unreal;
 namespace Palworld {
 	UClass* UPalStaticConsumeItemData::StaticClass()
 	{
-		auto Class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Pal.PalStaticConsumeItemData"));
+		auto Class = UECustom::UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Pal.PalStaticConsumeItemData"));
 		return Class;
 	}
 }

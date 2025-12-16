@@ -1,4 +1,5 @@
 #include "SDK/Classes/KismetRenderingLibrary.h"
+#include "SDK/Classes/Custom/UObjectGlobals.h"
 #include "Unreal/UFunction.hpp"
 #include "Utility/Logging.h"
 
@@ -8,7 +9,7 @@ using namespace RC::Unreal;
 namespace UECustom {
     RC::Unreal::UObject* UKismetRenderingLibrary::ImportFileAsTexture2D(RC::Unreal::UObject* WorldContextObject, const RC::Unreal::FString& Filename)
     {
-        static auto Function = UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, TEXT("/Script/Engine.KismetRenderingLibrary:ImportFileAsTexture2D"));
+        static auto Function = UECustom::UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, TEXT("/Script/Engine.KismetRenderingLibrary:ImportFileAsTexture2D"));
 
         if (!Function)
         {
@@ -32,7 +33,7 @@ namespace UECustom {
 
     UKismetRenderingLibrary* UKismetRenderingLibrary::GetDefaultObj()
     {
-        static auto Self = UObjectGlobals::StaticFindObject<UKismetRenderingLibrary*>(nullptr, nullptr, TEXT("/Script/Engine.Default__KismetRenderingLibrary"));
+        static auto Self = UECustom::UObjectGlobals::StaticFindObject<UKismetRenderingLibrary*>(nullptr, nullptr, TEXT("/Script/Engine.Default__KismetRenderingLibrary"));
         return Self;
     }
 }

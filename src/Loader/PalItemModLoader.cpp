@@ -1,5 +1,6 @@
 #include "Unreal/CoreUObject/UObject/UnrealType.hpp"
 #include "Unreal/Engine/UDataTable.hpp"
+#include "SDK/Classes/Custom/UObjectGlobals.h"
 #include "SDK/Classes/PalStaticItemDataTable.h"
 #include "SDK/Classes/PalStaticArmorItemData.h"
 #include "SDK/Classes/PalStaticConsumeItemData.h"
@@ -23,16 +24,16 @@ namespace Palworld {
 
 	void PalItemModLoader::Initialize()
 	{
-		m_itemDataAsset = UObjectGlobals::StaticFindObject<UPalStaticItemDataAsset*>(nullptr, nullptr,
+		m_itemDataAsset = UECustom::UObjectGlobals::StaticFindObject<UPalStaticItemDataAsset*>(nullptr, nullptr,
 			STR("/Game/Pal/DataAsset/Item/DA_StaticItemDataAsset.DA_StaticItemDataAsset"));
 
-        m_itemRecipeTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
+        m_itemRecipeTable = UECustom::UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
             STR("/Game/Pal/DataTable/Item/DT_ItemRecipeDataTable.DT_ItemRecipeDataTable"));
 
-        m_nameTranslationTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
+        m_nameTranslationTable = UECustom::UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
             STR("/Game/Pal/DataTable/Text/DT_ItemNameText.DT_ItemNameText"));
 
-        m_descriptionTranslationTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
+        m_descriptionTranslationTable = UECustom::UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
             STR("/Game/Pal/DataTable/Text/DT_ItemDescriptionText.DT_ItemDescriptionText"));
 
         PS::Log<LogLevel::Verbose>(STR("Initialized ItemModLoader\n"));
