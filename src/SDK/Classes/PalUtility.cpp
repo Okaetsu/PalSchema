@@ -1,4 +1,5 @@
 #include "SDK/Classes/PalUtility.h"
+#include "SDK/Classes/Custom/UObjectGlobals.h"
 #include "Unreal/UFunction.hpp"
 #include "Unreal/CoreUObject/UObject/Class.hpp"
 #include "Utility/Logging.h"
@@ -9,7 +10,7 @@ using namespace RC::Unreal;
 namespace Palworld {
     UPalMasterDataTables* UPalUtility::GetMasterDataTables(UObject* WorldContextObject)
     {
-        static auto Function = UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, STR("/Script/Pal.PalUtility:GetMasterDataTables"));
+        static auto Function = UECustom::UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, STR("/Script/Pal.PalUtility:GetMasterDataTables"));
 
         if (!Function)
         {
@@ -31,7 +32,7 @@ namespace Palworld {
 
     void UPalUtility::Alert(UObject* WorldContextObject, const FText& Message)
     {
-        static auto Function = UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, STR("/Script/Pal.PalUtility:Alert"));
+        static auto Function = UECustom::UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, STR("/Script/Pal.PalUtility:Alert"));
 
         if (!Function)
         {
@@ -52,7 +53,7 @@ namespace Palworld {
 
     UPalItemIDManager* UPalUtility::GetItemIDManager(RC::Unreal::UObject* WorldContextObject)
     {
-        static auto Function = UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, STR("/Script/Pal.PalUtility:GetItemIDManager"));
+        static auto Function = UECustom::UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, STR("/Script/Pal.PalUtility:GetItemIDManager"));
 
         if (!Function)
         {
@@ -74,7 +75,7 @@ namespace Palworld {
 
     UPalUtility* UPalUtility::GetDefaultObject()
     {
-        static auto Class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Pal.PalUtility"));
+        static auto Class = UECustom::UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Pal.PalUtility"));
         return static_cast<UPalUtility*>(Class->GetClassDefaultObject());
     }
 }

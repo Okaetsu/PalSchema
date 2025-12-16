@@ -1,4 +1,5 @@
 #include "SDK/Classes/KismetGuidLibrary.h"
+#include "SDK/Classes/Custom/UObjectGlobals.h"
 #include "Unreal/UFunction.hpp"
 #include "Utility/Logging.h"
 
@@ -8,7 +9,7 @@ using namespace RC::Unreal;
 namespace UECustom {
     UECustom::FGuid UKismetGuidLibrary::NewGuid()
     {
-        static auto Function = UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, TEXT("/Script/Engine.KismetGuidLibrary:NewGuid"));
+        static auto Function = UECustom::UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, TEXT("/Script/Engine.KismetGuidLibrary:NewGuid"));
 
         if (!Function)
         {
@@ -27,7 +28,7 @@ namespace UECustom {
 
     RC::Unreal::FString UKismetGuidLibrary::Conv_GuidToString(const UECustom::FGuid& Guid)
     {
-        static auto Function = UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, TEXT("/Script/Engine.KismetGuidLibrary:Conv_GuidToString"));
+        static auto Function = UECustom::UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, TEXT("/Script/Engine.KismetGuidLibrary:Conv_GuidToString"));
 
         if (!Function)
         {
@@ -49,7 +50,7 @@ namespace UECustom {
 
     UKismetGuidLibrary* UKismetGuidLibrary::GetDefaultObj()
     {
-        static auto Self = UObjectGlobals::StaticFindObject<UKismetGuidLibrary*>(nullptr, nullptr, TEXT("/Script/Engine.Default__KismetGuidLibrary"));
+        static auto Self = UECustom::UObjectGlobals::StaticFindObject<UKismetGuidLibrary*>(nullptr, nullptr, TEXT("/Script/Engine.Default__KismetGuidLibrary"));
         return Self;
     }
 }

@@ -1,13 +1,13 @@
 #include "SDK/Classes/PalNoteData.h"
-#include "Unreal/UClass.hpp"
-#include "Unreal/UObjectGlobals.hpp"
+#include "SDK/Classes/Custom/UObjectGlobals.h"
+#include "Unreal/CoreUObject/UObject/Class.hpp"
 
 using namespace RC::Unreal;
 
 namespace Palworld {
     UClass* UPalNoteData::StaticClass()
     {
-        static auto Class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, TEXT("/Script/Pal.PalNoteData"));
+        static auto Class = UECustom::UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, TEXT("/Script/Pal.PalNoteData"));
         return Class;
     }
 }

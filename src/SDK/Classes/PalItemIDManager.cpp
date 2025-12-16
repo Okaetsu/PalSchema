@@ -1,5 +1,6 @@
 #include "SDK/Classes/PalItemIDManager.h"
 #include "SDK/Classes/PalStaticItemDataTable.h"
+#include "SDK/Classes/Custom/UObjectGlobals.h"
 #include "Unreal/UFunction.hpp"
 #include "Unreal/CoreUObject/UObject/Class.hpp"
 #include "Utility/Logging.h"
@@ -20,7 +21,7 @@ namespace Palworld {
 
     UObject* UPalItemIDManager::GetStaticItemData(const FName& StaticItemId)
     {
-        static auto Function = UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, STR("/Script/Pal.PalItemIDManager:GetStaticItemData"));
+        static auto Function = UECustom::UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, STR("/Script/Pal.PalItemIDManager:GetStaticItemData"));
 
         if (!Function)
         {

@@ -1,4 +1,5 @@
 #include "SDK/Classes/KismetSystemLibrary.h"
+#include "SDK/Classes/Custom/UObjectGlobals.h"
 #include "Unreal/UFunction.hpp"
 #include "Utility/Logging.h"
 
@@ -8,7 +9,7 @@ using namespace RC::Unreal;
 namespace UECustom {
     void UKismetSystemLibrary::CollectGarbage()
     {
-        static auto Function = UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, TEXT("/Script/Engine.KismetSystemLibrary:CollectGarbage"));
+        static auto Function = UECustom::UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, TEXT("/Script/Engine.KismetSystemLibrary:CollectGarbage"));
 
         if (!Function)
         {
@@ -21,7 +22,7 @@ namespace UECustom {
 
     FSoftObjectPath UKismetSystemLibrary::MakeSoftObjectPath(const FString& Path)
 	{
-		static auto Function = UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, TEXT("/Script/Engine.KismetSystemLibrary:MakeSoftObjectPath"));
+		static auto Function = UECustom::UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, TEXT("/Script/Engine.KismetSystemLibrary:MakeSoftObjectPath"));
 
         if (!Function)
         {
@@ -43,7 +44,7 @@ namespace UECustom {
 
     RC::Unreal::UObject* UKismetSystemLibrary::LoadAsset_Blocking(UECustom::TSoftObjectPtr<UObject> Asset)
     {
-        static auto Function = UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, TEXT("/Script/Engine.KismetSystemLibrary:LoadAsset_Blocking"));
+        static auto Function = UECustom::UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, TEXT("/Script/Engine.KismetSystemLibrary:LoadAsset_Blocking"));
 
         if (!Function)
         {
@@ -65,7 +66,7 @@ namespace UECustom {
 
 	UKismetSystemLibrary* UKismetSystemLibrary::GetDefaultObj()
 	{
-		static auto Self = UObjectGlobals::StaticFindObject<UKismetSystemLibrary*>(nullptr, nullptr, TEXT("/Script/Engine.Default__KismetSystemLibrary"));
+		static auto Self = UECustom::UObjectGlobals::StaticFindObject<UKismetSystemLibrary*>(nullptr, nullptr, TEXT("/Script/Engine.Default__KismetSystemLibrary"));
 		return Self;
 	}
 }
