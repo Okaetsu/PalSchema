@@ -1,4 +1,4 @@
-#include "Unreal/UClass.hpp"
+#include "Unreal/CoreUObject/UObject/Class.hpp"
 #include "Unreal/UObject.hpp"
 #include "Unreal/UObjectGlobals.hpp"
 #include "Unreal/UScriptStruct.hpp"

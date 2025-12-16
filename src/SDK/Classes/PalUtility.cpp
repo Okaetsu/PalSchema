@@ -1,6 +1,6 @@
 #include "SDK/Classes/PalUtility.h"
 #include "Unreal/UFunction.hpp"
-#include "Unreal/UClass.hpp"
+#include "Unreal/CoreUObject/UObject/Class.hpp"
 #include "Utility/Logging.h"
 
 using namespace RC;

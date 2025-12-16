@@ -93,7 +93,7 @@ namespace Palworld {
         {
             try
             {
-                for (auto& Property : TableRowStruct->ForEachPropertyInChain())
+                for (FProperty* Property : TFieldRange<FProperty>(TableRowStruct, EFieldIterationFlags::IncludeSuper))
                 {
                     auto PropertyName = RC::to_string(Property->GetName());
 
@@ -119,7 +119,7 @@ namespace Palworld {
             TableRowStruct->InitializeStruct(RowData);
             try
             {
-                for (auto& Property : TableRowStruct->ForEachPropertyInChain())
+                for (FProperty* Property : TFieldRange<FProperty>(TableRowStruct, EFieldIterationFlags::IncludeSuper))
                 {
                     auto PropertyName = RC::to_string(Property->GetName());
 
@@ -186,7 +186,7 @@ namespace Palworld {
         {
             try
             {
-                for (auto& Property : TableRowStruct->ForEachPropertyInChain())
+                for (FProperty* Property : TFieldRange<FProperty>(TableRowStruct, EFieldIterationFlags::IncludeSuper))
                 {
                     auto PropertyName = RC::to_string(Property->GetName());
 
@@ -219,7 +219,7 @@ namespace Palworld {
 
             try
             {
-                for (auto& Property : TableRowStruct->ForEachPropertyInChain())
+                for (FProperty* Property : TFieldRange<FProperty>(TableRowStruct, EFieldIterationFlags::IncludeSuper))
                 {
                     auto PropertyName = RC::to_string(Property->GetName());
 
@@ -333,7 +333,7 @@ namespace Palworld {
         auto RowData = FMemory::Malloc(TableRowStruct->GetStructureSize());
         TableRowStruct->InitializeStruct(RowData);
 
-        for (auto& Property : TableRowStruct->ForEachPropertyInChain())
+        for (FProperty* Property : TFieldRange<FProperty>(TableRowStruct, EFieldIterationFlags::IncludeSuper))
         {
             auto PropertyName = RC::to_string(Property->GetName());
             if (Data.contains(PropertyName))
@@ -355,7 +355,7 @@ namespace Palworld {
         {
             try
             {
-                for (auto& Property : TableRowStruct->ForEachPropertyInChain())
+                for (FProperty* Property : TFieldRange<FProperty>(TableRowStruct, EFieldIterationFlags::IncludeSuper))
                 {
                     auto PropertyName = RC::to_string(Property->GetName());
                     if (Data.contains(PropertyName))
@@ -376,7 +376,7 @@ namespace Palworld {
 
             try
             {
-                for (auto& Property : TableRowStruct->ForEachPropertyInChain())
+                for (FProperty* Property : TFieldRange<FProperty>(TableRowStruct, EFieldIterationFlags::IncludeSuper))
                 {
                     auto PropertyName = RC::to_string(Property->GetName());
                     if (Data.contains(PropertyName))
@@ -412,7 +412,7 @@ namespace Palworld {
         {
             try
             {
-                for (auto& Property : TableRowStruct->ForEachPropertyInChain())
+                for (FProperty* Property : TFieldRange<FProperty>(TableRowStruct, EFieldIterationFlags::IncludeSuper))
                 {
                     auto PropertyName = RC::to_string(Property->GetName());
                     if (PropertyName == "Name" || PropertyName == "Description")
@@ -438,7 +438,7 @@ namespace Palworld {
 
             try
             {
-                for (auto& Property : TableRowStruct->ForEachPropertyInChain())
+                for (FProperty* Property : TFieldRange<FProperty>(TableRowStruct, EFieldIterationFlags::IncludeSuper))
                 {
                     auto PropertyName = RC::to_string(Property->GetName());
 
@@ -548,7 +548,7 @@ namespace Palworld {
         {
             try
             {
-                for (auto& Property : TableRowStruct->ForEachPropertyInChain())
+                for (FProperty* Property : TFieldRange<FProperty>(TableRowStruct, EFieldIterationFlags::IncludeSuper))
                 {
                     auto PropertyName = RC::to_string(Property->GetName());
                     if (Data.contains(PropertyName))
@@ -568,7 +568,7 @@ namespace Palworld {
             TableRowStruct->InitializeStruct(RowData);
             try
             {
-                for (auto& Property : TableRowStruct->ForEachPropertyInChain())
+                for (FProperty* Property : TFieldRange<FProperty>(TableRowStruct, EFieldIterationFlags::IncludeSuper))
                 {
                     auto PropertyName = RC::to_string(Property->GetName());
                     if (Data.contains(PropertyName))
@@ -576,6 +576,7 @@ namespace Palworld {
                         PropertyHelper::CopyJsonValueToContainer(RowData, Property, Data.at(PropertyName));
                     }
                 }
+
                 DataTable->AddRow(BuildingId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData));
             }
             catch (const std::exception& e)

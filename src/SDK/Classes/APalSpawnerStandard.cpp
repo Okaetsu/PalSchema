@@ -2,7 +2,7 @@
 #include "SDK/Helper/PropertyHelper.h"
 #include "SDK/Structs/Custom/FScriptArrayHelper.h"
 #include "SDK/Structs/Reflected/PalSpawnerGroupInfo.h"
-#include "Unreal/UClass.hpp"
+#include "Unreal/CoreUObject/UObject/Class.hpp"
 #include "Unreal/Core/Containers/ScriptArray.hpp"
 #include "Unreal/FProperty.hpp"
 

@@ -1,6 +1,6 @@
 #include <fstream>
 #include <filesystem>
-#include "Unreal/UClass.hpp"
+#include "Unreal/CoreUObject/UObject/Class.hpp"
 #include "Unreal/UFunction.hpp"
 #include "Unreal/Hooks.hpp"
 #include "Utility/Config.h"

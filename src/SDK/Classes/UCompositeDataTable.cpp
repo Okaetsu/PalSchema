@@ -1,6 +1,6 @@
 #include "SDK/Classes/UCompositeDataTable.h"
 #include "SDK/Classes/Custom/UObjectGlobals.h"
-#include "Unreal/UClass.hpp"
+#include "Unreal/CoreUObject/UObject/Class.hpp"
 #include "Helpers/Casting.hpp"
 
 using namespace RC;

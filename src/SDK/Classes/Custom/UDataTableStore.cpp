@@ -1,7 +1,7 @@
 #include "SDK/Classes/Custom/UDataTableStore.h"
 #include "SDK/Classes/Custom/UObjectGlobals.h"
 #include "Utility/Logging.h"
-#include "Unreal/UClass.hpp"
+#include "Unreal/CoreUObject/UObject/Class.hpp"
 #include "Unreal/UObject.hpp"
 #include "Unreal/Engine/UDataTable.hpp"
 #include "Helpers/String.hpp"

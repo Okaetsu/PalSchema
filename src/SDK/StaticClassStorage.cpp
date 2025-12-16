@@ -1,6 +1,6 @@
 #include "SDK/StaticClassStorage.h"
 #include "SDK/Helper/PropertyHelper.h"
-#include "Unreal/UClass.hpp"
+#include "Unreal/CoreUObject/UObject/Class.hpp"
 
 using namespace RC;
 using namespace RC::Unreal;
