@@ -1,4 +1,4 @@
-#include "Unreal/UClass.hpp"
+#include "Unreal/CoreUObject/UObject/Class.hpp"
 #include "Unreal/Engine/UDataTable.hpp"
 #include "Unreal/FProperty.hpp"
 #include "Unreal/UObjectGlobals.hpp"
@@ -440,14 +440,14 @@ namespace Palworld {
 			{
 				try
 				{
-					for (auto& Property : CreateRowStruct->ForEachPropertyInChain())
-					{
-						auto PropertyName = RC::to_string(Property->GetName());
-						if (CreateRowJson.contains(PropertyName))
-						{
-							PropertyHelper::CopyJsonValueToContainer(ExistingCreateRow, Property, CreateRowJson.at(PropertyName));
-						}
-					}
+                    for (FProperty* Property : TFieldRange<FProperty>(CreateRowStruct, EFieldIterationFlags::IncludeSuper))
+                    {
+                        auto PropertyName = RC::to_string(Property->GetName());
+                        if (CreateRowJson.contains(PropertyName))
+                        {
+                            PropertyHelper::CopyJsonValueToContainer(ExistingCreateRow, Property, CreateRowJson.at(PropertyName));
+                        }
+                    }
 					if (!m_ItemShopCreateDataTable->FindRowUnchecked(CharacterId)) addSucceeded = false;
 				}
 				catch (const std::exception& e)
@@ -461,14 +461,14 @@ namespace Palworld {
 				FManagedStruct CreateRowData{ CreateRowStruct };
 				try
 				{
-					for (auto& Property : CreateRowStruct->ForEachPropertyInChain())
-					{
-						auto PropertyName = RC::to_string(Property->GetName());
-						if (CreateRowJson.contains(PropertyName))
-						{
-							PropertyHelper::CopyJsonValueToContainer(CreateRowData.GetData(), Property, CreateRowJson.at(PropertyName));
-						}
-					}
+                    for (FProperty* Property : TFieldRange<FProperty>(CreateRowStruct, EFieldIterationFlags::IncludeSuper))
+                    {
+                        auto PropertyName = RC::to_string(Property->GetName());
+                        if (CreateRowJson.contains(PropertyName))
+                        {
+                            PropertyHelper::CopyJsonValueToContainer(CreateRowData.GetData(), Property, CreateRowJson.at(PropertyName));
+                        }
+                    }
 					m_ItemShopCreateDataTable->AddRow(CharacterId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(CreateRowData.GetData()));
 					if (!m_ItemShopCreateDataTable->FindRowUnchecked(CharacterId)) addSucceeded = false;
 				}

@@ -1,9 +1,8 @@
 #include "SDK/Structs/Reflected/PalSpawnerGroupInfo.h"
 #include "SDK/Structs/Reflected/PalSpawnerOneTribeInfo.h"
 #include "SDK/Classes/Custom/UObjectGlobals.h"
-#include "Unreal/Property/FArrayProperty.hpp"
+#include "Unreal/CoreUObject/UObject/UnrealType.hpp"
 #include "Unreal/Property/FEnumProperty.hpp"
-#include "Unreal/Property/FNumericProperty.hpp"
 
 using namespace RC;
 using namespace RC::Unreal;

@@ -1,6 +1,4 @@
-#include "Unreal/UObjectGlobals.hpp"
-#include "Unreal/UClass.hpp"
-#include "Unreal/UScriptStruct.hpp"
+#include "Unreal/CoreUObject/UObject/UnrealType.hpp"
 #include "Unreal/Engine/UDataTable.hpp"
 #include "SDK/Classes/PalStaticItemDataTable.h"
 #include "SDK/Classes/PalStaticArmorItemData.h"
@@ -217,19 +215,19 @@ namespace Palworld {
 			*DynamicItemDataClassProperty = DynamicDatabaseClass;
 		}
 
-		for (auto& Property : DatabaseClass->ForEachPropertyInChain())
-		{
-			auto PropertyName = RC::to_string(Property->GetName());
-			if (PropertyName == "DynamicItemDataClass")
-			{
-				// We've already set this earlier so we skip it.
-				continue;
-			}
-			if (Data.contains(PropertyName))
-			{
-				PropertyHelper::CopyJsonValueToContainer(reinterpret_cast<uint8_t*>(Item), Property, Data.at(PropertyName));
-			}
-		}
+        for (FProperty* Property : TFieldRange<FProperty>(DatabaseClass, EFieldIterationFlags::IncludeSuper))
+        {
+            auto PropertyName = RC::to_string(Property->GetName());
+            if (PropertyName == "DynamicItemDataClass")
+            {
+                // We've already set this earlier so we skip it.
+                continue;
+            }
+            if (Data.contains(PropertyName))
+            {
+                PropertyHelper::CopyJsonValueToContainer(reinterpret_cast<uint8_t*>(Item), Property, Data.at(PropertyName));
+            }
+        }
 		
 		if (Data.contains("Recipe"))
 		{
@@ -243,23 +241,23 @@ namespace Palworld {
 
 	void PalItemModLoader::Edit(const RC::Unreal::FName& ItemId, UPalStaticItemDataBase* Item, const nlohmann::json& Data)
 	{
-		for (auto& Property : Item->GetClassPrivate()->ForEachPropertyInChain())
-		{
-			auto PropertyName = RC::to_string(Property->GetName());
-			if (PropertyName == "DynamicItemDataClass")
-			{
-				continue;
-			}
-			if (PropertyName == "ID")
-			{
-				// Editing the ID is a bad idea, hence we skip it.
-				continue;
-			}
-			if (Data.contains(PropertyName))
-			{
-				PropertyHelper::CopyJsonValueToContainer(reinterpret_cast<uint8_t*>(Item), Property, Data.at(PropertyName));
-			}
-		}
+        for (FProperty* Property : TFieldRange<FProperty>(Item->GetClassPrivate(), EFieldIterationFlags::IncludeSuper))
+        {
+            auto PropertyName = RC::to_string(Property->GetName());
+            if (PropertyName == "DynamicItemDataClass")
+            {
+                continue;
+            }
+            if (PropertyName == "ID")
+            {
+                // Editing the ID is a bad idea, hence we skip it.
+                continue;
+            }
+            if (Data.contains(PropertyName))
+            {
+                PropertyHelper::CopyJsonValueToContainer(reinterpret_cast<uint8_t*>(Item), Property, Data.at(PropertyName));
+            }
+        }
 
 		if (Data.contains("Recipe"))
 		{

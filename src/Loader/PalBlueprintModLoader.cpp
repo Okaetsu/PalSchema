@@ -1,5 +1,5 @@
 #include <regex>
-#include "Unreal/UClass.hpp"
+#include "Unreal/CoreUObject/UObject/Class.hpp"
 #include "Unreal/UObject.hpp"
 #include "Unreal/AActor.hpp"
 #include "Unreal/Property/FObjectProperty.hpp"

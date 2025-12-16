@@ -13,7 +13,7 @@
 #include "Unreal/Property/FTextProperty.hpp"
 #include "Unreal/FString.hpp"
 #include "Unreal/NameTypes.hpp"
-#include "Unreal/UClass.hpp"
+#include "Unreal/CoreUObject/UObject/Class.hpp"
 #include "Unreal/UEnum.hpp"
 #include "Unreal/UScriptStruct.hpp"
 #include "SDK/Classes/TSoftObjectPtr.h"

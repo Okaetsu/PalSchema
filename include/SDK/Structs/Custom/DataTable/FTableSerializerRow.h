@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Helpers/String.hpp"
-#include "Unreal/UClass.hpp"
+#include "Unreal/CoreUObject/UObject/Class.hpp"
 #include "Unreal/NameTypes.hpp"
 #include "Unreal/UScriptStruct.hpp"
 #include "Unreal/FProperty.hpp"

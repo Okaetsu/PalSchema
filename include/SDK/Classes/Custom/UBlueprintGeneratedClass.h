@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Unreal/UClass.hpp"
+#include "Unreal/CoreUObject/UObject/Class.hpp"
 #include "SDK/Classes/Custom/USimpleConstructionScript.h"
 
 namespace RC::Unreal {

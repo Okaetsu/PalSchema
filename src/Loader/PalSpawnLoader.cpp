@@ -1,4 +1,4 @@
-#include "Unreal/UClass.hpp"
+#include "Unreal/CoreUObject/UObject/Class.hpp"
 #include "Unreal/UEnum.hpp"
 #include "Unreal/Engine/UDataTable.hpp"
 #include "Unreal/Transform.hpp"

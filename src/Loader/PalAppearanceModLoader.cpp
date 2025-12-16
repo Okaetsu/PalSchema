@@ -1,4 +1,4 @@
-#include "Unreal/UClass.hpp"
+#include "Unreal/CoreUObject/UObject/Class.hpp"
 #include "Unreal/UObjectGlobals.hpp"
 #include "Unreal/UScriptStruct.hpp"
 #include "Unreal/FProperty.hpp"
@@ -122,7 +122,7 @@ namespace Palworld {
 		auto RowData = FMemory::Malloc(RowStruct->GetStructureSize());
 		RowStruct->InitializeStruct(RowData);
 
-		for (auto& Property : RowStruct->ForEachProperty())
+        for (FProperty* Property : TFieldRange<FProperty>(RowStruct, EFieldIterationFlags::Default))
 		{
 			auto PropertyName = RC::to_string(Property->GetName());
 			if (Data.contains(PropertyName))

@@ -1,8 +1,6 @@
 #include "Unreal/UObjectGlobals.hpp"
-#include "Unreal/UClass.hpp"
-#include "Unreal/UScriptStruct.hpp"
 #include "Unreal/Engine/UDataTable.hpp"
-#include "Unreal/FText.hpp"
+#include "Unreal/CoreUObject/UObject/UnrealType.hpp"
 #include "SDK/Structs/Custom/FManagedStruct.h"
 #include "SDK/Classes/PalNoteDataAsset.h"
 #include "SDK/Classes/PalNoteData.h"
@@ -121,14 +119,14 @@ namespace Palworld {
 
 	void PalHelpGuideModLoader::Edit(const RC::Unreal::FName& NoteId, UPalNoteData* NoteData, const nlohmann::json& Data)
 	{
-		for (auto& Property : NoteData->GetClassPrivate()->ForEachPropertyInChain())
-		{
-			auto PropertyName = RC::to_string(Property->GetName());
-			if (Data.contains(PropertyName))
-			{
-				PropertyHelper::CopyJsonValueToContainer(reinterpret_cast<uint8_t*>(NoteData), Property, Data.at(PropertyName));
-			}
-		}
+        for (FProperty* Property : TFieldRange<FProperty>(NoteData->GetClassPrivate(), EFieldIterationFlags::IncludeSuper))
+        {
+            auto PropertyName = RC::to_string(Property->GetName());
+            if (Data.contains(PropertyName))
+            {
+                PropertyHelper::CopyJsonValueToContainer(reinterpret_cast<uint8_t*>(NoteData), Property, Data.at(PropertyName));
+            }
+        }
 	}
 
 	void PalHelpGuideModLoader::AddOrEditMasterData(const RC::Unreal::FName& NoteId, const nlohmann::json& Data)
