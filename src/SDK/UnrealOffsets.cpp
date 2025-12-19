@@ -120,7 +120,7 @@ void Palworld::UnrealOffsets::InitializeGMalloc()
     int64_t DispValue = MemOp.disp.value;
     uint8_t* GMallocAddr = static_cast<uint8_t*>(NextInstructionAddr) + DispValue;
 
-    RC::Unreal::GMalloc = *std::bit_cast<RC::Unreal::FMalloc**>(GMallocAddr);
+    RC::Unreal::GMalloc = std::bit_cast<RC::Unreal::FMalloc**>(GMallocAddr);
 
     PS::Log<LogLevel::Verbose>(STR("Found GMalloc: {}\n"), static_cast<void*>(GMallocAddr));
 }
