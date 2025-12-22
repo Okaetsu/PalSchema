@@ -14,7 +14,7 @@ NOTE: Make sure to check `Add "Open with Code"` for both checkboxes as seen in t
 
 * [UE4SS Palworld](https://github.com/Okaetsu/RE-UE4SS/releases/tag/experimental-palworld) - You'll want to get the linked version rather than the latest one because Palworld did some engine modifications which now requires a `MemberVariableLayout.ini` with UE4SS. If you don't get the linked version you will experience crashes with certain mods and PalSchema is one of them. See issue [here](https://github.com/UE4SS-RE/RE-UE4SS/issues/802). UE4SS is required as PalSchema relies on it.
 
-* [FModel](https://fmodel.app/) - Very useful for exploring Palworld files in general, you'll want this for referencing different data tables and assets in the game. Setup guide for FModel can be found [here](https://pwmodding.wiki/docs/asset-swapping/StartingOut). You only need to do what's on the linked `Starting Out` page. You can skip the 2D, 3D asset related stuff.
+* [FModel](https://fmodel.app/) - Very useful for exploring Palworld files in general, you'll want this for referencing different data tables and assets in the game. Setup guide for FModel can be found [here](https://pwmodding.wiki/docs/developers/useful-tools/fmodel).
 
 * [PalSchema](https://github.com/Okaetsu/PalSchema/releases) - You'll obviously need PalSchema itself. Make sure you get the PalSchema_x.x.x_Dev-beta version where x.x.x is the latest version available.
 
