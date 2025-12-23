@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Unreal/UObject.hpp"
+#include "SDK/Classes/Custom/UObjectWrapper.h"
 #include "Unreal/UnrealCoreStructs.hpp"
 
 namespace UECustom {
@@ -24,7 +24,7 @@ namespace UECustom {
         RC::Unreal::uint8 CookedComponentInstancingData[0x48];
     };
 
-    class UInheritableComponentHandler : public RC::Unreal::UObject {
+    class UInheritableComponentHandler : public UECustom::UObjectWrapper {
     public:
         RC::Unreal::TArray<FComponentOverrideRecord> GetRecords();
     };

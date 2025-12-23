@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Unreal/UObject.hpp"
+#include "SDK/Classes/Custom/UObjectWrapper.h"
 
 namespace UECustom {
-    class USCS_Node : public RC::Unreal::UObject {
+    class USCS_Node : public UECustom::UObjectWrapper {
     public:
         RC::Unreal::UObject* GetComponentTemplate();
     };

@@ -1,31 +1,19 @@
 #include "Unreal/FProperty.hpp"
-#include "Unreal/Property/FArrayProperty.hpp"
-#include "Unreal/Property/FBoolProperty.hpp"
-#include "Unreal/Property/FNameProperty.hpp"
-#include "Unreal/Property/FNumericProperty.hpp"
 #include "Unreal/Property/FEnumProperty.hpp"
-#include "Unreal/Property/FMapProperty.hpp"
-#include "Unreal/Property/FStructProperty.hpp"
 #include "Unreal/Property/FStrProperty.hpp"
-#include "Unreal/Property/FClassProperty.hpp"
-#include "Unreal/Property/FSoftClassProperty.hpp"
-#include "Unreal/Property/FSoftObjectProperty.hpp"
 #include "Unreal/Property/FTextProperty.hpp"
-#include "Unreal/FString.hpp"
-#include "Unreal/NameTypes.hpp"
+#include "Unreal/CoreUObject/UObject/UnrealType.hpp"
 #include "Unreal/CoreUObject/UObject/Class.hpp"
-#include "Unreal/UEnum.hpp"
-#include "Unreal/UScriptStruct.hpp"
+#include "Helpers/Casting.hpp"
 #include "SDK/Classes/TSoftObjectPtr.h"
 #include "SDK/Classes/TSoftClassPtr.h"
 #include "SDK/Classes/KismetSystemLibrary.h"
 #include "SDK/Structs/Custom/FManagedValue.h"
 #include "SDK/Structs/Custom/FScriptMapHelper.h"
 #include "SDK/Structs/Custom/FScriptArrayHelper.h"
-#include "Utility/Logging.h"
 #include "SDK/Helper/PropertyHelper.h"
 #include "SDK/PalSignatures.h"
-#include "Helpers/Casting.hpp"
+#include "Utility/Logging.h"
 
 using namespace RC;
 using namespace RC::Unreal;
@@ -548,6 +536,23 @@ namespace Palworld {
             }
         }
         return Property;
+    }
+
+    void* PropertyHelper::GetValuePtrByPropertyNameInChain(RC::Unreal::UObject* Instance, const RC::StringType& PropertyName)
+    {
+        if (!Instance)
+        {
+            return nullptr;
+        }
+
+        RC::Unreal::FProperty* Property = PropertyHelper::GetPropertyByName(Instance->GetClassPrivate(), PropertyName);
+        if (!Property)
+        {
+            return nullptr;
+        }
+
+        auto ValuePtr = Property->ContainerPtrToValuePtr<void>(Instance);
+        return ValuePtr;
     }
 
     RC::Unreal::FFieldClass* PropertyHelper::FindFieldClassByName(const RC::Unreal::FName& Name)

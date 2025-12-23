@@ -6,6 +6,13 @@ using namespace RC::Unreal;
 namespace UECustom {
     TArray<FComponentOverrideRecord> UECustom::UInheritableComponentHandler::GetRecords()
     {
-        return *this->GetValuePtrByPropertyNameInChain<TArray<FComponentOverrideRecord>>(STR("Records"));
+        auto Records = this->GetValuePtrByPropertyNameInChain<TArray<FComponentOverrideRecord>>(STR("Records"));
+        
+        if (!Records)
+        {
+            return {};
+        }
+
+        return *Records;
     }
 }

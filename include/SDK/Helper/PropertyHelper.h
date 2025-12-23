@@ -81,6 +81,15 @@ namespace Palworld::PropertyHelper {
         return CastProperty<FFieldDerivedType>(Property);
     }
 
+    void* GetValuePtrByPropertyNameInChain(RC::Unreal::UObject* Instance, const RC::StringType& PropertyName);
+
+    template<typename ReturnType>
+    ReturnType* GetValuePtrByPropertyNameInChain(RC::Unreal::UObject* Instance, const RC::StringType& PropertyName)
+    {
+        auto ValuePtr = PropertyHelper::GetValuePtrByPropertyNameInChain(Instance, PropertyName);
+        return static_cast<ReturnType*>(ValuePtr);
+    }
+
     RC::Unreal::FFieldClass* FindFieldClassByName(const RC::Unreal::FName& Name);
 
     RC::Unreal::FFieldClass* FindFieldClassByName(const RC::StringType& Name);
