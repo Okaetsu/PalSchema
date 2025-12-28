@@ -66,4 +66,6 @@ That's all that's needed! If you were to now save and launch the game, you shoul
 
 *If you want to add new entries to a DT file, simply do the same process with a new/custom ID for the entry, and be sure to fill in all the necessary lines for the entry to be properly accepted.*
 
+*In some cases, you may want to delete a row from a table. In that case, simply set the value of an existing row to `null`, and the entry will be deleted.*
+
 **Note: There are some special entries such as Arrays, as mentioned at the start of this guide. Arrays are defined with standard or "square" brackets and may require more specialized modification.**
