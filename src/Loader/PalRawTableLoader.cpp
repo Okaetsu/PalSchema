@@ -140,7 +140,7 @@ namespace Palworld {
             if (Data.is_null())
             {
                 OutResult.SuccessfulDeletions += Table->GetRowMap().Num();
-                Table->GetRowMap().Empty();
+                Table->EmptyTable();
             }
             else
             {
