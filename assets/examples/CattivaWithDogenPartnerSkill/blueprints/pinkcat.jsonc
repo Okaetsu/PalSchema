@@ -6,6 +6,10 @@
           "AIActionMap": [
             {
               "Key": "Cooperation",
+
+              // In FModel, the "Value" might look like Pal/Content/Pal/Blueprint/Controller/AIAction/Coop/BP_AIAction_ReturnToBaseCampCall.uasset
+              // When you're using asset paths with PalSchema, you will always want to convert the "Pal/Content" in the beginning to "/Game/" since that's how Unreal handles the paths during runtime.
+              // You can check the PalSchema documentation to read up more on it, under the types "TSoftClassPtr" and "TSoftObjectPtr".
               "Value": "/Game/Pal/Blueprint/Controller/AIAction/Coop/BP_AIAction_ReturnToBaseCampCall.BP_AIAction_ReturnToBaseCampCall_C"
             }
           ]
