@@ -137,10 +137,18 @@ namespace Palworld {
         try
         {
             auto RowStruct = Table->GetRowStruct().Get();
-            for (auto& [Key, Row] : Table->GetRowMap())
+            if (Data.is_null())
             {
-                ModifyRowProperties(Table, Key, Row, Data, OutResult);
-                OutResult.SuccessfulModifications++;
+                OutResult.SuccessfulDeletions += Table->GetRowMap().Num();
+                Table->EmptyTable();
+            }
+            else
+            {
+                for (auto& [Key, Row] : Table->GetRowMap())
+                {
+                    ModifyRowProperties(Table, Key, Row, Data, OutResult);
+                    OutResult.SuccessfulModifications++;
+                }
             }
         }
         catch (const std::exception& e)
