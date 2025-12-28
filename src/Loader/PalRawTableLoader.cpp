@@ -89,6 +89,12 @@ namespace Palworld {
             }
 
             auto RowKeyName = FName(RC::to_generic_string(RowKey), FNAME_Add);
+            if (RowData.is_null())
+            {
+                DeleteRow(Table, RowKeyName, OutResult);
+                continue;
+            }
+
             auto Row = Table->FindRowUnchecked(RowKeyName);
             if (!Row)
             {
@@ -96,14 +102,7 @@ namespace Palworld {
                 continue;
             }
 
-            if (RowData.is_null())
-            {
-                DeleteRow(Table, RowKeyName, OutResult);
-            }
-            else
-            {
-                EditRow(Table, RowKeyName, Row, RowData, OutResult);
-            }
+            EditRow(Table, RowKeyName, Row, RowData, OutResult);
         }
     }
 
