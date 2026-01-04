@@ -8,6 +8,7 @@
 #include "SDK/Classes/PalDynamicWeaponItemDataBase.h"
 #include "SDK/Classes/PalDynamicArmorItemDataBase.h"
 #include "SDK/Structs/FPalCharacterIconDataRow.h"
+#include "SDK/Structs/Custom/FManagedStruct.h"
 #include "SDK/Helper/PropertyHelper.h"
 #include "Helpers/String.hpp"
 #include "Utility/Logging.h"
@@ -26,6 +27,9 @@ namespace Palworld {
 	{
 		m_itemDataAsset = UECustom::UObjectGlobals::StaticFindObject<UPalStaticItemDataAsset*>(nullptr, nullptr,
 			STR("/Game/Pal/DataAsset/Item/DA_StaticItemDataAsset.DA_StaticItemDataAsset"));
+
+        m_itemDataTable = UECustom::UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
+            STR("/Game/Pal/DataTable/Item/DT_ItemDataTable.DT_ItemDataTable"));
 
         m_itemRecipeTable = UECustom::UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
             STR("/Game/Pal/DataTable/Item/DT_ItemRecipeDataTable.DT_ItemRecipeDataTable"));
@@ -235,6 +239,8 @@ namespace Palworld {
 			AddRecipe(ItemId, Data.at("Recipe"));
 		}
 
+        AddItemData(ItemId, Data);
+
 		AddTranslations(ItemId, Data);
 
 		m_itemDataAsset->StaticItemDataMap.Add(ItemId, Item);
@@ -429,6 +435,31 @@ namespace Palworld {
 			}
 		}
 	}
+
+    void PalItemModLoader::AddItemData(const RC::Unreal::FName& ItemId, const nlohmann::json& Data)
+    {
+        auto RowStruct = m_itemDataTable->GetRowStruct().Get();
+        FManagedStruct RowData{ RowStruct };
+
+        auto LegalProp = RowStruct->GetPropertyByName(STR("bLegalInGame"));
+        if (!LegalProp)
+        {
+            PS::Log<LogLevel::Error>(STR("Property 'bLegalInGame' does not exist in DT_ItemDataTable, skipping addition of data for {}.\n"), ItemId.ToString());
+            return;
+        }
+
+        if (Data.contains("bLegalInGame"))
+        {
+            PropertyHelper::CopyJsonValueToContainer(RowData.GetData(), LegalProp, Data.at("bLegalInGame"));
+        }
+        else
+        {
+            bool LegalValue = true;
+            FMemory::Memcpy(LegalProp->ContainerPtrToValuePtr<void>(RowData.GetData()), &LegalValue, sizeof(bool));
+        }
+
+        m_itemDataTable->AddRow(ItemId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData.GetData()));
+    }
 
     void PalItemModLoader::InitializeDummyTranslations()
     {
