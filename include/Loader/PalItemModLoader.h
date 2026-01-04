@@ -34,9 +34,13 @@ namespace Palworld {
 
 		void EditTranslations(const RC::Unreal::FName& ItemId, const nlohmann::json& Data);
 
+        // Handles DT_ItemDataTable stuff
+        void AddItemData(const RC::Unreal::FName& ItemId, const nlohmann::json& Data);
+
         void InitializeDummyTranslations();
 
 		UPalStaticItemDataAsset* m_itemDataAsset{};
+		RC::Unreal::UDataTable* m_itemDataTable{};
 		RC::Unreal::UDataTable* m_itemRecipeTable{};
 		RC::Unreal::UDataTable* m_nameTranslationTable{};
 		RC::Unreal::UDataTable* m_descriptionTranslationTable{};
