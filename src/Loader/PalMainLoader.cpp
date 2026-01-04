@@ -383,9 +383,6 @@ namespace Palworld {
                 PS::Log<RC::LogLevel::Normal>(STR("Loading mod: {}\n"), modName);
 
                 ResourceLoader.Load(modPath);
-
-                auto translationsFolder = modPath / constants::translationsFolder;
-                LoadLanguageMods(translationsFolder);
                 
                 auto palFolder = modPath / constants::palsFolder;
                 ParseJsonFilesInPath(palFolder, [&](const nlohmann::json& data) {
@@ -436,6 +433,9 @@ namespace Palworld {
                 ParseJsonFilesInPath(spawnsFolder, [&](const nlohmann::json& data) {
                     SpawnLoader.Load(modName, data);
                 });
+
+                auto translationsFolder = modPath / constants::translationsFolder;
+                LoadLanguageMods(translationsFolder);
             }
             catch (const std::exception& e)
             {
