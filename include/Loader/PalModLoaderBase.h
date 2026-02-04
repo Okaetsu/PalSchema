@@ -11,8 +11,6 @@ namespace RC::Unreal {
 namespace Palworld {
 	class PalModLoaderBase {
 	public:
-		PalModLoaderBase(const std::string& modFolderName);
-
 		virtual ~PalModLoaderBase();
 
         virtual void Apply(RC::Unreal::UDataTable* Table);
@@ -21,6 +19,8 @@ namespace Palworld {
 
 		void Initialize();
     protected:
+        PalModLoaderBase(const std::string& modFolderName);
+
         std::string m_modFolderName = "";
 	};
 }
