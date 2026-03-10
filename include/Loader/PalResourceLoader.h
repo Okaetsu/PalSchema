@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Loader/PalModLoaderBase.h"
 #include <filesystem>
 #include <unordered_map>
 
@@ -8,11 +9,15 @@ namespace RC::Unreal {
 }
 
 namespace Palworld {
-    class PalResourceLoader {
+    class PalResourceLoader : public PalModLoaderBase {
     public:
         PalResourceLoader();
         ~PalResourceLoader();
-        void Load(const std::filesystem::path& modPath);
+    protected:
+        virtual void OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase) override final;
+
+        virtual bool CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase) override final;
+        virtual bool OnInitialize() override final;
     private:
         void RegisterResourceAsset(const std::filesystem::path::string_type& modName, RC::Unreal::UObject* resource);
         void UnregisterResourceAssets(const std::filesystem::path::string_type& modName);

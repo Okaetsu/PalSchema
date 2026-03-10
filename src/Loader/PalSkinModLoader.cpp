@@ -13,56 +13,84 @@
 #include "SDK/Structs/FPalBPClassDataRow.h"
 #include "SDK/Helper/PropertyHelper.h"
 #include "Utility/Logging.h"
+#include "Utility/JsonHelpers.h"
 #include "Helpers/String.hpp"
 #include "Loader/PalSkinModLoader.h"
 
 using namespace RC;
 using namespace RC::Unreal;
 
-UClass* PalSkinDataPalCharacterClass = nullptr;
-
 namespace Palworld {
-	PalSkinModLoader::PalSkinModLoader() : PalModLoaderBase("skins") {}
+	PalSkinModLoader::PalSkinModLoader() : PalModLoaderBase("skins") {
+        SetDisplayName(TEXT("Skin Mod Loader"));
+    }
 
 	PalSkinModLoader::~PalSkinModLoader() {}
 
-	void PalSkinModLoader::Initialize()
-	{
-		m_skinDataAsset = UECustom::UObjectGlobals::StaticFindObject<UECustom::UDataAsset*>(nullptr, nullptr,
-			STR("/Game/Pal/DataAsset/Skin/DA_StaticSkinDataAsset.DA_StaticSkinDataAsset"));
+    void PalSkinModLoader::OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase)
+    {
+        if (engineLifecyclePhase != EEngineLifecyclePhase::GameInstanceInit)
+        {
+            return;
+        }
 
-		m_skinIconTable = UECustom::UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-            STR("/Game/Pal/DataTable/Character/DT_PalCharacterIconDataTable_SkinOverride.DT_PalCharacterIconDataTable_SkinOverride"));
+        PS::JsonHelpers::ParseJsonFilesInPath(loaderPath, [&](const nlohmann::json& data) {
+            LoadSkins(data);
+        });
+    }
 
-        m_skinTranslationTable = UECustom::UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/Text/DT_UI_Common_Text.DT_UI_Common_Text"));
+    bool PalSkinModLoader::CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase)
+    {
+        if (engineLifecyclePhase == EEngineLifecyclePhase::GameInstanceInit)
+        {
+            return true;
+        }
 
-        PS::Log<LogLevel::Verbose>(STR("Initialized SkinModLoader\n"));
-	}
+        return false;
+    }
 
-	void PalSkinModLoader::Load(const nlohmann::json& json)
-	{
+    bool PalSkinModLoader::OnInitialize()
+    {
+        try
+        {
+            m_skinDataAsset = UECustom::UObjectGlobals::StaticFindObject<UECustom::UDataAsset*>(nullptr, nullptr,
+                STR("/Game/Pal/DataAsset/Skin/DA_StaticSkinDataAsset.DA_StaticSkinDataAsset"));
+
+            m_skinIconTable = GetDatatableByName("DT_PalCharacterIconDataTable_SkinOverride");
+            m_skinTranslationTable = GetDatatableByName("DT_UI_Common_Text");
+        }
+        catch (const std::exception& e)
+        {
+            PS::Log<LogLevel::Error>(STR("Unable to initialize {}, {}\n"), GetDisplayName(), RC::to_generic_string(e.what()));
+            return false;
+        }
+
+        return true;
+    }
+
+    void PalSkinModLoader::LoadSkins(const nlohmann::json& data)
+    {
         auto StaticSkinMapProperty = PropertyHelper::GetPropertyByName(m_skinDataAsset->GetClassPrivate(), STR("StaticSkinMap"));
-		if (!StaticSkinMapProperty)
-		{
-			throw std::runtime_error("Property 'StaticSkinMap' has changed name in DA_StaticSkinDataAsset, update is required");
-		}
+        if (!StaticSkinMapProperty)
+        {
+            throw std::runtime_error("Property 'StaticSkinMap' has changed name in DA_StaticSkinDataAsset, update is required");
+        }
 
         auto StaticSkinMap = StaticSkinMapProperty->ContainerPtrToValuePtr<TMap<FName, UObject*>>(m_skinDataAsset);
-		for (auto& [skin_id, value] : json.items())
-		{
-			auto SkinId = FName(RC::to_generic_string(skin_id), FNAME_Add);
-			if (StaticSkinMap->Contains(SkinId))
-			{
-				auto Row = StaticSkinMap->FindRef(SkinId);
-				Edit(SkinId, Row, value);
-			}
-			else
-			{
-				Add(SkinId, StaticSkinMap, value);
-			}
-		}
-	}
+        for (auto& [skin_id, value] : data.items())
+        {
+            auto SkinId = FName(RC::to_generic_string(skin_id), FNAME_Add);
+            if (StaticSkinMap->Contains(SkinId))
+            {
+                auto Row = StaticSkinMap->FindRef(SkinId);
+                Edit(SkinId, Row, value);
+            }
+            else
+            {
+                Add(SkinId, StaticSkinMap, value);
+            }
+        }
+    }
 
 	void PalSkinModLoader::Add(const FName& SkinId, TMap<FName, UObject*>* StaticSkinMap, const nlohmann::json& Data)
 	{

@@ -55,11 +55,6 @@ public:
         return fs::exists(MemberVariableLayoutFile);
     }
 
-    auto reload_mods() -> void
-    {
-        MainLoader.ReloadMods();
-    }
-
     auto on_ui_init() -> void override
     {
         if (!UE4SSProgram::settings_manager.Debug.DebugConsoleEnabled)
@@ -77,13 +72,6 @@ public:
             if (!mod)
             {
                 return;
-            }
-
-            if (ImGui::Button("Reload Schema Mods"))
-            {
-                UECustom::AsyncTask(UECustom::ENamedThreads::GameThread, [mod]() {
-                    mod->reload_mods();
-                    });
             }
         });
 

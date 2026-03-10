@@ -15,6 +15,7 @@
 #include "Utility/EnumHelpers.h"
 #include "Utility/JsonHelpers.h"
 #include "Loader/PalSpawnLoader.h"
+#include "SDK/PalSignatures.h"
 
 using namespace RC;
 using namespace RC::Unreal;
@@ -22,34 +23,19 @@ using namespace RC::Unreal;
 namespace fs = std::filesystem;
 
 namespace Palworld {
-    PalSpawnLoader::PalSpawnLoader() : PalModLoaderBase("spawns") {}
-
-    PalSpawnLoader::~PalSpawnLoader() {}
-
-    void PalSpawnLoader::Initialize()
-    {
-        m_bossSpawnerLocationData = UECustom::UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-            STR("/Game/Pal/DataTable/UI/DT_BossSpawnerLoactionData.DT_BossSpawnerLoactionData"));
+    PalSpawnLoader::PalSpawnLoader() : PalModLoaderBase("spawns") {
+        SetDisplayName(TEXT("Custom Spawn Loader"));
     }
 
-    void PalSpawnLoader::Load(const std::filesystem::path::string_type& modName, const nlohmann::json& data)
-    {
-        if (!data.is_array())
-        {
-            throw std::runtime_error("Spawn JSON must start as an array rather than as an object.");
-        }
-
-        // The json file itself starts as an array, rather than as an object
-        for (auto& value : data)
-        {
-            RegisterSpawn(modName, value);
-        }
+    PalSpawnLoader::~PalSpawnLoader() {
+        auto expected = WorldCleanupHook.disable();
+        WorldCleanupHook = {};
     }
 
     void PalSpawnLoader::Reload(const std::filesystem::path::string_type& modName, const nlohmann::json& data)
     {
         UnloadMod(modName);
-        Load(modName, data);
+        // Load(modName, data);
 
         for (auto loadedCell : m_loadedCells)
         {
@@ -57,27 +43,55 @@ namespace Palworld {
         }
     }
 
-    void PalSpawnLoader::OnWorldCleanup(RC::Unreal::UWorld* World)
+    void PalSpawnLoader::OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase)
     {
-        static auto NAME_MainWorld5 = FName(STR("PL_MainWorld5"), FNAME_Add);
-        
-        if (NAME_MainWorld5 != World->GetNamePrivate())
+        if (engineLifecyclePhase != EEngineLifecyclePhase::GameInstanceInit)
         {
             return;
         }
 
-        // Main world is unloading (returning to title).
-        // We want to reset all the containers so that our spawners can be spawned again when we re-enter the world.
-        for (auto& spawnInfo : m_spawns)
+        PS::JsonHelpers::ParseJsonFilesInPath(loaderPath, [&](const nlohmann::json& data) {
+            LoadSpawns(modName, data);
+        });
+    }
+
+    bool PalSpawnLoader::CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase)
+    {
+        if (engineLifecyclePhase == EEngineLifecyclePhase::GameInstanceInit)
         {
-            spawnInfo.Cell = nullptr;
-            spawnInfo.SpawnerActor = nullptr;
-            spawnInfo.bExistsInWorld = false;
+            return true;
         }
 
-        m_loadedCells.Empty();
+        return false;
+    }
 
-        PS::Log<LogLevel::Verbose>(STR("Session ending, spawners have been cleaned up.\n"));
+    bool PalSpawnLoader::OnInitialize()
+    {
+        try
+        {
+            m_bossSpawnerLocationData = GetDatatableByName("DT_BossSpawnerLoactionData");
+
+            auto CleanupWorld_FuncPtr = Palworld::SignatureManager::GetSignature("UWorld::CleanupWorld");
+            if (!CleanupWorld_FuncPtr)
+            {
+                PS::Log<LogLevel::Error>(STR("Unable to hook UWorld::CleanupWorld, signature is outdated. Custom spawns will not work.\n"));
+                return false;
+            }
+
+            WorldCleanupCallback = [&](RC::Unreal::UWorld* selfWorld, bool bSessionEnded, bool bCleanupResources, RC::Unreal::UWorld* newWorld) {
+                this->CleanupSpawns();
+            };
+
+            WorldCleanupHook = safetyhook::create_inline(reinterpret_cast<void*>(CleanupWorld_FuncPtr),
+                OnWorldCleanup);
+        }
+        catch (const std::exception& e)
+        {
+            PS::Log<LogLevel::Error>(STR("Unable to initialize {}, {}\n"), GetDisplayName(), RC::to_generic_string(e.what()));
+            return false;
+        }
+
+        return true;
     }
 
     void PalSpawnLoader::OnCellLoaded(UECustom::UWorldPartitionRuntimeLevelStreamingCell* cell)
@@ -111,6 +125,25 @@ namespace Palworld {
     {
         DestroySpawnersInCell(cell);
         m_loadedCells.Remove(cell);
+    }
+
+    void PalSpawnLoader::OnAutoReload(const std::filesystem::path::string_type& modName, const nlohmann::json& data)
+    {
+        Reload(modName, data);
+    }
+
+    void PalSpawnLoader::LoadSpawns(const RC::StringType& modName, const nlohmann::json& data)
+    {
+        if (!data.is_array())
+        {
+            throw std::runtime_error("Spawn JSON must start as an array rather than as an object.");
+        }
+
+        // The json file itself starts as an array, rather than as an object
+        for (auto& value : data)
+        {
+            RegisterSpawn(modName, value);
+        }
     }
 
     void PalSpawnLoader::RegisterSpawn(const std::filesystem::path::string_type& modName, const nlohmann::json& value)
@@ -410,5 +443,37 @@ namespace Palworld {
 
             return false;
         });
+    }
+
+    void PalSpawnLoader::CleanupSpawns()
+    {
+        // Main world is unloading (returning to title).
+        // We want to reset all the containers so that our spawners can be spawned again when we re-enter the world.
+        for (auto& spawnInfo : m_spawns)
+        {
+            spawnInfo.Cell = nullptr;
+            spawnInfo.SpawnerActor = nullptr;
+            spawnInfo.bExistsInWorld = false;
+        }
+
+        m_loadedCells.Empty();
+
+        PS::Log<LogLevel::Verbose>(STR("Session ending, spawners have been cleaned up.\n"));
+    }
+
+    void PalSpawnLoader::OnWorldCleanup(RC::Unreal::UWorld* thisWorld, bool bSessionEnded, bool bCleanupResources, RC::Unreal::UWorld* newWorld)
+    {
+        WorldCleanupHook.call(thisWorld, bSessionEnded, bCleanupResources, newWorld);
+
+        static auto NAME_MainWorld5 = FName(STR("PL_MainWorld5"), FNAME_Add);
+        if (NAME_MainWorld5 != thisWorld->GetNamePrivate())
+        {
+            return;
+        }
+
+        if (WorldCleanupCallback)
+        {
+            WorldCleanupCallback(thisWorld, bSessionEnded, bCleanupResources, newWorld);
+        }
     }
 }

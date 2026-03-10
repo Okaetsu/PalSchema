@@ -17,7 +17,7 @@ namespace PS::EnumHelpers {
         }
 
         auto enumKey = RC::to_generic_string(enumStringFixed);
-        for (const auto& enumPair : enum_->GetNames())
+        for (const auto& enumPair : enum_->GetEnumNames())
         {
             if (enumPair.Key.ToString() == enumKey)
             {

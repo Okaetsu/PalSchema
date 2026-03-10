@@ -3,95 +3,121 @@
 #include "Unreal/UEnum.hpp"
 #include "Helpers/String.hpp"
 #include "Utility/Logging.h"
+#include "Utility/JsonHelpers.h"
 #include "SDK/Classes/Custom/UObjectGlobals.h"
 
 using namespace RC;
 using namespace RC::Unreal;
 
 namespace Palworld {
-    PalEnumLoader::PalEnumLoader() : PalModLoaderBase("enums") {}
+    PalEnumLoader::PalEnumLoader() : PalModLoaderBase("enums") {
+        SetDisplayName(TEXT("Enum Loader"));
+    }
 
     PalEnumLoader::~PalEnumLoader() {}
 
-    void PalEnumLoader::Initialize()
+    void PalEnumLoader::OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase)
     {
-        PS::Log<LogLevel::Verbose>(STR("Attempting to get UClass for UEnum...\n"));
-        auto EnumClass = UECustom::UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/CoreUObject.Enum"));
-
-        if (!EnumClass)
+        if (engineLifecyclePhase != EEngineLifecyclePhase::PostEngineInit)
         {
-            PS::Log<LogLevel::Error>(STR("Unable to initialize EnumLoader, failed to get /Script/CoreUObject.Enum\n"));
             return;
         }
 
-        TArray<UObject*> Results;
-
-        PS::Log<LogLevel::Verbose>(STR("UClass for UEnum found, fetching UEnums...\n"));
-        UECustom::UObjectGlobals::GetObjectsOfClass(EnumClass, Results);
-
-        int AddedUEnums = 0;
-        for (auto& Result : Results)
-        {
-            EnumNameToObjectMap.emplace(Result->GetName(), static_cast<UEnum*>(Result));
-            AddedUEnums++;
-        }
-
-        PS::Log<LogLevel::Verbose>(STR("Finished mapping {} UEnums.\n"), AddedUEnums);
+        PS::JsonHelpers::ParseJsonFilesInPath(loaderPath, [&](const nlohmann::json& data) {
+            LoadEnums(data);
+        });
     }
 
-    void PalEnumLoader::Load(const nlohmann::json& Data)
+    bool PalEnumLoader::CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase)
     {
-        for (auto& [EnumClassName, EnumArray]: Data.items())
+        if (engineLifecyclePhase == EEngineLifecyclePhase::PostEngineInit)
         {
-            auto EnumClassNameWide = RC::to_generic_string(EnumClassName);
-            if (!EnumArray.is_array())
+            return true;
+        }
+
+        return false;
+    }
+
+    bool PalEnumLoader::OnInitialize()
+    {
+        PS::Log<LogLevel::Verbose>(STR("Attempting to get UClass for UEnum...\n"));
+        auto enumClass = UECustom::UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/CoreUObject.Enum"));
+
+        if (!enumClass)
+        {
+            PS::Log<LogLevel::Error>(STR("Unable to initialize {}, failed to get /Script/CoreUObject.Enum\n"), GetDisplayName());
+            return false;
+        }
+
+        TArray<UObject*> results;
+
+        PS::Log<LogLevel::Verbose>(STR("UClass for UEnum found, fetching UEnums...\n"));
+        UECustom::UObjectGlobals::GetObjectsOfClass(enumClass, results);
+
+        int addedUEnums = 0;
+        for (auto& result : results)
+        {
+            m_enumNameToObjectMap.emplace(result->GetName(), static_cast<UEnum*>(result));
+            addedUEnums++;
+        }
+
+        PS::Log<LogLevel::Verbose>(STR("Finished mapping {} UEnums.\n"), addedUEnums);
+
+        return true;
+    }
+
+    void PalEnumLoader::LoadEnums(const nlohmann::json& data)
+    {
+        for (auto& [enumNamespace, enumValues] : data.items())
+        {
+            auto enumNamespaceWide = RC::to_generic_string(enumNamespace);
+            if (!enumValues.is_array())
             {
-                throw std::runtime_error(std::format("Values in {} must be arrays of strings", EnumClassName));
+                throw std::runtime_error(std::format("Values in {} must be arrays of strings", enumNamespace));
             }
 
-            auto EnumObject = GetEnumByName(EnumClassNameWide);
-            if (!EnumObject) {
-                throw std::runtime_error(std::format("Enum object was invalid."));
+            auto enumObject = GetEnumByName(enumNamespaceWide);
+            if (!enumObject) {
+                throw std::runtime_error(std::format("Enum object {} was invalid.", enumNamespace));
             }
 
-            auto EnumClassName = EnumObject->GetName();
-            for (auto& ArrayValue : EnumArray)
+            for (auto& enumValue : enumValues)
             {
-                if (!ArrayValue.is_string()) throw std::runtime_error(std::format("Array must only contain strings"));
+                if (!enumValue.is_string()) throw std::runtime_error(std::format("Array must only contain strings"));
 
-                auto EnumString = ArrayValue.get<std::string>();
-                if (EnumString.find(':') != std::string::npos) {
+                auto enumValueString = enumValue.get<std::string>();
+                if (enumValueString.find(':') != std::string::npos) {
                     throw std::runtime_error(
-                    std::format("Enum value '{}' must not contain the namespace. Example: Write ExampleEnum instead of {}::ExampleEnum",
-                    EnumString, RC::to_string(EnumClassName)));
+                        std::format("Enum value '{}' must not contain the namespace. Example: Write ExampleEnum instead of {}::ExampleEnum",
+                            enumValueString, enumNamespace));
                 }
 
-                auto EnumStringWide = std::format(STR("{}::{}"), EnumClassName, RC::to_generic_string(EnumString));
+                auto enumValueStringWide = std::format(STR("{}::{}"), enumNamespaceWide, RC::to_generic_string(enumValueString));
 
-                auto EnumName = FName(EnumStringWide, FNAME_Add);
-                int32 IndexToInsertAt = EnumObject->NumEnums() - 1;
+                auto enumName = FName(enumValueStringWide, FNAME_Add);
+                int32 indexToInsertAt = enumObject->NumEnums() - 1;
 
-                FEnumNamePair EnumNamePair;
-                EnumNamePair.Key = EnumName;
-                EnumNamePair.Value = IndexToInsertAt;
+                FEnumNamePair enumNamePair;
+                enumNamePair.Key = enumName;
+                enumNamePair.Value = indexToInsertAt;
 
-                auto ResultIndex = EnumObject->InsertIntoNames(EnumNamePair, IndexToInsertAt, true);
+                auto ResultIndex = enumObject->InsertIntoNames(enumNamePair, indexToInsertAt, true);
                 if (ResultIndex < 0)
                 {
-                    throw std::runtime_error(std::format("Something went wrong adding the enum {}", EnumString));
+                    throw std::runtime_error(std::format("Something went wrong adding the enum {}", enumValueString));
                 }
 
-                PS::Log<LogLevel::Normal>(STR("Enum {} has been added.\n"), EnumStringWide);
+                PS::Log<LogLevel::Normal>(STR("Enum value {} has been added to {}.\n"), enumValueStringWide, enumNamespaceWide);
             }
         }
     }
 
     RC::Unreal::UEnum* PalEnumLoader::GetEnumByName(const RC::StringType& Name)
     {
-        auto EnumMapIterator = EnumNameToObjectMap.find(Name);
-        if (EnumMapIterator != EnumNameToObjectMap.end())
+        auto enumMapIterator = m_enumNameToObjectMap.find(Name);
+        if (enumMapIterator != m_enumNameToObjectMap.end())
         {
-            return EnumMapIterator->second;
+            return enumMapIterator->second;
         }
 
         return nullptr;

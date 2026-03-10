@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <functional>
 #include "nlohmann/json_fwd.hpp"
 #include "Unreal/Core/HAL/Platform.hpp"
 
@@ -21,4 +22,7 @@ namespace PS::JsonHelpers {
     void ParseInteger(const nlohmann::json& value, const std::string& fieldName, int& outValue);
     void ParseUInt8(const nlohmann::json& value, const std::string& fieldName, RC::Unreal::uint8& outValue);
     void ParseString(const nlohmann::json& value, const std::string& fieldName, std::string& outValue);
+
+    void ParseJsonFileInPath(const std::filesystem::path& path, const std::function<void(const nlohmann::json&)>& callback);
+    void ParseJsonFilesInPath(const std::filesystem::path& path, const std::function<void(const nlohmann::json&)>& callback);
 }

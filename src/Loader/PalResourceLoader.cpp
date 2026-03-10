@@ -12,30 +12,43 @@ using namespace RC::Unreal;
 namespace fs = std::filesystem;
 
 namespace Palworld {
-    PalResourceLoader::PalResourceLoader()
+    PalResourceLoader::PalResourceLoader() : PalModLoaderBase("resources")
     {
     }
     PalResourceLoader::~PalResourceLoader()
     {
     }
 
-    void PalResourceLoader::Load(const std::filesystem::path& modPath)
+    void PalResourceLoader::OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase)
     {
-        if (!fs::is_directory(modPath))
-        {
-            return;
-        }
-
-        auto modName = modPath.stem().native();
         UnregisterResourceAssets(modName);
 
-        auto resourcesPath = modPath / "resources";
-        if (!fs::is_directory(resourcesPath))
+        LoadImages(modName, loaderPath);
+    }
+
+    bool PalResourceLoader::CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase)
+    {
+        if (engineLifecyclePhase == EEngineLifecyclePhase::PostEngineInit)
         {
-            return;
+            return true;
         }
 
-        LoadImages(modName, resourcesPath);
+        return false;
+    }
+
+    bool PalResourceLoader::OnInitialize()
+    {
+        try
+        {
+            
+        }
+        catch (const std::exception& e)
+        {
+            PS::Log<LogLevel::Error>(STR("Unable to initialize {}, {}\n"), GetDisplayName(), RC::to_generic_string(e.what()));
+            return false;
+        }
+
+        return true;
     }
 
     void PalResourceLoader::RegisterResourceAsset(const std::filesystem::path::string_type& modName, RC::Unreal::UObject* resource)

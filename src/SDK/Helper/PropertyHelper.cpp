@@ -112,7 +112,7 @@ namespace Palworld {
         bool WasEnumFound = false;
         int64_t EnumValue = 0;
 
-        for (const auto& EnumPair : Enum->GetNames())
+        for (const auto& EnumPair : Enum->GetEnumNames())
         {
             if (EnumPair.Key == EnumName)
             {
@@ -151,7 +151,7 @@ namespace Palworld {
         bool WasEnumFound = false;
         int64_t EnumValue = 0;
 
-        for (const auto& EnumPair : Enum->GetNames())
+        for (const auto& EnumPair : Enum->GetEnumNames())
         {
             if (EnumPair.Key == EnumName)
             {

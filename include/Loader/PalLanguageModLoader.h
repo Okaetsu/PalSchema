@@ -9,13 +9,16 @@ namespace Palworld {
 		PalLanguageModLoader();
 
 		~PalLanguageModLoader();
+    protected:
+        virtual void OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase) override final;
 
-		virtual void Load(const nlohmann::json& Data) override final;
-
-		void Initialize();
-
-		const std::string& GetCurrentLanguage();
+        virtual bool CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase) override final;
+        virtual bool OnInitialize() override final;
 	private:
 		std::string m_currentLanguage{};
+
+        void LoadTranslations(const nlohmann::json& data);
+
+        const std::string& GetCurrentLanguage();
 	};
 }

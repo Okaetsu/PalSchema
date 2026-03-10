@@ -9,6 +9,7 @@
 #include "SDK/Structs/Custom/FManagedStruct.h"
 #include "SDK/Helper/PropertyHelper.h"
 #include "Utility/Logging.h"
+#include "Utility/JsonHelpers.h"
 #include "Loader/PalRawTableLoader.h"
 
 using namespace RC;
@@ -17,227 +18,248 @@ using namespace RC::Unreal;
 namespace fs = std::filesystem;
 
 namespace Palworld {
-	PalRawTableLoader::PalRawTableLoader() : PalModLoaderBase("raw") {}
+	PalRawTableLoader::PalRawTableLoader() : PalModLoaderBase("raw") {
+        SetDisplayName(TEXT("Raw Table Loader"));
+    }
 
 	PalRawTableLoader::~PalRawTableLoader() {}
 
-	void PalRawTableLoader::Initialize() {}
-
-    void PalRawTableLoader::OnDataTableChanged(RC::Unreal::UDataTable* Table)
+    void PalRawTableLoader::Apply(const RC::StringType& tableName, RC::Unreal::UDataTable* datatable)
     {
-        if (!Table) return;
-
-        if (Table->GetClassPrivate() == UECustom::UCompositeDataTable::StaticClass())
+        auto it = m_tableDataMap.find(tableName);
+        if (it != m_tableDataMap.end())
         {
-            auto CompositeTable = static_cast<UECustom::UCompositeDataTable*>(Table);
-            Apply(CompositeTable);
-        }
-        else
-        {
-            Apply(Table->GetName(), Table);
-        }
-    }
+            LoadResult result{};
 
-    void PalRawTableLoader::Apply(const RC::StringType& TableName, RC::Unreal::UDataTable* Table)
-    {
-        auto It = m_tableDataMap.find(TableName);
-        if (It != m_tableDataMap.end())
-        {
-            LoadResult Result{};
-
-            for (auto& Data : It->second)
+            for (auto& data : it->second)
             {
-                Apply(Data, Table, Result);
+                Apply(data, datatable, result);
             }
 
             PS::Log<LogLevel::Normal>(STR("{}: {} rows updated, {} rows added, {} rows deleted, {} error{}.\n"),
-                Table->GetName(), Result.SuccessfulModifications, Result.SuccessfulAdditions,
-                Result.SuccessfulDeletions, Result.ErrorCount, Result.ErrorCount > 1 || Result.ErrorCount == 0 ? STR("s") : STR(""));
+                datatable->GetName(), result.SuccessfulModifications, result.SuccessfulAdditions,
+                result.SuccessfulDeletions, result.ErrorCount, result.ErrorCount > 1 || result.ErrorCount == 0 ? STR("s") : STR(""));
         }
     }
 
-    void PalRawTableLoader::Apply(UECustom::UCompositeDataTable* Table)
+    void PalRawTableLoader::Apply(UECustom::UCompositeDataTable* compositeDatatable)
     {
-        auto CompositeTable = static_cast<UECustom::UCompositeDataTable*>(Table);
-        auto ParentTables = CompositeTable->GetParentTables();
-        for (auto& ParentTable : ParentTables)
+        auto parentTables = compositeDatatable->GetParentTables();
+        for (auto& parentTable : parentTables)
         {
-            auto ParentTableName = ParentTable->GetName();
-            if (ParentTableName.ends_with(STR("_Common")))
+            auto parentTableName = parentTable->GetName();
+            if (parentTableName.ends_with(STR("_Common")))
             {
-                Apply(Table->GetName(), ParentTable.Get());
+                Apply(compositeDatatable->GetName(), parentTable.Get());
             }
         }
     }
 
-    void PalRawTableLoader::Apply(const nlohmann::json& Data, RC::Unreal::UDataTable* Table, LoadResult& OutResult)
+    void PalRawTableLoader::Apply(const nlohmann::json& data, RC::Unreal::UDataTable* datatable, LoadResult& outResult)
     {
-        auto Name = Table->GetNamePrivate().ToString();
-        for (auto& [RowKey, RowData] : Data.items())
+        for (auto& [dataKey, dataRow] : data.items())
         {
-            if (RowKey == "Rows")
+            if (dataKey == "Rows")
             {
-                OutResult.ErrorCount++;
+                outResult.ErrorCount++;
                 PS::Log<LogLevel::Error>(STR("When copying entries from FModel, make sure to not include the 'Rows' field and instead add your row entries directly. See https://okaetsu.github.io/PalSchema/docs/guides/rawtables/intro for more info.\n"));
                 continue;
             }
 
-            if (RowKey.contains("*"))
+            if (dataKey.contains("*"))
             {
-                HandleFilters(Table, RowData, OutResult);
+                HandleFilters(datatable, dataRow, outResult);
                 continue;
             }
 
-            auto RowKeyName = FName(RC::to_generic_string(RowKey), FNAME_Add);
-            if (RowData.is_null())
+            auto rowKeyName = FName(RC::to_generic_string(dataKey), FNAME_Add);
+            if (dataRow.is_null())
             {
-                DeleteRow(Table, RowKeyName, OutResult);
+                DeleteRow(datatable, rowKeyName, outResult);
                 continue;
             }
 
-            auto Row = Table->FindRowUnchecked(RowKeyName);
-            if (!Row)
+            auto row = datatable->FindRowUnchecked(rowKeyName);
+            if (!row)
             {
-                AddRow(Table, RowKeyName, RowData, OutResult);
+                AddRow(datatable, rowKeyName, dataRow, outResult);
                 continue;
             }
 
-            EditRow(Table, RowKeyName, Row, RowData, OutResult);
+            EditRow(datatable, rowKeyName, row, dataRow, outResult);
         }
     }
 
-	void PalRawTableLoader::Load(const nlohmann::json& Data)
-	{
-        for (auto& [Key, Value] : Data.items())
-        {
-            AddToTableDataMap(Key, Value);
-        }
-	}
-
-    void PalRawTableLoader::Reload(const nlohmann::json& Data)
+    void PalRawTableLoader::OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase)
     {
-        for (auto& [Key, Value] : Data.items())
+        if (engineLifecyclePhase != EEngineLifecyclePhase::PostEngineInit)
         {
-            auto Table = UECustom::UDataTableStore::GetTableByName(Key);
-            if (Table)
-            {
-                auto Name = Table->GetNamePrivate().ToString();
-                LoadResult Result;
-                Apply(Value, Table, Result);
+            return;
+        }
 
-                PS::Log<LogLevel::Normal>(STR("{}: {} rows updated, {} rows added, {} rows deleted, {} error{}.\n"),
-                    Name, Result.SuccessfulModifications, Result.SuccessfulAdditions,
-                    Result.SuccessfulDeletions, Result.ErrorCount, Result.ErrorCount > 1 || Result.ErrorCount == 0 ? STR("s") : STR(""));
+        PS::JsonHelpers::ParseJsonFilesInPath(loaderPath, [&](const nlohmann::json& data) {
+            for (auto& [Key, Value] : data.items())
+            {
+                AddToTableDataMap(Key, Value);
             }
+        });
+    }
+
+    void PalRawTableLoader::OnAutoReload(const RC::StringType& modName, const nlohmann::json& data)
+    {
+        for (auto& [key, value] : data.items())
+        {
+            auto datatable = GetDatatableByName(key);
+            if (!datatable)
+            {
+                PS::Log<LogLevel::Error>(STR("Failed to auto-reload {}, data table {} doesn't exist.\n"), modName, RC::to_generic_string(key));
+                return;
+            }
+
+            auto name = datatable->GetNamePrivate().ToString();
+            LoadResult result;
+            Apply(value, datatable, result);
+
+            PS::Log<LogLevel::Normal>(STR("{}: {} rows updated, {} rows added, {} rows deleted, {} error{}.\n"),
+                name, result.SuccessfulModifications, result.SuccessfulAdditions,
+                result.SuccessfulDeletions, result.ErrorCount, result.ErrorCount > 1 || result.ErrorCount == 0 ? STR("s") : STR(""));
         }
     }
 
-    void PalRawTableLoader::HandleFilters(RC::Unreal::UDataTable* Table, const nlohmann::json& Data, LoadResult& OutResult)
+    bool PalRawTableLoader::CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase)
+    {
+        if (engineLifecyclePhase == EEngineLifecyclePhase::PostEngineInit)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    bool PalRawTableLoader::OnInitialize()
+    {
+        return true;
+    }
+
+    void PalRawTableLoader::OnDatatableSerialized(RC::Unreal::UDataTable* datatable)
+    {
+        if (!datatable) return;
+
+        if (datatable->GetClassPrivate() == UECustom::UCompositeDataTable::StaticClass())
+        {
+            auto compositeDatatable = static_cast<UECustom::UCompositeDataTable*>(datatable);
+            Apply(compositeDatatable);
+        }
+        else
+        {
+            Apply(datatable->GetName(), datatable);
+        }
+    }
+
+    void PalRawTableLoader::HandleFilters(RC::Unreal::UDataTable* datatable, const nlohmann::json& data, LoadResult& outResult)
     {
         try
         {
-            auto RowStruct = Table->GetRowStruct().Get();
-            if (Data.is_null())
+            if (data.is_null())
             {
-                OutResult.SuccessfulDeletions += Table->GetRowMap().Num();
-                Table->EmptyTable();
+                outResult.SuccessfulDeletions += datatable->GetRowMap().Num();
+                datatable->EmptyTable();
             }
             else
             {
-                for (auto& [Key, Row] : Table->GetRowMap())
+                for (auto& [key, row] : datatable->GetRowMap())
                 {
-                    ModifyRowProperties(Table, Key, Row, Data, OutResult);
-                    OutResult.SuccessfulModifications++;
+                    ModifyRowProperties(datatable, key, row, data, outResult);
+                    outResult.SuccessfulModifications++;
                 }
             }
         }
         catch (const std::exception& e)
         {
-            OutResult.ErrorCount++;
-            PS::Log<LogLevel::Error>(STR("Failed to do wildcard modification in {}: {}\n"), Table->GetNamePrivate().ToString(), RC::to_generic_string(e.what()));
+            outResult.ErrorCount++;
+            PS::Log<LogLevel::Error>(STR("Failed to do wildcard modification in {}: {}\n"), datatable->GetNamePrivate().ToString(), RC::to_generic_string(e.what()));
         }
     }
 
-    void PalRawTableLoader::AddRow(RC::Unreal::UDataTable* Table, const FName& RowName, const nlohmann::json& Data, LoadResult& OutResult)
+    void PalRawTableLoader::AddRow(RC::Unreal::UDataTable* datatable, const FName& rowName, const nlohmann::json& data, LoadResult& outResult)
     {
-        auto RowStruct = Table->GetRowStruct().Get();
-        FManagedStruct NewRowData(RowStruct);
+        auto rowStruct = datatable->GetRowStruct().Get();
+        FManagedStruct newRowData(rowStruct);
 
         try
         {
-            ModifyRowProperties(Table, RowName, NewRowData.GetData(), Data, OutResult);
-            Table->AddRow(RowName, *reinterpret_cast<RC::Unreal::FTableRowBase*>(NewRowData.GetData()));
-            OutResult.SuccessfulAdditions++;
+            ModifyRowProperties(datatable, rowName, newRowData.GetData(), data, outResult);
+            datatable->AddRow(rowName, *reinterpret_cast<RC::Unreal::FTableRowBase*>(newRowData.GetData()));
+            outResult.SuccessfulAdditions++;
         }
         catch (const std::exception& e)
         {
-            auto TableName = Table->GetNamePrivate().ToString();
-            OutResult.ErrorCount++;
-            PS::Log<LogLevel::Error>(STR("Failed to add Row '{}' in {}: {}\n"), RowName.ToString(), TableName, RC::to_generic_string(e.what()));
+            auto tableName = datatable->GetNamePrivate().ToString();
+            outResult.ErrorCount++;
+            PS::Log<LogLevel::Error>(STR("Failed to add Row '{}' in {}: {}\n"), rowName.ToString(), tableName, RC::to_generic_string(e.what()));
         }
     }
 
-    void PalRawTableLoader::EditRow(RC::Unreal::UDataTable* Table, const FName& RowName, uint8* Row, const nlohmann::json& Data, LoadResult& OutResult)
+    void PalRawTableLoader::EditRow(RC::Unreal::UDataTable* datatable, const FName& rowName, uint8* row, const nlohmann::json& data, LoadResult& outResult)
     {
         try
         {
-            auto RowStruct = Table->GetRowStruct().Get();
-            ModifyRowProperties(Table, RowName, Row, Data, OutResult);
-            OutResult.SuccessfulModifications++;
+            ModifyRowProperties(datatable, rowName, row, data, outResult);
+            outResult.SuccessfulModifications++;
         }
         catch (const std::exception& e)
         {
-            auto TableName = Table->GetNamePrivate().ToString();
-            OutResult.ErrorCount++;
-            PS::Log<LogLevel::Error>(STR("Failed to edit Row '{}' in {}: {}\n"), RowName.ToString(), TableName, RC::to_generic_string(e.what()));
+            auto tableName = datatable->GetNamePrivate().ToString();
+            outResult.ErrorCount++;
+            PS::Log<LogLevel::Error>(STR("Failed to edit Row '{}' in {}: {}\n"), rowName.ToString(), tableName, RC::to_generic_string(e.what()));
         }
     }
 
-    void PalRawTableLoader::DeleteRow(RC::Unreal::UDataTable* Table, const RC::Unreal::FName& RowName, LoadResult& OutResult)
+    void PalRawTableLoader::DeleteRow(RC::Unreal::UDataTable* datatable, const RC::Unreal::FName& rowName, LoadResult& outResult)
     {
-        Table->RemoveRow(RowName);
-        OutResult.SuccessfulDeletions++;
+        datatable->RemoveRow(rowName);
+        outResult.SuccessfulDeletions++;
     }
 
-    void PalRawTableLoader::ModifyRowProperties(RC::Unreal::UDataTable* Table, const FName& RowName, void* RowPtr, const nlohmann::json& Data,
-                                                LoadResult& OutResult)
+    void PalRawTableLoader::ModifyRowProperties(RC::Unreal::UDataTable* datatable, const FName& rowName, void* rowPtr, const nlohmann::json& data,
+                                                LoadResult& outResult)
     {
-        if (!Data.is_object())
+        if (!data.is_object())
         {
-            throw std::runtime_error(std::format("Value for {} must be an object", RC::to_string(RowName.ToString())));
+            throw std::runtime_error(std::format("Value for {} must be an object", RC::to_string(rowName.ToString())));
         }
 
-        auto RowStruct = Table->GetRowStruct().Get();
-        for (auto& [Key, Value] : Data.items())
+        auto rowStruct = datatable->GetRowStruct().Get();
+        for (auto& [key, value] : data.items())
         {
-            auto KeyWide = RC::to_generic_string(Key);
-            auto Property = PropertyHelper::GetPropertyByName(RowStruct, KeyWide);
-            if (Property)
+            auto keyWide = RC::to_generic_string(key);
+            auto property = PropertyHelper::GetPropertyByName(rowStruct, keyWide);
+            if (property)
             {
-                PropertyHelper::CopyJsonValueToContainer(RowPtr, Property, Value);
+                PropertyHelper::CopyJsonValueToContainer(rowPtr, property, value);
             }
             else
             {
-                OutResult.ErrorCount++;
-                PS::Log<LogLevel::Warning>(STR("Property '{}' not found in Row '{}' in {}.\n"), KeyWide, RowName.ToString(), Table->GetNamePrivate().ToString());
+                outResult.ErrorCount++;
+                PS::Log<LogLevel::Warning>(STR("Property '{}' not found in Row '{}' in {}.\n"), keyWide, rowName.ToString(), datatable->GetNamePrivate().ToString());
             }
         }
     }
 
-    void PalRawTableLoader::AddToTableDataMap(const std::string& TableName, const nlohmann::json& Data)
+    void PalRawTableLoader::AddToTableDataMap(const std::string& datatableName, const nlohmann::json& data)
     {
-        auto TableNameWide = RC::to_generic_string(TableName);
-        auto It = m_tableDataMap.find(TableNameWide);
-        if (It != m_tableDataMap.end())
+        auto datatableNameWide = RC::to_generic_string(datatableName);
+        auto it = m_tableDataMap.find(datatableNameWide);
+        if (it != m_tableDataMap.end())
         {
-            It->second.push_back(Data);
+            it->second.push_back(data);
         }
         else
         {
-            std::vector<nlohmann::json> NewDataArray{
-                Data
+            std::vector<nlohmann::json> newDataArray{
+                data
             };
-            m_tableDataMap.emplace(TableNameWide, NewDataArray);
+            m_tableDataMap.emplace(datatableNameWide, newDataArray);
         }
     }
 }

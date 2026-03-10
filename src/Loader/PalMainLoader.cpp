@@ -15,6 +15,18 @@
 #include "SDK/StaticClassStorage.h"
 #include "SDK/UnrealOffsets.h"
 #include "UE4SSProgram.hpp"
+#include "Loader/PalMonsterModLoader.h"
+#include "Loader/PalHumanModLoader.h"
+#include "Loader/PalLanguageModLoader.h"
+#include "Loader/PalItemModLoader.h"
+#include "Loader/PalSkinModLoader.h"
+#include "Loader/PalAppearanceModLoader.h"
+#include "Loader/PalBuildingModLoader.h"
+#include "Loader/PalRawTableLoader.h"
+#include "Loader/PalBlueprintModLoader.h"
+#include "Loader/PalEnumLoader.h"
+#include "Loader/PalHelpGuideModLoader.h"
+#include "Loader/PalSpawnLoader.h"
 #include "Loader/PalMainLoader.h"
 
 using namespace RC;
@@ -22,25 +34,10 @@ using namespace RC::Unreal;
 
 namespace fs = std::filesystem;
 
-namespace constants {
-    // FOLDERS //
-    constexpr std::string appearanceFolder      = "appearance";
-    constexpr std::string blueprintsFolder      = "blueprints";
-    constexpr std::string buildingsFolder       = "buildings";
-    constexpr std::string enumsFolder           = "enums";
-    constexpr std::string helpguideFolder       = "helpguide";
-    constexpr std::string itemsFolder           = "items";
-    constexpr std::string npcsFolder            = "npcs";
-    constexpr std::string palsFolder            = "pals";
-    constexpr std::string rawFolder             = "raw";
-    constexpr std::string skinsFolder           = "skins";
-    constexpr std::string translationsFolder    = "translations";
-    constexpr std::string resourcesFolder       = "resources";
-    constexpr std::string spawnsFolder          = "spawns";
-}
-
 namespace Palworld {
-    PalMainLoader::PalMainLoader() {}
+    PalMainLoader::PalMainLoader() {
+        CreateLoaders();
+    }
 
     PalMainLoader::~PalMainLoader()
     {
@@ -50,30 +47,21 @@ namespace Palworld {
         auto expected2 = GameInstanceInit_Hook.disable();
         GameInstanceInit_Hook = {};
 
-        auto expected3 = PostLoad_Hook.disable();
-        PostLoad_Hook = {};
-
         auto expected4 = GetPakFolders_Hook.disable();
         GetPakFolders_Hook = {};
 
         auto expected5 = StaticItemDataTable_Get_Hook.disable();
         StaticItemDataTable_Get_Hook = {};
 
-        auto expected6 = WorldCleanUp_Hook.disable();
-        WorldCleanUp_Hook = {};
-
         DatatableSerializeCallbacks.clear();
         GameInstanceInitCallbacks.clear();
-        PostLoadCallbacks.clear();
         GetPakFoldersCallback.clear();
-        WorldCleanUp_Callbacks.clear();
     }
 
     void PalMainLoader::PreInitialize()
     {
         HookDatatableSerialize();
         HookStaticItemDataTable_Get();
-        HookWorldCleanup();
         SetupAlternativePakPathReader();
     }
 
@@ -82,16 +70,32 @@ namespace Palworld {
         SetupAutoReload();
 	}
 
-    void PalMainLoader::ReloadMods()
+    void PalMainLoader::IterateModsFolder(const std::function<void(const std::filesystem::path&, const RC::StringType&)>& callback)
     {
-        PS::Log<LogLevel::Normal>(STR("Reloading mods...\n"));
+        static auto modsPath = fs::path(UE4SSProgram::get_program().get_working_directory()) / "Mods" / "PalSchema" / "mods";
+        if (fs::exists(modsPath))
+        {
+            for (const auto& entry : fs::directory_iterator(modsPath)) {
+                if (entry.is_directory())
+                {
+                    auto& path = entry.path();
+                    auto folderName = path.stem().native();
+                    callback(entry.path(), folderName);
+                }
+            }
+        }
+    }
 
-        auto loadErrorCallback = [](const fs::path::string_type& modName, const std::exception& e) {
-            PS::Log<LogLevel::Error>(STR("Failed to reload mod {} - {}\n"), modName, RC::to_generic_string(e.what()));
-        };
-        Load(loadErrorCallback);
+    void PalMainLoader::SetupPostEngineInitLoaders()
+    {
+        InitializeMods(EEngineLifecyclePhase::PostEngineInit);
+        LoadMods(EEngineLifecyclePhase::PostEngineInit);
+    }
 
-        PS::Log<LogLevel::Normal>(STR("Finished reloading mods.\n"));
+    void PalMainLoader::SetupGameInstanceInitLoaders()
+    {
+        InitializeMods(EEngineLifecyclePhase::GameInstanceInit);
+        LoadMods(EEngineLifecyclePhase::GameInstanceInit);
     }
 
     void PalMainLoader::HookDatatableSerialize()
@@ -106,10 +110,9 @@ namespace Palworld {
         DatatableSerialize_Hook = safetyhook::create_inline(reinterpret_cast<void*>(DatatableSerializeFuncPtr),
             OnDataTableSerialized);
 
-        DatatableSerializeCallbacks.push_back([&](RC::Unreal::UDataTable* Table) {
+        DatatableSerializeCallbacks.push_back([&](RC::Unreal::UDataTable* datatable) {
             InitCore();
-            UECustom::UDataTableStore::Store(Table);
-            RawTableLoader.OnDataTableChanged(Table);
+            m_datatableRegistry.Add(datatable);
         });
 
         PS::Log<LogLevel::Verbose>(STR("Core pre-initialized.\n"));
@@ -130,21 +133,68 @@ namespace Palworld {
         PS::Log<LogLevel::Verbose>(STR("Dummy item fix applied.\n"));
     }
 
-    void PalMainLoader::HookWorldCleanup()
+    void PalMainLoader::HookGameInstanceInit()
     {
-        auto World_CleanupWorld_FuncPtr = Palworld::SignatureManager::GetSignature("UWorld::CleanupWorld");
-        if (!World_CleanupWorld_FuncPtr)
+        auto PalGameInstanceClass = UECustom::UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Pal.PalGameInstance"));
+        if (!PalGameInstanceClass)
         {
-            PS::Log<LogLevel::Error>(STR("Unable to hook UWorld::CleanupWorld, signature is outdated. Custom spawns will not work.\n"));
+            PS::Log<LogLevel::Error>(STR("Failed to find PalGameInstance. Cannot hook OnGameInstanceInit.\n"));
             return;
         }
 
-        WorldCleanUp_Hook = safetyhook::create_inline(reinterpret_cast<void*>(World_CleanupWorld_FuncPtr),
-            UWorld_CleanupWorld);
+        PS::Log<LogLevel::Verbose>(STR("Fetching default object for UPalGameInstance...\n"));
+        uintptr_t** PGIVTablePtr = *(uintptr_t***)PalGameInstanceClass->GetClassDefaultObject();
+        void* GameInstanceInitPtr = (void*)PGIVTablePtr[90];
+        PS::Log<LogLevel::Verbose>(STR("Found UPalGameInstance::Init: {}\n"), GameInstanceInitPtr);
 
-        WorldCleanUp_Callbacks.push_back([&](RC::Unreal::UWorld* WorldToCleanup) {
-            SpawnLoader.OnWorldCleanup(WorldToCleanup);
+        GameInstanceInitCallbacks.push_back([&](UObject* Instance) {
+            SetupGameInstanceInitLoaders();
         });
+
+        GameInstanceInit_Hook = safetyhook::create_inline(GameInstanceInitPtr,
+            reinterpret_cast<void*>(OnGameInstanceInit));
+    }
+
+    void PalMainLoader::CreateLoaders()
+    {
+        auto resourceLoader = std::make_unique<PalResourceLoader>();
+        RegisterLoader(std::move(resourceLoader));
+
+        auto enumLoader = std::make_unique<PalEnumLoader>();
+        RegisterLoader(std::move(enumLoader));
+
+        auto monsterModLoader = std::make_unique<PalMonsterModLoader>();
+        RegisterLoader(std::move(monsterModLoader));
+
+        auto humanModLoader = std::make_unique<PalHumanModLoader>();
+        RegisterLoader(std::move(humanModLoader));
+
+        auto itemModLoader = std::make_unique<PalItemModLoader>();
+        RegisterLoader(std::move(itemModLoader));
+
+        auto skinModLoader = std::make_unique<PalSkinModLoader>();
+        RegisterLoader(std::move(skinModLoader));
+
+        auto appearanceModLoader = std::make_unique<PalAppearanceModLoader>();
+        RegisterLoader(std::move(appearanceModLoader));
+
+        auto buildingModLoader = std::make_unique<PalBuildingModLoader>();
+        RegisterLoader(std::move(buildingModLoader));
+
+        auto rawTableModLoader = std::make_unique<PalRawTableLoader>();
+        RegisterLoader(std::move(rawTableModLoader));
+
+        auto blueprintModLoader = std::make_unique<PalBlueprintModLoader>();
+        RegisterLoader(std::move(blueprintModLoader));
+
+        auto helpGuideLoader = std::make_unique<PalHelpGuideModLoader>();
+        RegisterLoader(std::move(helpGuideLoader));
+
+        auto spawnLoader = std::make_unique<PalSpawnLoader>();
+        RegisterLoader(std::move(spawnLoader));
+
+        auto languageModLoader = std::make_unique<PalLanguageModLoader>();
+        RegisterLoader(std::move(languageModLoader));
     }
 
     void PalMainLoader::SetupAutoReload()
@@ -160,8 +210,7 @@ namespace Palworld {
             [&](const std::wstring& path, const filewatch::Event change_type) {
                 if (change_type == filewatch::Event::modified)
                 {
-                    auto ue4ssPath = fs::path(UE4SSProgram::get_program().get_working_directory());
-                    auto modsPath = ue4ssPath / "Mods" / "PalSchema" / "mods";
+                    auto modsPath = GetModsPath();
                     auto modFilePath = modsPath / path;
 
                     auto subPath = fs::path(path);
@@ -171,7 +220,7 @@ namespace Palworld {
                     }
 
                     auto modName = it->native();
-                    auto modPath = ue4ssPath / "Mods" / "PalSchema" / "mods" / modName;
+                    auto modPath = modsPath / modName;
 
                     std::advance(it, 1);
                     auto folderType = it->string();
@@ -185,56 +234,15 @@ namespace Palworld {
                     UECustom::AsyncTask(UECustom::ENamedThreads::GameThread, [this, path, folderType, modName, modPath, modFilePath]() {
                         try
                         {
-                            ResourceLoader.Load(modPath);
-
-                            ParseJsonFileInPath(modFilePath, [&](const nlohmann::json& data) {
-                                if (folderType == constants::palsFolder)
+                            for (auto& loader : m_loaders)
+                            {
+                                if (loader->GetModFolderType() == folderType)
                                 {
-                                    MonsterModLoader.Load(data);
+                                    loader->AutoReload(modName, modFilePath);
+                                    PS::Log<LogLevel::Normal>(STR("Auto-reloaded mod {}\n"), modName);
+                                    break;
                                 }
-                                else if (folderType == constants::appearanceFolder)
-                                {
-                                    AppearanceModLoader.Load(data);
-                                }
-                                else if (folderType == constants::buildingsFolder)
-                                {
-                                    BuildingModLoader.Load(data);
-                                }
-                                else if (folderType == constants::itemsFolder)
-                                {
-                                    ItemModLoader.Load(data);
-                                }
-                                else if (folderType == constants::skinsFolder)
-                                {
-                                    SkinModLoader.Load(data);
-                                }
-                                else if (folderType == constants::helpguideFolder)
-                                {
-                                    HelpGuideModLoader.Load(data);
-                                }
-                                else if (folderType == constants::translationsFolder)
-                                {
-                                    LanguageModLoader.Load(data);
-                                }
-                                else if (folderType == constants::blueprintsFolder)
-                                {
-                                    BlueprintModLoader.Load(data);
-                                }
-                                else if (folderType == constants::npcsFolder)
-                                {
-                                    HumanModLoader.Load(data);
-                                }
-                                else if (folderType == constants::rawFolder)
-                                {
-                                    RawTableLoader.Reload(data);
-                                }
-                                else if (folderType == constants::spawnsFolder)
-                                {
-                                    SpawnLoader.Reload(modName, data);
-                                }
-                            });
-
-                            PS::Log<LogLevel::Normal>(STR("Auto-reloaded mod {}\n"), modName);
+                            }
                         }
                         catch (const std::exception& e)
                         {
@@ -268,294 +276,53 @@ namespace Palworld {
         PS::Log<LogLevel::Verbose>(STR("Initializing Static Class Storage...\n"));
         Palworld::StaticClassStorage::Initialize();
 
-        LoadCustomEnums();
+        SetupPostEngineInitLoaders();
 
-        PS::Log<LogLevel::Verbose>(STR("Loading raw tables and blueprint mods...\n"));
+        HookGameInstanceInit();
+
+        PS::Log<LogLevel::Verbose>(STR("Initialized Core\n"));
+    }
+
+    void PalMainLoader::RegisterLoader(std::unique_ptr<PalModLoaderBase> newLoader)
+    {
+        newLoader->AssignDatatableRegistry(m_datatableRegistry);
+        newLoader->Setup();
+
+        m_loaders.push_back(std::move(newLoader));
+    }
+
+    void PalMainLoader::InitializeMods(EEngineLifecyclePhase engineLifecyclePhase)
+    {
+        for (auto& loader : m_loaders)
+        {
+            loader->Initialize(engineLifecyclePhase);
+        }
+    }
+
+    void PalMainLoader::LoadMods(EEngineLifecyclePhase engineLifecyclePhase)
+    {
         IterateModsFolder([&](const fs::path& modPath, const fs::path::string_type& modName)
         {
             try
             {
                 PS::Log<RC::LogLevel::Normal>(STR("Loading mod: {}\n"), modName);
 
-                auto rawFolder = modPath / constants::rawFolder;
-                ParseJsonFilesInPath(rawFolder, [&](const nlohmann::json& data) {
-                    RawTableLoader.Load(data);
-                });
-
-                auto blueprintFolder = modPath / constants::blueprintsFolder;
-                ParseJsonFilesInPath(blueprintFolder, [&](const nlohmann::json& data) {
-                    BlueprintModLoader.LoadSafe(data);
-                });
+                for (auto& loader : m_loaders)
+                {
+                    loader->Load(modPath, modName, engineLifecyclePhase);
+                }
             }
             catch (const std::exception& e)
             {
                 PS::Log<LogLevel::Error>(STR("Failed to load mod {} - {}\n"), modName, RC::to_generic_string(e.what()));
             }
         });
-        PS::Log<LogLevel::Verbose>(STR("Finished loading raw tables and blueprint mods.\n"));
-
-        // Should in theory be more consistent than finding a signature for BlueprintGeneratedClass::PostLoad
-        auto BlueprintGeneratedClass = UECustom::UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.BlueprintGeneratedClass"), false);
-        if (!BlueprintGeneratedClass)
-        {
-            PS::Log<LogLevel::Error>(STR("Failed to find BlueprintGeneratedClass. Cannot hook PostLoad.\n"));
-            return;
-        }
-
-        PS::Log<LogLevel::Verbose>(STR("Fetching default object for UBlueprintGeneratedClass...\n"));
-        uintptr_t* BGCVTablePtr = *(uintptr_t**)BlueprintGeneratedClass->GetClassDefaultObject();
-        void* PostLoadPtr = (void*)BGCVTablePtr[20];
-        PS::Log<LogLevel::Verbose>(STR("Found UBlueprintGeneratedClass::PostLoad: {}\n"), PostLoadPtr);
-
-        PostLoadCallbacks.push_back([&](UClass* BPGeneratedClass) {
-            BlueprintModLoader.OnPostLoadDefaultObject(BPGeneratedClass, BPGeneratedClass->GetClassDefaultObject());
-        });
-
-        PostLoad_Hook = safetyhook::create_inline(PostLoadPtr,
-            reinterpret_cast<void*>(PostLoad));
-
-        auto PalGameInstanceClass = UECustom::UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Pal.PalGameInstance"));
-        if (!PalGameInstanceClass)
-        {
-            PS::Log<LogLevel::Error>(STR("Failed to find PalGameInstance. Cannot hook OnGameInstanceInit.\n"));
-            return;
-        }
-
-        PS::Log<LogLevel::Verbose>(STR("Fetching default object for UPalGameInstance...\n"));
-        uintptr_t** PGIVTablePtr = *(uintptr_t***)PalGameInstanceClass->GetClassDefaultObject();
-        void* GameInstanceInitPtr = (void*)PGIVTablePtr[90];
-        PS::Log<LogLevel::Verbose>(STR("Found UPalGameInstance::Init: {}\n"), GameInstanceInitPtr);
-
-        GameInstanceInitCallbacks.push_back([&](UObject* Instance) {
-            InitLoaders();
-        });
-
-        GameInstanceInit_Hook = safetyhook::create_inline(GameInstanceInitPtr,
-            reinterpret_cast<void*>(OnGameInstanceInit));
-
-        auto onLevelShownFunction = UECustom::UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, STR("/Script/Engine.WorldPartitionRuntimeLevelStreamingCell:OnLevelShown"));
-        onLevelShownFunction->RegisterPostHook([&](UnrealScriptFunctionCallableContext& Context, void* CustomData) {
-            auto Cell = static_cast<UECustom::UWorldPartitionRuntimeLevelStreamingCell*>(Context.Context);
-            SpawnLoader.OnCellLoaded(Cell);
-        });
-
-        auto onLevelHiddenFunction = UECustom::UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, STR("/Script/Engine.WorldPartitionRuntimeLevelStreamingCell:OnLevelHidden"));
-        onLevelHiddenFunction->RegisterPostHook([&](UnrealScriptFunctionCallableContext& Context, void* CustomData) {
-            auto Cell = static_cast<UECustom::UWorldPartitionRuntimeLevelStreamingCell*>(Context.Context);
-            SpawnLoader.OnCellUnloaded(Cell);
-        });
-
-        PS::Log<LogLevel::Verbose>(STR("Initialized Core\n"));
     }
 
-    void PalMainLoader::InitLoaders()
+    std::filesystem::path PalMainLoader::GetModsPath()
     {
-        PS::Log<LogLevel::Verbose>(STR("Initializing UDataTable storage...\n"));
-        UECustom::UDataTableStore::Initialize();
-
-        PS::Log<LogLevel::Verbose>(STR("Initializing Loaders...\n"));
-        LanguageModLoader.Initialize();
-        MonsterModLoader.Initialize();
-        HumanModLoader.Initialize();
-        AppearanceModLoader.Initialize();
-        BuildingModLoader.Initialize();
-        ItemModLoader.Initialize();
-        SkinModLoader.Initialize();
-        HelpGuideModLoader.Initialize();
-        SpawnLoader.Initialize();
-        PS::Log<LogLevel::Verbose>(STR("Initialized Loaders\n"));
-        PS::Log<LogLevel::Normal>(STR("Loading mods...\n"));
-
-        auto loadErrorCallback = [](const fs::path::string_type& modName, const std::exception& e) {
-            PS::Log<LogLevel::Error>(STR("Failed to load mod {} - {}\n"), modName, RC::to_generic_string(e.what()));
-        };
-        Load(loadErrorCallback);
-
-        PS::Log<LogLevel::Normal>(STR("Finished loading mods.\n"));
-    }
-
-    void PalMainLoader::Load(const std::function<void(const fs::path::string_type&, const std::exception&)>& errorCallback)
-	{
-        IterateModsFolder([&](const fs::path& modPath, const fs::path::string_type& modName)
-        {
-            try
-            {
-                PS::Log<RC::LogLevel::Normal>(STR("Loading mod: {}\n"), modName);
-
-                ResourceLoader.Load(modPath);
-                
-                auto palFolder = modPath / constants::palsFolder;
-                ParseJsonFilesInPath(palFolder, [&](const nlohmann::json& data) {
-                    MonsterModLoader.Load(data);
-                });
-
-                auto npcFolder = modPath / constants::npcsFolder;
-                ParseJsonFilesInPath(npcFolder, [&](const nlohmann::json& data) {
-                    HumanModLoader.Load(data);
-                });
-
-                auto appearanceFolder = modPath / constants::appearanceFolder;
-                ParseJsonFilesInPath(appearanceFolder, [&](const nlohmann::json& data) {
-                    AppearanceModLoader.Load(data);
-                });
-
-                auto buildingsFolder = modPath / constants::buildingsFolder;
-                ParseJsonFilesInPath(buildingsFolder, [&](const nlohmann::json& data) {
-                    BuildingModLoader.Load(data);
-                });
-
-                auto itemsFolder = modPath / constants::itemsFolder;
-                ParseJsonFilesInPath(itemsFolder, [&](const nlohmann::json& data) {
-                    ItemModLoader.Load(data);
-                });
-
-                auto skinsFolder = modPath / constants::skinsFolder;
-                ParseJsonFilesInPath(skinsFolder, [&](const nlohmann::json& data) {
-                    SkinModLoader.Load(data);
-                });
-
-                auto helpguideFolder = modPath / constants::helpguideFolder;
-                ParseJsonFilesInPath(helpguideFolder, [&](const nlohmann::json& data) {
-                    HelpGuideModLoader.Load(data);
-                });
-
-                auto rawFolder = modPath / constants::rawFolder;
-                ParseJsonFilesInPath(rawFolder, [&](const nlohmann::json& data) {
-                    RawTableLoader.Reload(data);
-                });
-
-                auto blueprintFolder = modPath / constants::blueprintsFolder;
-                ParseJsonFilesInPath(blueprintFolder, [&](const nlohmann::json& data) {
-                    BlueprintModLoader.Load(data);
-                });
-
-                auto spawnsFolder = modPath / constants::spawnsFolder;
-                ParseJsonFilesInPath(spawnsFolder, [&](const nlohmann::json& data) {
-                    SpawnLoader.Load(modName, data);
-                });
-
-                auto translationsFolder = modPath / constants::translationsFolder;
-                LoadLanguageMods(translationsFolder);
-            }
-            catch (const std::exception& e)
-            {
-                errorCallback(modName, e);
-            }
-        });
-	}
-
-	void PalMainLoader::LoadLanguageMods(const std::filesystem::path& path)
-	{
-		const auto& currentLanguage = LanguageModLoader.GetCurrentLanguage();
-
-        PS::Log<LogLevel::Verbose>(STR("Loading language mods...\n"));
-        auto globalLanguageFolder = path / "global";
-        if (fs::exists(globalLanguageFolder))
-        {
-            ParseJsonFilesInPath(globalLanguageFolder, [&](nlohmann::json data) {
-                LanguageModLoader.Load(data);
-            });
-        }
-
-        auto translationLanguageFolder = path / currentLanguage;
-		if (fs::exists(translationLanguageFolder))
-		{
-            ParseJsonFilesInPath(translationLanguageFolder, [&](nlohmann::json data) {
-                LanguageModLoader.Load(data);
-            });
-		}
-
-        PS::Log<LogLevel::Verbose>(STR("Finished loading language mods.\n"));
-	}
-
-    void PalMainLoader::LoadCustomEnums()
-    {
-        EnumLoader.Initialize();
-
-        PS::Log<LogLevel::Verbose>(STR("Loading custom enums...\n"));
-        IterateModsFolder([&](const fs::path& modPath, const fs::path::string_type& modName) {
-            auto enumsFolder = modPath / constants::enumsFolder;
-            ParseJsonFilesInPath(enumsFolder, [&](nlohmann::json data) {
-                try
-                {
-                    EnumLoader.Load(data);
-                }
-                catch (const std::exception& e)
-                {
-                    PS::Log<LogLevel::Error>(STR("Failed to add custom enums from mod {} - {}\n"), modName, RC::to_generic_string(e.what()));
-                }
-            });
-        });
-
-        PS::Log<LogLevel::Verbose>(STR("Finished loading custom enums.\n"));
-    }
-
-    void PalMainLoader::IterateModsFolder(const std::function<void(const std::filesystem::path&, const std::filesystem::path::string_type&)>& callback)
-    {
-        auto cwd = fs::path(UE4SSProgram::get_program().get_working_directory()) / "Mods" / "PalSchema" / "mods";
-        if (fs::exists(cwd))
-        {
-            for (const auto& entry : fs::directory_iterator(cwd)) {
-                if (entry.is_directory())
-                {
-                    auto& path = entry.path();
-                    auto folderName = path.stem().native();
-                    callback(entry.path(), folderName);
-                }
-            }
-        }
-    }
-
-    void PalMainLoader::ParseJsonFileInPath(const std::filesystem::path& path, const std::function<void(const nlohmann::json&)>& callback)
-    {
-        if (!fs::exists(path))
-        {
-            PS::Log<LogLevel::Error>(STR("Failed parsing mod file {} - file doesn't exist.\n"), path.native());
-            return;
-        }
-
-        auto ignoreComments = path.extension() == ".jsonc";
-        std::ifstream f(path);
-
-        nlohmann::json data = nlohmann::json::parse(f, nullptr, true, ignoreComments);
-        callback(data);
-    }
-
-    void PalMainLoader::ParseJsonFilesInPath(const std::filesystem::path& path, const std::function<void(const nlohmann::json&)>& callback)
-    {
-        if (!fs::is_directory(path))
-        {
-            return;
-        }
-
-        for (const auto& file : fs::directory_iterator(path)) {
-            try
-            {
-                auto filePath = file.path();
-                if (filePath.has_extension())
-                {
-                    if (filePath.extension() == ".json" || filePath.extension() == ".jsonc")
-                    {
-                        ParseJsonFileInPath(filePath, callback);
-                    }
-                }
-            }
-            catch (const std::exception& e)
-            {
-                PS::Log<RC::LogLevel::Error>(STR("Failed parsing mod file {} - {}.\n"), RC::to_generic_string(file.path().native()), RC::to_generic_string(e.what()));
-                throw std::runtime_error(e.what());
-            }
-        }
-    }
-
-    void PalMainLoader::PostLoad(UClass* This)
-    {
-        PostLoad_Hook.call(This);
-
-        for (auto& Callback : PostLoadCallbacks)
-        {
-            Callback(This);
-        }
+        static auto modsPath = fs::path(UE4SSProgram::get_program().get_working_directory()) / "Mods" / "PalSchema" / "mods";
+        return modsPath;
     }
 
     // This entire function block will get called twice, it's fine.
@@ -579,7 +346,7 @@ namespace Palworld {
         }
         
         PS::Log<LogLevel::Verbose>(STR("Preparing to add extra .pak read directory...\n"));
-        auto ModsFolderPath = fs::path(UE4SSProgram::get_program().get_working_directory()) / "Mods" / "PalSchema" / "mods";
+        auto ModsFolderPath = GetModsPath();
         auto AbsolutePath = ModsFolderPath.native();
         auto AbsolutePathWithSuffix = std::format(STR("{}/"), RC::to_generic_string(AbsolutePath));
 
@@ -634,14 +401,5 @@ namespace Palworld {
         // Instead, we'll generate a dummy item for that ItemId and return it.
         // Subsequent calls to this hook with the same ItemId will just return in the first if block since it was added to StaticItemDataAsset.
         return PalItemModLoader::AddDummyItem(This, ItemId);
-    }
-
-    void PalMainLoader::UWorld_CleanupWorld(UWorld* This, bool bSessionEnded, bool bCleanupResources, UWorld* NewWorld)
-    {
-        WorldCleanUp_Hook.call(This, bSessionEnded, bCleanupResources, NewWorld);
-        for (auto& Callback : WorldCleanUp_Callbacks)
-        {
-            Callback(This);
-        }
     }
 }

@@ -2,20 +2,10 @@
 
 #include <vector>
 #include <functional>
-#include "Loader/PalMonsterModLoader.h"
-#include "Loader/PalHumanModLoader.h"
-#include "Loader/PalLanguageModLoader.h"
-#include "Loader/PalItemModLoader.h"
-#include "Loader/PalSkinModLoader.h"
-#include "Loader/PalAppearanceModLoader.h"
-#include "Loader/PalBuildingModLoader.h"
-#include "Loader/PalRawTableLoader.h"
-#include "Loader/PalBlueprintModLoader.h"
-#include "Loader/PalEnumLoader.h"
-#include "Loader/PalHelpGuideModLoader.h"
 #include "Loader/PalResourceLoader.h"
-#include "Loader/PalSpawnLoader.h"
+#include "SDK/Classes/Custom/UDataTableStore.h"
 #include "FileWatch.hpp"
+#include "safetyhook.hpp"
 
 namespace RC::Unreal {
     class AGameModeBase;
@@ -39,31 +29,26 @@ namespace Palworld {
 		void PreInitialize();
 
 		void Initialize();
-
-        // Should be called in Game Thread
-        void ReloadMods();
 	private:
-		PalLanguageModLoader LanguageModLoader;
-		PalMonsterModLoader MonsterModLoader;
-		PalHumanModLoader HumanModLoader;
-		PalItemModLoader ItemModLoader;
-		PalSkinModLoader SkinModLoader;
-		PalAppearanceModLoader AppearanceModLoader;
-		PalBuildingModLoader BuildingModLoader;
-		PalRawTableLoader RawTableLoader;
-		PalBlueprintModLoader BlueprintModLoader;
-        PalEnumLoader EnumLoader;
-		PalHelpGuideModLoader HelpGuideModLoader;
-        PalResourceLoader ResourceLoader;
-        PalSpawnLoader SpawnLoader;
+        std::vector<std::unique_ptr<PalModLoaderBase>> m_loaders;
 
         std::unique_ptr<filewatch::FileWatch<std::wstring>> m_fileWatch;
+
+        UECustom::UDataTableRegistry m_datatableRegistry;
+
+        void IterateModsFolder(const std::function<void(const std::filesystem::path&, const RC::StringType&)>& callback);
+
+        void SetupPostEngineInitLoaders();
+
+        void SetupGameInstanceInitLoaders();
 
         void HookDatatableSerialize();
 
         void HookStaticItemDataTable_Get();
 
-        void HookWorldCleanup();
+        void HookGameInstanceInit();
+
+        void CreateLoaders();
 
         void SetupAutoReload();
 
@@ -74,22 +59,12 @@ namespace Palworld {
 
         void InitCore();
 
-        void InitLoaders();
+        void RegisterLoader(std::unique_ptr<PalModLoaderBase> newLoader);
 
-        // errorCallback(modName, error) is fired each time a mod fails to load properly due to an error.
-		void Load(const std::function<void(const std::filesystem::path::string_type&, const std::exception&)>& errorCallback);
-
-		void LoadLanguageMods(const std::filesystem::path& path);
-
-        void LoadCustomEnums();
-
-        void IterateModsFolder(const std::function<void(const std::filesystem::path&, const std::filesystem::path::string_type&)>& callback);
-
-        void ParseJsonFileInPath(const std::filesystem::path& path, const std::function<void(const nlohmann::json&)>& callback);
-
-        void ParseJsonFilesInPath(const std::filesystem::path& path, const std::function<void(const nlohmann::json&)>& callback);
+        void InitializeMods(EEngineLifecyclePhase engineLifecyclePhase);
+        void LoadMods(EEngineLifecyclePhase engineLifecyclePhase);
     private:
-        static void PostLoad(RC::Unreal::UClass* This);
+        static std::filesystem::path GetModsPath();
 
         static void GetPakFolders(const RC::Unreal::TCHAR* CmdLine, RC::Unreal::TArray<RC::Unreal::FString>* OutPakFolders);
 
@@ -99,21 +74,15 @@ namespace Palworld {
 
         static RC::Unreal::UObject* StaticItemDataTable_Get(UPalStaticItemDataTable* This, RC::Unreal::FName ItemId);
 
-        static void UWorld_CleanupWorld(RC::Unreal::UWorld* This, bool bSessionEnded, bool bCleanupResources, RC::Unreal::UWorld* NewWorld);
-
         bool m_hasInit = false;
 
         static inline std::vector<std::function<void(RC::Unreal::UDataTable*)>> DatatableSerializeCallbacks;
         static inline std::vector<std::function<void(RC::Unreal::UObject*)>> GameInstanceInitCallbacks;
-        static inline std::vector<std::function<void(RC::Unreal::UClass*)>> PostLoadCallbacks;
-        static inline std::vector<std::function<void(RC::Unreal::UWorld*)>> WorldCleanUp_Callbacks;
         static inline std::vector<std::function<void()>> GetPakFoldersCallback;
 
         static inline SafetyHookInline DatatableSerialize_Hook;
         static inline SafetyHookInline GameInstanceInit_Hook;
-        static inline SafetyHookInline PostLoad_Hook;
         static inline SafetyHookInline GetPakFolders_Hook;
         static inline SafetyHookInline StaticItemDataTable_Get_Hook;
-        static inline SafetyHookInline WorldCleanUp_Hook;
 	};
 }

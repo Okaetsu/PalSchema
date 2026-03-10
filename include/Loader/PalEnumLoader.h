@@ -16,14 +16,16 @@ namespace Palworld {
     class PalEnumLoader : public PalModLoaderBase {
     public:
         PalEnumLoader();
-
         ~PalEnumLoader();
-
-        void Initialize();
-
-        virtual void Load(const nlohmann::json& Data) override final;
+    protected:
+        virtual void OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase) override final;
+        
+        virtual bool CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase) override final;
+        virtual bool OnInitialize() override final;
     private:
-        std::unordered_map<RC::StringType, RC::Unreal::UEnum*> EnumNameToObjectMap;
+        std::unordered_map<RC::StringType, RC::Unreal::UEnum*> m_enumNameToObjectMap;
+
+        void LoadEnums(const nlohmann::json& data);
 
         RC::Unreal::UEnum* GetEnumByName(const RC::StringType& Name);
     };

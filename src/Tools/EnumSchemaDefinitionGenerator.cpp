@@ -15,7 +15,7 @@ namespace Palworld {
 
         nlohmann::ordered_json JsonDefinitions;
 
-        for (auto& EnumObject : EnumObjects)
+        for (auto EnumObject : EnumObjects)
         {
             auto Enum = static_cast<UEnum*>(EnumObject);
             auto EnumName = RC::to_string(Enum->GetName());
@@ -25,7 +25,7 @@ namespace Palworld {
                 continue;
             }
 
-            auto& Names = Enum->GetNames();
+            auto Names = Enum->GetEnumNames();
 
             JsonDefinitions[EnumName] = {
                 { "type", "string" },

@@ -15,13 +15,16 @@ namespace Palworld {
 		PalItemModLoader();
 
 		~PalItemModLoader();
+    protected:
+        virtual void OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase) override final;
 
-		void Initialize();
-
-		virtual void Load(const nlohmann::json& Data) override final;
+        virtual bool CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase) override final;
+        virtual bool OnInitialize() override final;
     public:
         static UPalStaticItemDataBase* AddDummyItem(UPalStaticItemDataTable* StaticItemDataTable, const RC::Unreal::FName& ItemId);
 	private:
+        void LoadItems(const nlohmann::json& data);
+
 		void Add(const RC::Unreal::FName& ItemId, const nlohmann::json& Data);
 
 		void Edit(const RC::Unreal::FName& ItemId, UPalStaticItemDataBase* Item, const nlohmann::json& Data);

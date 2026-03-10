@@ -19,18 +19,21 @@ namespace Palworld {
 		PalAppearanceModLoader();
 
 		~PalAppearanceModLoader();
+    protected:
+        virtual void OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase) override final;
 
-		void Initialize();
-
-		virtual void Load(const nlohmann::json& Data) override final;
+        virtual bool CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase) override final;
+        virtual bool OnInitialize() override final;
 	private:
-		RC::Unreal::UDataTable* m_hairTable;
-		RC::Unreal::UDataTable* m_headTable;
-		RC::Unreal::UDataTable* m_eyesTable;
-		RC::Unreal::UDataTable* m_bodyTable;
-		RC::Unreal::UDataTable* m_presetTable;
-		RC::Unreal::UDataTable* m_colorPresetTable;
-		RC::Unreal::UDataTable* m_equipmentTable;
+		RC::Unreal::UDataTable* m_hairTable{};
+		RC::Unreal::UDataTable* m_headTable{};
+		RC::Unreal::UDataTable* m_eyesTable{};
+		RC::Unreal::UDataTable* m_bodyTable{};
+		RC::Unreal::UDataTable* m_presetTable{};
+		RC::Unreal::UDataTable* m_colorPresetTable{};
+		RC::Unreal::UDataTable* m_equipmentTable{};
+
+        void LoadAppearances(const nlohmann::json& data);
 
 		void Add(const RC::Unreal::FName& RowId, RC::Unreal::UDataTable* DataTable, const nlohmann::json& Data, const std::vector<std::string>& RequiredFields);
 

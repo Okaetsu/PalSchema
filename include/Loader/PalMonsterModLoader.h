@@ -14,11 +14,14 @@ namespace Palworld {
         PalMonsterModLoader();
 
         ~PalMonsterModLoader();
+    protected:
+        virtual void OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase) override final;
 
-        void Initialize();
-        
-        virtual void Load(const nlohmann::json& json) override final;
+        virtual bool CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase) override final;
+        virtual bool OnInitialize() override final;
     private:
+        void LoadPals(const nlohmann::json& data);
+
         void Add(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties);
 
         void Edit(uint8_t* TableRow, const RC::Unreal::FName& CharacterId, const nlohmann::json& properties);
@@ -35,7 +38,7 @@ namespace Palworld {
 
         void EditTranslations(const RC::Unreal::FName& CharacterId, const nlohmann::json& Data);
 
-        RC::Unreal::UDataTable* m_dataTable;
+        RC::Unreal::UDataTable* m_monsterDataTable;
         RC::Unreal::UDataTable* m_iconDataTable;
         RC::Unreal::UDataTable* m_palBpClassTable;
         RC::Unreal::UDataTable* m_wazaMasterLevelTable;

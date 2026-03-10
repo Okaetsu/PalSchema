@@ -13,15 +13,18 @@ namespace Palworld {
 		PalHelpGuideModLoader();
 
 		~PalHelpGuideModLoader();
+    protected:
+        virtual void OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase) override final;
 
-		void Initialize();
-
-		virtual void Load(const nlohmann::json& Data) override final;
+        virtual bool CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase) override final;
+        virtual bool OnInitialize() override final;
 	private:
 		UPalNoteDataAsset* m_helpGuideDataAsset{};
 		RC::Unreal::UDataTable* m_helpGuideMasterDataTable{};
 		RC::Unreal::UDataTable* m_helpGuideDescTextTable{};
 		RC::Unreal::UDataTable* m_helpGuideTextureDataTable{};
+
+        void LoadHelpGuides(const nlohmann::json& data);
 
 		void Add(const RC::Unreal::FName& NoteId, const nlohmann::json& Data);
 

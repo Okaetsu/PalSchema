@@ -9,50 +9,79 @@
 using namespace RC;
 using namespace RC::Unreal;
 
-RC::Unreal::UDataTable* UECustom::UDataTableStore::GetTableByName(const std::string& Name)
-{
-    auto Table = TableMap.find(Name);
-    if (Table != TableMap.end())
+namespace UECustom {
+    RC::Unreal::UDataTable* UDataTableRegistry::GetDatatableByName(const std::string& name)
     {
-        return Table->second;
+        auto datatable = m_datatableMap.find(name);
+        if (datatable != m_datatableMap.end())
+        {
+            return datatable->second;
+        }
+
+        return nullptr;
     }
 
-    return nullptr;
-}
-
-void UECustom::UDataTableStore::Store(const std::string& Name, RC::Unreal::UDataTable* Table)
-{
-    TableMap.insert_or_assign(Name, Table);
-}
-
-void UECustom::UDataTableStore::Store(RC::Unreal::UDataTable* Table)
-{
-    auto Name = Table->GetNamePrivate().ToString();
-    UECustom::UDataTableStore::Store(RC::to_string(Name), Table);
-}
-
-void UECustom::UDataTableStore::Initialize()
-{
-    TArray<UObject*> Results;
-
-    auto DataTableClass = RC::Unreal::UDataTable::StaticClass();
-    if (!DataTableClass)
+    DatatableSerializeCallbackId UDataTableRegistry::RegisterDatatableSerializeCallback(const DatatableSerializeCallback& callback)
     {
-        PS::Log<LogLevel::Error>(STR("Unable to initialize UDataTableStore, failed to get /Script/Engine.DataTable\n"));
-        return;
+        std::lock_guard<std::mutex> guard(m_mutex);
+        auto nextId = GenerateDatatableSerializeCallbackId();
+        m_callbackMap.emplace(nextId, callback);
+
+        return nextId;
     }
 
-    PS::Log<LogLevel::Verbose>(STR("UClass for UDataTable found, fetching UDataTables...\n"));
-    UECustom::UObjectGlobals::GetObjectsOfClass(DataTableClass, Results);
-
-    int AddedUDataTables = 0;
-    for (auto& Object : Results)
+    void UDataTableRegistry::UnregisterDatatableSerializeCallback(const DatatableSerializeCallbackId& callbackId)
     {
-        auto DT = static_cast<RC::Unreal::UDataTable*>(Object);
-        auto Name = Object->GetNamePrivate().ToString();
-        UECustom::UDataTableStore::Store(RC::to_string(Name), DT);
-        AddedUDataTables++;
+        std::lock_guard<std::mutex> guard(m_mutex);
+        m_callbackMap.erase(callbackId);
     }
 
-    PS::Log<LogLevel::Verbose>(STR("Finished mapping {} UDataTables.\n"), AddedUDataTables);
+    void UDataTableRegistry::Add(const std::string& name, RC::Unreal::UDataTable* datatable)
+    {
+        m_datatableMap.insert_or_assign(name, datatable);
+
+        std::lock_guard<std::mutex> guard(m_mutex);
+        for (auto& [callbackId, callback] : m_callbackMap)
+        {
+            callback(datatable);
+        }
+    }
+
+    void UDataTableRegistry::Add(RC::Unreal::UDataTable* datatable)
+    {
+        auto name = datatable->GetNamePrivate().ToString();
+        Add(RC::to_string(name), datatable);
+    }
+
+    void UDataTableRegistry::Initialize()
+    {
+        TArray<UObject*> results;
+
+        auto datatableClass = RC::Unreal::UDataTable::StaticClass();
+        if (!datatableClass)
+        {
+            PS::Log<LogLevel::Error>(STR("Unable to initialize UDataTableRegistry, failed to get /Script/Engine.DataTable\n"));
+            return;
+        }
+
+        PS::Log<LogLevel::Verbose>(STR("UClass for UDataTable found, fetching UDataTables...\n"));
+        UECustom::UObjectGlobals::GetObjectsOfClass(datatableClass, results);
+
+        int addedDatatables = 0;
+        for (auto& object : results)
+        {
+            auto datatable = static_cast<RC::Unreal::UDataTable*>(object);
+            auto name = object->GetNamePrivate().ToString();
+            Add(RC::to_string(name), datatable);
+            addedDatatables++;
+        }
+
+        PS::Log<LogLevel::Verbose>(STR("Finished mapping {} UDataTables.\n"), addedDatatables);
+    }
+
+    DatatableSerializeCallbackId UDataTableRegistry::GenerateDatatableSerializeCallbackId()
+    {
+        static RC::Unreal::uint64 datatableSerializeCallbackId = 0;
+        return datatableSerializeCallbackId++;
+    }
 }

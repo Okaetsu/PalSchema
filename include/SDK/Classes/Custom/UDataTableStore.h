@@ -1,23 +1,36 @@
 #pragma once
 
+#include <functional>
 #include <unordered_map>
 #include <string>
+#include <mutex>
+#include "Unreal/Core/HAL/Platform.hpp"
 
 namespace RC::Unreal {
     class UDataTable;
 }
 
 namespace UECustom {
-    class UDataTableStore {
-    private:
-        static inline std::unordered_map<std::string, RC::Unreal::UDataTable*> TableMap;
+    using DatatableSerializeCallback = std::function<void(RC::Unreal::UDataTable*)>;
+    using DatatableSerializeCallbackId = RC::Unreal::uint64;
+
+    class UDataTableRegistry {
     public:
-        static RC::Unreal::UDataTable* GetTableByName(const std::string& Name);
+        RC::Unreal::UDataTable* GetDatatableByName(const std::string& name);
 
-        static void Store(const std::string& Name, RC::Unreal::UDataTable* Table);
+        DatatableSerializeCallbackId RegisterDatatableSerializeCallback(const DatatableSerializeCallback& callback);
+        void UnregisterDatatableSerializeCallback(const DatatableSerializeCallbackId& callbackId);
 
-        static void Store(RC::Unreal::UDataTable* Table);
+        void Add(const std::string& name, RC::Unreal::UDataTable* datatable);
 
-        static void Initialize();
+        void Add(RC::Unreal::UDataTable* datatable);
+
+        void Initialize();
+    private:
+        std::mutex m_mutex;
+        std::unordered_map<std::string, RC::Unreal::UDataTable*> m_datatableMap;
+        std::unordered_map<DatatableSerializeCallbackId, DatatableSerializeCallback> m_callbackMap;
+
+        static DatatableSerializeCallbackId GenerateDatatableSerializeCallbackId();
     };
 }

@@ -7,71 +7,99 @@
 #include "SDK/Helper/PropertyHelper.h"
 #include "Helpers/String.hpp"
 #include "Utility/Logging.h"
+#include "Utility/JsonHelpers.h"
 #include "Loader/PalHelpGuideModLoader.h"
 
 using namespace RC;
 using namespace RC::Unreal;
 
 namespace Palworld {
-	PalHelpGuideModLoader::PalHelpGuideModLoader() : PalModLoaderBase("helpguide") {}
+	PalHelpGuideModLoader::PalHelpGuideModLoader() : PalModLoaderBase("helpguide") {
+        SetDisplayName(TEXT("Help Guide Loader"));
+    }
 
 	PalHelpGuideModLoader::~PalHelpGuideModLoader() {}
 
-	void PalHelpGuideModLoader::Initialize()
-	{
-		m_helpGuideDataAsset = UObjectGlobals::StaticFindObject<UPalNoteDataAsset*>(nullptr, nullptr,
-			STR("/Game/Pal/DataAsset/HelpGuide/DA_HelpGuideDataAsset.DA_HelpGuideDataAsset"));
+    void PalHelpGuideModLoader::OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase)
+    {
+        if (engineLifecyclePhase != EEngineLifecyclePhase::GameInstanceInit)
+        {
+            return;
+        }
 
-		m_helpGuideMasterDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/HelpGuide/DT_HelpGuideMasterDataTable.DT_HelpGuideMasterDataTable"));
+        PS::JsonHelpers::ParseJsonFilesInPath(loaderPath, [&](const nlohmann::json& data) {
+            LoadHelpGuides(data);
+        });
+    }
 
-		m_helpGuideDescTextTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/Text/DT_HelpGuideDescText.DT_HelpGuideDescText"));
+    bool PalHelpGuideModLoader::CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase)
+    {
+        if (engineLifecyclePhase == EEngineLifecyclePhase::GameInstanceInit)
+        {
+            return true;
+        }
 
-		m_helpGuideTextureDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/HelpGuide/DT_HelpGuideTextureDataTable.DT_HelpGuideTextureDataTable"));
+        return false;
+    }
 
-		PS::Log<RC::LogLevel::Verbose>(STR("Initialized HelpGuideModLoader\n"));
-	}
+    bool PalHelpGuideModLoader::OnInitialize()
+    {
+        try
+        {
+            m_helpGuideDataAsset = UObjectGlobals::StaticFindObject<UPalNoteDataAsset*>(nullptr, nullptr,
+                STR("/Game/Pal/DataAsset/HelpGuide/DA_HelpGuideDataAsset.DA_HelpGuideDataAsset"));
 
-	void PalHelpGuideModLoader::Load(const nlohmann::json& Data)
-	{
-		for (auto& [Key, Value] : Data.items())
-		{
-			auto NoteId = FName(RC::to_generic_string(Key), FNAME_Add);
-			
-			if (Value.is_null())
-			{
-				// Delete from all sources
-				auto Row = m_helpGuideDataAsset->NoteDataMap.Find(NoteId);
-				if (Row)
-				{
-					m_helpGuideDataAsset->NoteDataMap.Remove(NoteId);
-				}
-				
-				DeleteRelatedData(NoteId);
-				PS::Log<RC::LogLevel::Normal>(STR("Deleted Help Guide '{}'\n"), NoteId.ToString());
-			}
-			else
-			{
-				auto Row = m_helpGuideDataAsset->NoteDataMap.Find(NoteId);
-				if (Row)
-				{
-					Edit(NoteId, *Row, Value);
-					PS::Log<RC::LogLevel::Normal>(STR("Modified Help Guide '{}'\n"), NoteId.ToString());
-				}
-				else
-				{
-					Add(NoteId, Value);
-					PS::Log<RC::LogLevel::Normal>(STR("Added Help Guide '{}'\n"), NoteId.ToString());
-				}
+            m_helpGuideMasterDataTable = GetDatatableByName("DT_HelpGuideMasterDataTable");
+            m_helpGuideDescTextTable = GetDatatableByName("DT_HelpGuideDescText");
+            m_helpGuideTextureDataTable = GetDatatableByName("DT_HelpGuideTextureDataTable");
+        }
+        catch (const std::exception& e)
+        {
+            PS::Log<LogLevel::Error>(STR("Unable to initialize {}, {}\n"), GetDisplayName(), RC::to_generic_string(e.what()));
+            return false;
+        }
 
-				// Always update the DataTables
-				AddOrEditMasterData(NoteId, Value);
-				AddOrEditDescText(NoteId, Value);
-			}
-		}
-	}
+        return true;
+    }
+
+    void PalHelpGuideModLoader::LoadHelpGuides(const nlohmann::json& data)
+    {
+        for (auto& [Key, Value] : data.items())
+        {
+            auto NoteId = FName(RC::to_generic_string(Key), FNAME_Add);
+
+            if (Value.is_null())
+            {
+                // Delete from all sources
+                auto Row = m_helpGuideDataAsset->NoteDataMap.Find(NoteId);
+                if (Row)
+                {
+                    m_helpGuideDataAsset->NoteDataMap.Remove(NoteId);
+                }
+
+                DeleteRelatedData(NoteId);
+                PS::Log<RC::LogLevel::Normal>(STR("Deleted Help Guide '{}'\n"), NoteId.ToString());
+            }
+            else
+            {
+                auto Row = m_helpGuideDataAsset->NoteDataMap.Find(NoteId);
+                if (Row)
+                {
+                    Edit(NoteId, *Row, Value);
+                    PS::Log<RC::LogLevel::Normal>(STR("Modified Help Guide '{}'\n"), NoteId.ToString());
+                }
+                else
+                {
+                    Add(NoteId, Value);
+                    PS::Log<RC::LogLevel::Normal>(STR("Added Help Guide '{}'\n"), NoteId.ToString());
+                }
+
+                // Always update the DataTables
+                AddOrEditMasterData(NoteId, Value);
+                AddOrEditDescText(NoteId, Value);
+            }
+        }
+    }
 
 	void PalHelpGuideModLoader::Add(const RC::Unreal::FName& NoteId, const nlohmann::json& Data)
 	{
