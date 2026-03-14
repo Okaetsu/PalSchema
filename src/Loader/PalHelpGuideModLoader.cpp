@@ -49,9 +49,7 @@ namespace Palworld {
             m_helpGuideDataAsset = UObjectGlobals::StaticFindObject<UPalNoteDataAsset*>(nullptr, nullptr,
                 STR("/Game/Pal/DataAsset/HelpGuide/DA_HelpGuideDataAsset.DA_HelpGuideDataAsset"));
 
-            m_helpGuideMasterDataTable = GetDatatableByName("DT_HelpGuideMasterDataTable");
             m_helpGuideDescTextTable = GetDatatableByName("DT_HelpGuideDescText");
-            m_helpGuideTextureDataTable = GetDatatableByName("DT_HelpGuideTextureDataTable");
         }
         catch (const std::exception& e)
         {
@@ -95,7 +93,6 @@ namespace Palworld {
                 }
 
                 // Always update the DataTables
-                AddOrEditMasterData(NoteId, Value);
                 AddOrEditDescText(NoteId, Value);
             }
         }
@@ -155,34 +152,6 @@ namespace Palworld {
                 PropertyHelper::CopyJsonValueToContainer(reinterpret_cast<uint8_t*>(NoteData), Property, Data.at(PropertyName));
             }
         }
-	}
-
-	void PalHelpGuideModLoader::AddOrEditMasterData(const RC::Unreal::FName& NoteId, const nlohmann::json& Data)
-	{
-		if (!m_helpGuideMasterDataTable) return;
-
-		auto TableRow = m_helpGuideMasterDataTable->FindRowUnchecked(NoteId);
-		auto TableRowStruct = m_helpGuideMasterDataTable->GetRowStruct().Get();
-        auto DescriptionProperty = TableRowStruct->GetPropertyByNameInChain(STR("TextId_Description"));
-        if (!DescriptionProperty)
-        {
-            PS::Log<RC::LogLevel::Error>(STR("Failed to add MasterData '{}': Property 'TextId_Description' doesn't exist in {}\n"), NoteId.ToString(), m_helpGuideMasterDataTable->GetName());
-            return;
-        }
-
-		if (TableRow)
-		{
-            auto Description = DescriptionProperty->ContainerPtrToValuePtr<FName>(TableRow);
-            *Description = NoteId;
-		}
-		else
-		{
-			auto RowData = FManagedStruct(TableRowStruct);
-            auto Description = DescriptionProperty->ContainerPtrToValuePtr<FName>(RowData.GetData());
-            *Description = NoteId;
-
-            m_helpGuideMasterDataTable->AddRow(NoteId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData.GetData()));
-		}
 	}
 
 	void PalHelpGuideModLoader::AddOrEditDescText(const RC::Unreal::FName& NoteId, const nlohmann::json& Data)
@@ -245,19 +214,9 @@ namespace Palworld {
 
 	void PalHelpGuideModLoader::DeleteRelatedData(const RC::Unreal::FName& NoteId)
 	{
-		if (m_helpGuideMasterDataTable)
-		{
-			m_helpGuideMasterDataTable->RemoveRow(NoteId);
-		}
-
 		if (m_helpGuideDescTextTable)
 		{
 			m_helpGuideDescTextTable->RemoveRow(NoteId);
-		}
-
-		if (m_helpGuideTextureDataTable)
-		{
-			m_helpGuideTextureDataTable->RemoveRow(NoteId);
 		}
 	}
 }
