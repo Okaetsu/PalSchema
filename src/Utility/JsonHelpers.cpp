@@ -124,6 +124,11 @@ namespace PS::JsonHelpers {
             return;
         }
 
+        if (path.extension() != ".json" && path.extension() != ".jsonc")
+        {
+            return;
+        }
+
         auto ignoreComments = path.extension() == ".jsonc";
         std::ifstream f(path);
 
@@ -145,10 +150,7 @@ namespace PS::JsonHelpers {
                 auto filePath = file.path();
                 if (filePath.has_extension())
                 {
-                    if (filePath.extension() == ".json" || filePath.extension() == ".jsonc")
-                    {
-                        ParseJsonFileInPath(filePath, callback);
-                    }
+                    ParseJsonFileInPath(filePath, callback);
                 }
             }
             catch (const std::exception& e)
