@@ -21,6 +21,11 @@ namespace Palworld {
 
     void PalResourceLoader::OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase)
     {
+        if (engineLifecyclePhase != EEngineLifecyclePhase::GameInstanceInit)
+        {
+            return;
+        }
+
         UnregisterResourceAssets(modName);
 
         LoadImages(modName, loaderPath);
@@ -34,7 +39,7 @@ namespace Palworld {
 
     bool PalResourceLoader::CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase)
     {
-        if (engineLifecyclePhase == EEngineLifecyclePhase::PostEngineInit)
+        if (engineLifecyclePhase == EEngineLifecyclePhase::GameInstanceInit)
         {
             return true;
         }
@@ -44,16 +49,6 @@ namespace Palworld {
 
     bool PalResourceLoader::OnInitialize()
     {
-        try
-        {
-            
-        }
-        catch (const std::exception& e)
-        {
-            PS::Log<LogLevel::Error>(STR("Unable to initialize {}, {}\n"), GetDisplayName(), RC::to_generic_string(e.what()));
-            return false;
-        }
-
         return true;
     }
 
