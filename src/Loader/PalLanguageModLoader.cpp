@@ -123,12 +123,14 @@ namespace Palworld {
                     if (Row)
                     {
                         Row->TextData = FText(RC::to_generic_string(RowValue.get<std::string>()));
+                        PS::Log<LogLevel::Normal>(STR("Localization row '{}' has been updated in {}\n"), RowName.ToString(), Table->GetName());
                     }
                     else
                     {
                         FPalLocalizedTextData NewRow{};
                         NewRow.TextData = FText(RC::to_generic_string(RowValue.get<std::string>()));
                         Table->AddRow(RowName, NewRow);
+                        PS::Log<LogLevel::Normal>(STR("Localization row '{}' has been added to {}\n"), RowName.ToString(), Table->GetName());
                     }
                 }
             }

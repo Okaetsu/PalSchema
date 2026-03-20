@@ -154,6 +154,8 @@ namespace Palworld {
                 }
 
                 m_mapObjectMasterDataTable->AddRow(BuildingId, *static_cast<RC::Unreal::FTableRowBase*>(RowData));
+
+                PS::Log<LogLevel::Normal>(STR("Added building '{}'\n"), BuildingId.ToString());
             }
             catch (const std::exception& e)
             {
