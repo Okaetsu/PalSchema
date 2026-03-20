@@ -51,7 +51,7 @@ namespace Palworld {
         // Called when the Loader is created, calling UE functions during Setup is not safe
         virtual void OnSetup();
         virtual void OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase);
-        virtual void OnAutoReload(const RC::StringType& modName, const nlohmann::json& data);
+        virtual void OnAutoReload(const RC::StringType& modName, const std::filesystem::path& modFilePath);
 
         virtual bool CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase) = 0;
 

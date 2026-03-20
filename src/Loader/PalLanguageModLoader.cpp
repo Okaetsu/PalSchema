@@ -46,6 +46,13 @@ namespace Palworld {
         }
     }
 
+    void PalLanguageModLoader::OnAutoReload(const RC::StringType& modName, const std::filesystem::path& modFilePath)
+    {
+        PS::JsonHelpers::ParseJsonFileInPath(modFilePath, [&](nlohmann::json data) {
+            LoadTranslations(data);
+        });
+    }
+
     bool PalLanguageModLoader::CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase)
     {
         if (engineLifecyclePhase == EEngineLifecyclePhase::GameInstanceInit)

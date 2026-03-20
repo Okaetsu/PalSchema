@@ -35,7 +35,7 @@ namespace Palworld {
     void PalSpawnLoader::Reload(const std::filesystem::path::string_type& modName, const nlohmann::json& data)
     {
         UnloadMod(modName);
-        // Load(modName, data);
+        LoadSpawns(modName, data);
 
         for (auto loadedCell : m_loadedCells)
         {
@@ -52,6 +52,13 @@ namespace Palworld {
 
         PS::JsonHelpers::ParseJsonFilesInPath(loaderPath, [&](const nlohmann::json& data) {
             LoadSpawns(modName, data);
+        });
+    }
+
+    void PalSpawnLoader::OnAutoReload(const std::filesystem::path::string_type& modName, const std::filesystem::path& modFilePath)
+    {
+        PS::JsonHelpers::ParseJsonFileInPath(modFilePath, [&](const nlohmann::json& data) {
+            Reload(modName, data);
         });
     }
 
@@ -125,11 +132,6 @@ namespace Palworld {
     {
         DestroySpawnersInCell(cell);
         m_loadedCells.Remove(cell);
-    }
-
-    void PalSpawnLoader::OnAutoReload(const std::filesystem::path::string_type& modName, const nlohmann::json& data)
-    {
-        Reload(modName, data);
     }
 
     void PalSpawnLoader::LoadSpawns(const RC::StringType& modName, const nlohmann::json& data)

@@ -105,25 +105,27 @@ namespace Palworld {
         });
     }
 
-    void PalRawTableLoader::OnAutoReload(const RC::StringType& modName, const nlohmann::json& data)
+    void PalRawTableLoader::OnAutoReload(const RC::StringType& modName, const std::filesystem::path& modFilePath)
     {
-        for (auto& [key, value] : data.items())
-        {
-            auto datatable = GetDatatableByName(key);
-            if (!datatable)
+        PS::JsonHelpers::ParseJsonFileInPath(modFilePath, [&](const nlohmann::json& data) {
+            for (auto& [key, value] : data.items())
             {
-                PS::Log<LogLevel::Error>(STR("Failed to auto-reload {}, data table {} doesn't exist.\n"), modName, RC::to_generic_string(key));
-                return;
+                auto datatable = GetDatatableByName(key);
+                if (!datatable)
+                {
+                    PS::Log<LogLevel::Error>(STR("Failed to auto-reload {}, data table {} doesn't exist.\n"), modName, RC::to_generic_string(key));
+                    return;
+                }
+
+                auto name = datatable->GetNamePrivate().ToString();
+                LoadResult result;
+                Apply(value, datatable, result);
+
+                PS::Log<LogLevel::Normal>(STR("{}: {} rows updated, {} rows added, {} rows deleted, {} error{}.\n"),
+                    name, result.SuccessfulModifications, result.SuccessfulAdditions,
+                    result.SuccessfulDeletions, result.ErrorCount, result.ErrorCount > 1 || result.ErrorCount == 0 ? STR("s") : STR(""));
             }
-
-            auto name = datatable->GetNamePrivate().ToString();
-            LoadResult result;
-            Apply(value, datatable, result);
-
-            PS::Log<LogLevel::Normal>(STR("{}: {} rows updated, {} rows added, {} rows deleted, {} error{}.\n"),
-                name, result.SuccessfulModifications, result.SuccessfulAdditions,
-                result.SuccessfulDeletions, result.ErrorCount, result.ErrorCount > 1 || result.ErrorCount == 0 ? STR("s") : STR(""));
-        }
+        });
     }
 
     bool PalRawTableLoader::CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase)

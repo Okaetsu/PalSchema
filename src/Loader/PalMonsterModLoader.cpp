@@ -33,6 +33,13 @@ namespace Palworld {
         });
 	}
 
+    void PalMonsterModLoader::OnAutoReload(const RC::StringType& modName, const std::filesystem::path& modFilePath)
+    {
+        PS::JsonHelpers::ParseJsonFileInPath(modFilePath, [&](const nlohmann::json& data) {
+            LoadPals(data);
+        });
+    }
+
     bool PalMonsterModLoader::CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase)
     {
         if (engineLifecyclePhase == EEngineLifecyclePhase::GameInstanceInit)

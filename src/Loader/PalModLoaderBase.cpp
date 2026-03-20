@@ -37,9 +37,7 @@ namespace Palworld {
 
     void PalModLoaderBase::AutoReload(const std::filesystem::path::string_type& modName, const std::filesystem::path& modFilePath)
     {
-        PS::JsonHelpers::ParseJsonFileInPath(modFilePath, [&](const nlohmann::json& data) {
-            OnAutoReload(modName, data);
-        });
+        OnAutoReload(modName, modFilePath);
     }
 
     void PalModLoaderBase::Load(const fs::path& modPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase)
@@ -138,7 +136,7 @@ namespace Palworld {
 
     void PalModLoaderBase::OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase) {}
 
-    void PalModLoaderBase::OnAutoReload(const std::filesystem::path::string_type& modName, const nlohmann::json& data) {}
+    void PalModLoaderBase::OnAutoReload(const std::filesystem::path::string_type& modName, const std::filesystem::path& modFilePath) {}
 
     void PalModLoaderBase::PostInitialize() {}
 

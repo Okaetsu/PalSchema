@@ -32,6 +32,13 @@ namespace Palworld {
         });
     }
 
+    void PalHelpGuideModLoader::OnAutoReload(const RC::StringType& modName, const std::filesystem::path& modFilePath)
+    {
+        PS::JsonHelpers::ParseJsonFileInPath(modFilePath, [&](const nlohmann::json& data) {
+            LoadHelpGuides(data);
+        });
+    }
+
     bool PalHelpGuideModLoader::CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase)
     {
         if (engineLifecyclePhase == EEngineLifecyclePhase::GameInstanceInit)
