@@ -28,6 +28,7 @@
 #include "Loader/PalHelpGuideModLoader.h"
 #include "Loader/PalSpawnLoader.h"
 #include "Loader/PalMainLoader.h"
+#include "Misc/FileWatchWrapper.h"
 
 using namespace RC;
 using namespace RC::Unreal;
@@ -69,6 +70,51 @@ namespace Palworld {
 	{
         SetupAutoReload();
 	}
+
+    void PalMainLoader::AutoReload(const std::filesystem::path& filePath)
+    {
+        // Skip to the PalSchema folder and start our iterator from there
+        auto it = std::find_if(filePath.begin(), filePath.end(),
+            [](const auto& p) { return p == "PalSchema"; });
+
+        if (it == filePath.end() || std::distance(it, filePath.end()) < 4)
+        {
+            return;
+        }
+
+        // Skip PalSchema and mods folder
+        std::advance(it, 2);
+        auto modName = it->native();
+
+        // Move to folder type, e.g. buildings
+        std::advance(it, 1);
+        auto folderType = it->string();
+
+        std::ifstream f(filePath);
+        if (f.peek() == std::ifstream::traits_type::eof()) {
+            return;
+        }
+        f.close();
+
+        UECustom::AsyncTask(UECustom::ENamedThreads::GameThread, [this, filePath, folderType, modName]() {
+            try
+            {
+                for (auto& loader : m_loaders)
+                {
+                    if (loader->GetModFolderType() == folderType)
+                    {
+                        loader->AutoReload(modName, filePath);
+                        PS::Log<LogLevel::Normal>(STR("Auto-reloaded mod {}\n"), modName);
+                        break;
+                    }
+                }
+            }
+            catch (const std::exception& e)
+            {
+                PS::Log<LogLevel::Error>(STR("Failed to auto-reload mod {} - {}\n"), modName, RC::to_generic_string(e.what()));
+            }
+        });
+    }
 
     void PalMainLoader::IterateModsFolder(const std::function<void(const std::filesystem::path&, const RC::StringType&)>& callback)
     {
@@ -204,56 +250,19 @@ namespace Palworld {
 
         PS::Log<LogLevel::Normal>(STR("Auto-reload is enabled.\n"));
 
-        m_fileWatch = std::make_unique<filewatch::FileWatch<std::wstring>>(
-            fs::path(UE4SSProgram::get_program().get_working_directory()) / "Mods" / "PalSchema" / "mods",
-            std::wregex(L".*\\.(json|jsonc|png|jpg|jpeg|bmp|tga)"),
-            [&](const std::wstring& path, const filewatch::Event change_type) {
-                if (change_type == filewatch::Event::modified
-                    || change_type == filewatch::Event::added
-                    || change_type == filewatch::Event::removed)
+        auto modsPath = GetModsPath();
+
+        m_fileWatcher = std::make_unique<PS::FileWatchWrapper>(modsPath, [this](efsw::WatchID watchId, const std::string& dir,
+            const std::string& filename, efsw::Action action,
+            std::string oldFilename) {
+                if (action == efsw::Actions::Add || action == efsw::Actions::Modified)
                 {
-                    auto modsPath = GetModsPath();
-                    auto modFilePath = modsPath / path;
-
-                    auto subPath = fs::path(path);
-                    auto it = subPath.begin();
-                    if (std::distance(subPath.begin(), subPath.end()) < 2) {
-                        return;
-                    }
-
-                    auto modName = it->native();
-                    auto modPath = modsPath / modName;
-
-                    std::advance(it, 1);
-                    auto folderType = it->string();
-
-                    std::ifstream f(modFilePath);
-                    if (f.peek() == std::ifstream::traits_type::eof()) {
-                        return;
-                    }
-                    f.close();
-
-                    UECustom::AsyncTask(UECustom::ENamedThreads::GameThread, [this, path, folderType, modName, modPath, modFilePath]() {
-                        try
-                        {
-                            for (auto& loader : m_loaders)
-                            {
-                                if (loader->GetModFolderType() == folderType)
-                                {
-                                    loader->AutoReload(modName, modFilePath);
-                                    PS::Log<LogLevel::Normal>(STR("Auto-reloaded mod {}\n"), modName);
-                                    break;
-                                }
-                            }
-                        }
-                        catch (const std::exception& e)
-                        {
-                            PS::Log<LogLevel::Error>(STR("Failed to auto-reload mod {} - {}\n"), modName, RC::to_generic_string(e.what()));
-                        }
-                    });
+                    auto path = fs::path(dir) / filename;
+                    AutoReload(path);
                 }
             }
         );
+        m_fileWatcher->Watch();
     }
 
     void PalMainLoader::SetupAlternativePakPathReader()

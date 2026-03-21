@@ -4,7 +4,6 @@
 #include <functional>
 #include "Loader/PalResourceLoader.h"
 #include "SDK/Classes/Custom/UDataTableStore.h"
-#include "FileWatch.hpp"
 #include "safetyhook.hpp"
 
 namespace RC::Unreal {
@@ -15,6 +14,10 @@ namespace RC::Unreal {
 namespace UECustom {
     class UCompositeDataTable;
     class UWorldPartitionRuntimeLevelStreamingCell;
+}
+
+namespace PS {
+    class FileWatchWrapper;
 }
 
 namespace Palworld {
@@ -32,9 +35,11 @@ namespace Palworld {
 	private:
         std::vector<std::unique_ptr<PalModLoaderBase>> m_loaders;
 
-        std::unique_ptr<filewatch::FileWatch<std::wstring>> m_fileWatch;
+        std::unique_ptr<PS::FileWatchWrapper> m_fileWatcher;
 
         UECustom::UDataTableRegistry m_datatableRegistry;
+
+        void AutoReload(const std::filesystem::path& filePath);
 
         void IterateModsFolder(const std::function<void(const std::filesystem::path&, const RC::StringType&)>& callback);
 

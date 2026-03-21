@@ -27,11 +27,11 @@ file(GLOB SRC_FILES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Utility/Config.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Utility/JsonHelpers.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Utility/EnumHelpers.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/FileWatchWrapper.cpp"
 )
 
 add_library(${TARGET} SHARED ${SRC_FILES})
 target_include_directories(${TARGET} PRIVATE 
     include/
-    "${FETCHCONTENT_BASE_DIR}/filewatch-src"
 )
-target_link_libraries(${TARGET} PRIVATE Zydis Zycore safetyhook nlohmann_json::nlohmann_json glaze::glaze UE4SS)
+target_link_libraries(${TARGET} PRIVATE Zydis Zycore safetyhook nlohmann_json::nlohmann_json glaze::glaze UE4SS efsw)
