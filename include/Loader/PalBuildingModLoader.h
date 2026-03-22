@@ -18,10 +18,12 @@ namespace Palworld {
 		PalBuildingModLoader();
 
 		~PalBuildingModLoader();
+    protected:
+        virtual void OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase) override final;
+        virtual void OnAutoReload(const RC::StringType& modName, const std::filesystem::path& modFilePath) override final;
 
-		void Initialize();
-
-		virtual void Load(const nlohmann::json& json) override final;
+        virtual bool CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase) override final;
+        virtual bool OnInitialize() override final;
 	private:
 		RC::Unreal::UDataTable* m_mapObjectAssignData{};
 		RC::Unreal::UDataTable* m_mapObjectFarmCrop{};
@@ -34,6 +36,8 @@ namespace Palworld {
 		RC::Unreal::UDataTable* m_technologyRecipeUnlockTable{};
 		RC::Unreal::UDataTable* m_technologyNameTable{};
 		RC::Unreal::UDataTable* m_technologyDescTable{};
+
+        void LoadBuildings(const nlohmann::json& data);
 
 		void Add(const RC::Unreal::FName& BuildingId, const nlohmann::json& Data);
 

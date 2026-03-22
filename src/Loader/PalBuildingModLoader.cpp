@@ -5,70 +5,89 @@
 #include "Helpers/String.hpp"
 #include "SDK/Helper/PropertyHelper.h"
 #include "Utility/Logging.h"
+#include "Utility/JsonHelpers.h"
 #include "Loader/PalBuildingModLoader.h"
 
 using namespace RC;
 using namespace RC::Unreal;
 
 namespace Palworld {
-	PalBuildingModLoader::PalBuildingModLoader() : PalModLoaderBase("buildings") {}
+	PalBuildingModLoader::PalBuildingModLoader() : PalModLoaderBase("buildings") {
+        SetDisplayName(TEXT("Building Mod Loader"));
+    }
 
 	PalBuildingModLoader::~PalBuildingModLoader() {}
 
-	void PalBuildingModLoader::Initialize()
-	{
-		m_mapObjectAssignData = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/MapObject/DT_MapObjectAssignData.DT_MapObjectAssignData"));
+    void PalBuildingModLoader::OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase)
+    {
+        if (engineLifecyclePhase != EEngineLifecyclePhase::GameInstanceInit)
+        {
+            return;
+        }
 
-		m_mapObjectFarmCrop = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/MapObject/DT_MapObjectFarmCrop.DT_MapObjectFarmCrop"));
+        PS::JsonHelpers::ParseJsonFilesInPath(loaderPath, [&](const nlohmann::json& data) {
+            LoadBuildings(data);
+        });
+    }
 
-		m_mapObjectItemProductDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/MapObject/DT_MapObjectItemProductDataTable.DT_MapObjectItemProductDataTable"));
+    void PalBuildingModLoader::OnAutoReload(const RC::StringType& modName, const std::filesystem::path& modFilePath)
+    {
+        PS::JsonHelpers::ParseJsonFileInPath(modFilePath, [&](const nlohmann::json& data) {
+            LoadBuildings(data);
+        });
+    }
 
-		m_mapObjectMasterDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/MapObject/DT_MapObjectMasterDataTable.DT_MapObjectMasterDataTable"));
+    bool PalBuildingModLoader::CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase)
+    {
+        if (engineLifecyclePhase == EEngineLifecyclePhase::GameInstanceInit)
+        {
+            return true;
+        }
 
-        m_mapObjectNameTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-            STR("/Game/Pal/DataTable/Text/DT_MapObjectNameText.DT_MapObjectNameText"));
+        return false;
+    }
 
-		m_buildObjectDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/MapObject/Building/DT_BuildObjectDataTable.DT_BuildObjectDataTable"));
+    bool PalBuildingModLoader::OnInitialize()
+    {
+        try
+        {
+            m_mapObjectAssignData = GetDatatableByName("DT_MapObjectAssignData");
+            m_mapObjectFarmCrop = GetDatatableByName("DT_MapObjectFarmCrop");
+            m_mapObjectItemProductDataTable = GetDatatableByName("DT_MapObjectItemProductDataTable");
+            m_mapObjectMasterDataTable = GetDatatableByName("DT_MapObjectMasterDataTable");
+            m_mapObjectNameTable = GetDatatableByName("DT_MapObjectNameText");
+            m_buildObjectDataTable = GetDatatableByName("DT_BuildObjectDataTable");
+            m_buildObjectIconDataTable = GetDatatableByName("DT_BuildObjectIconDataTable");
+            m_buildObjectDescTable = GetDatatableByName("DT_BuildObjectDescText");
+            m_technologyRecipeUnlockTable = GetDatatableByName("DT_TechnologyRecipeUnlock");
+            m_technologyNameTable = GetDatatableByName("DT_TechnologyNameText");
+            m_technologyDescTable = GetDatatableByName("DT_TechnologyDescText");
+        }
+        catch (const std::exception& e)
+        {
+            PS::Log<LogLevel::Error>(STR("Unable to initialize {}, {}\n"), GetDisplayName(), RC::to_generic_string(e.what()));
+            return false;
+        }
 
-		m_buildObjectIconDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/MapObject/Building/DT_BuildObjectIconDataTable.DT_BuildObjectIconDataTable"));
+        return true;
+    }
 
-        m_buildObjectDescTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-            STR("/Game/Pal/DataTable/Text/DT_BuildObjectDescText.DT_BuildObjectDescText"));
-
-        m_technologyRecipeUnlockTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-            STR("/Game/Pal/DataTable/Technology/DT_TechnologyRecipeUnlock.DT_TechnologyRecipeUnlock"));
-
-        m_technologyNameTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-            STR("/Game/Pal/DataTable/Text/DT_TechnologyNameText.DT_TechnologyNameText"));
-
-        m_technologyDescTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-            STR("/Game/Pal/DataTable/Text/DT_TechnologyDescText.DT_TechnologyDescText"));
-
-        PS::Log<LogLevel::Verbose>(STR("Initialized BuildingModLoader\n"));
-	}
-
-	void PalBuildingModLoader::Load(const nlohmann::json& Data)
-	{
-		for (auto& [Key, Properties] : Data.items())
-		{
-			auto BuildingId = FName(RC::to_generic_string(Key), FNAME_Add);
-			auto TableRow = m_mapObjectMasterDataTable->FindRowUnchecked(BuildingId);
-			if (TableRow)
-			{
+    void PalBuildingModLoader::LoadBuildings(const nlohmann::json& data)
+    {
+        for (auto& [Key, Properties] : data.items())
+        {
+            auto BuildingId = FName(RC::to_generic_string(Key), FNAME_Add);
+            auto TableRow = m_mapObjectMasterDataTable->FindRowUnchecked(BuildingId);
+            if (TableRow)
+            {
                 PS::Log<LogLevel::Error>(STR("Editing of buildings should be done via raw tables instead\n"));
-			}
-			else
-			{
-				Add(BuildingId, Properties);
-			}
-		}
-	}
+            }
+            else
+            {
+                Add(BuildingId, Properties);
+            }
+        }
+    }
 
 	void PalBuildingModLoader::Add(const RC::Unreal::FName& BuildingId, const nlohmann::json& Data)
 	{
@@ -135,6 +154,8 @@ namespace Palworld {
                 }
 
                 m_mapObjectMasterDataTable->AddRow(BuildingId, *static_cast<RC::Unreal::FTableRowBase*>(RowData));
+
+                PS::Log<LogLevel::Normal>(STR("Added building '{}'\n"), BuildingId.ToString());
             }
             catch (const std::exception& e)
             {

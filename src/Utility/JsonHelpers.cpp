@@ -1,3 +1,4 @@
+#include <filesystem>
 #include "Utility/JsonHelpers.h"
 #include "Unreal/Core/HAL/Platform.hpp"
 #include "Unreal/NameTypes.hpp"
@@ -7,6 +8,8 @@
 
 using namespace RC;
 using namespace RC::Unreal;
+
+namespace fs = std::filesystem;
 
 namespace PS::JsonHelpers {
     bool FieldExists(const nlohmann::json& data, const std::string& fieldName)
@@ -112,5 +115,48 @@ namespace PS::JsonHelpers {
         }
 
         outValue = field.get<std::string>();
+    }
+
+    void ParseJsonFileInPath(const std::filesystem::path& path, const std::function<void(const nlohmann::json&)>& callback)
+    {
+        if (!fs::exists(path))
+        {
+            return;
+        }
+
+        if (path.extension() != ".json" && path.extension() != ".jsonc")
+        {
+            return;
+        }
+
+        auto ignoreComments = path.extension() == ".jsonc";
+        std::ifstream f(path);
+
+        nlohmann::json data = nlohmann::json::parse(f, nullptr, true, ignoreComments);
+        callback(data);
+    }
+
+    void ParseJsonFilesInPath(const std::filesystem::path& path, const std::function<void(const nlohmann::json&)>& callback)
+    {
+        if (!fs::is_directory(path))
+        {
+            return;
+        }
+
+        for (const auto& file : fs::directory_iterator(path))
+        {
+            try
+            {
+                auto filePath = file.path();
+                if (filePath.has_extension())
+                {
+                    ParseJsonFileInPath(filePath, callback);
+                }
+            }
+            catch (const std::exception& e)
+            {
+                throw std::runtime_error(std::format("Failed parsing mod file {} - {}.\n", file.path().string(), e.what()));
+            }
+        }
     }
 }

@@ -14,11 +14,14 @@ namespace Palworld {
 		PalHumanModLoader();
 
 		~PalHumanModLoader();
+    protected:
+        virtual void OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase) override final;
 
-		void Initialize();
-
-		virtual void Load(const nlohmann::json& json) override final;
+        virtual bool CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase) override final;
+        virtual bool OnInitialize() override final;
     private:
+        void LoadHumans(const nlohmann::json& data);
+
 		void Add(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties);
 
         void Edit(uint8_t* TableRow, const RC::Unreal::FName& CharacterId, const nlohmann::json& properties);
@@ -35,7 +38,7 @@ namespace Palworld {
 
 		void AddShop(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties);
 
-		RC::Unreal::UDataTable* m_dataTable = nullptr;
+		RC::Unreal::UDataTable* m_humanDataTable = nullptr;
 		RC::Unreal::UDataTable* m_iconDataTable = nullptr;
 		RC::Unreal::UDataTable* m_palBpClassTable = nullptr;
 		RC::Unreal::UDataTable* m_dropItemTable = nullptr;
@@ -43,8 +46,8 @@ namespace Palworld {
         RC::Unreal::UDataTable* m_palShortDescTable = nullptr;
         RC::Unreal::UDataTable* m_palLongDescTable = nullptr;
 		RC::Unreal::UDataTable* m_npcTalkFlowTable = nullptr;
-		RC::Unreal::UDataTable* m_ItemShopLotteryDataTable = nullptr;
-		RC::Unreal::UDataTable* m_ItemShopCreateDataTable = nullptr;
-		RC::Unreal::UDataTable* m_ItemShopSettingDataTable = nullptr;
+		RC::Unreal::UDataTable* m_itemShopLotteryDataTable = nullptr;
+		RC::Unreal::UDataTable* m_itemShopCreateDataTable = nullptr;
+		RC::Unreal::UDataTable* m_itemShopSettingDataTable = nullptr;
 	};
 }

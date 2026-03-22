@@ -24,8 +24,6 @@ namespace PS {
 
         void Load();
     private:
-        static inline std::unique_ptr<PSConfig> s_config;
-
         static std::filesystem::path GetConfigPath();
         
         void Save();

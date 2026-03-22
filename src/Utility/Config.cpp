@@ -8,6 +8,8 @@
 namespace fs = std::filesystem;
 
 namespace PS {
+    std::unique_ptr<PSConfig> s_config;
+
     PSConfig* PSConfig::Get()
     {
         if (!s_config)

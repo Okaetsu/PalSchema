@@ -9,6 +9,7 @@
 #include "SDK/Structs/FLinearColor.h"
 #include "SDK/Helper/PropertyHelper.h"
 #include "Utility/Logging.h"
+#include "Utility/JsonHelpers.h"
 #include "Helpers/String.hpp"
 #include "Loader/PalAppearanceModLoader.h"
 
@@ -18,90 +19,115 @@ using namespace RC::Unreal;
 namespace Palworld {
 	PalAppearanceModLoader::PalAppearanceModLoader() : PalModLoaderBase("appearance")
 	{
+        SetDisplayName(TEXT("Appearance Mod Loader"));
 	}
 
 	PalAppearanceModLoader::~PalAppearanceModLoader()
 	{
 	}
 
-	void PalAppearanceModLoader::Initialize()
-	{
-		m_hairTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/CharacteCreation/DT_CharacterCreationMeshPresetTable_Hair.DT_CharacterCreationMeshPresetTable_Hair"));
+    void PalAppearanceModLoader::OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase)
+    {
+        if (engineLifecyclePhase != EEngineLifecyclePhase::GameInstanceInit)
+        {
+            return;
+        }
 
-		m_headTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/CharacteCreation/DT_CharacterCreationMeshPresetTable_Head.DT_CharacterCreationMeshPresetTable_Head"));
+        PS::JsonHelpers::ParseJsonFilesInPath(loaderPath, [&](const nlohmann::json& data) {
+            LoadAppearances(data);
+        });
+    }
 
-		m_eyesTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/CharacteCreation/DT_CharacterCreationEyeMaterialPresetTable.DT_CharacterCreationEyeMaterialPresetTable"));
+    void PalAppearanceModLoader::OnAutoReload(const std::filesystem::path::string_type& modName, const std::filesystem::path& modFilePath)
+    {
+        PS::JsonHelpers::ParseJsonFilesInPath(modFilePath, [&](const nlohmann::json& data) {
+            LoadAppearances(data);
+        });
+    }
 
-		m_bodyTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/CharacteCreation/DT_CharacterCreationMeshPresetTable_Body.DT_CharacterCreationMeshPresetTable_Body"));
+    bool PalAppearanceModLoader::CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase)
+    {
+        if (engineLifecyclePhase == EEngineLifecyclePhase::GameInstanceInit)
+        {
+            return true;
+        }
 
-		m_presetTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/CharacteCreation/DT_CharacterCreationMakeInfoPreset.DT_CharacterCreationMakeInfoPreset"));
+        return false;
+    }
 
-		m_colorPresetTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/CharacteCreation/DT_CharacterCreationColorPresetTable.DT_CharacterCreationColorPresetTable"));
+    bool PalAppearanceModLoader::OnInitialize()
+    {
+        try
+        {
+            m_hairTable = GetDatatableByName("DT_CharacterCreationMeshPresetTable_Hair");
+            m_headTable = GetDatatableByName("DT_CharacterCreationMeshPresetTable_Head");
+            m_eyesTable = GetDatatableByName("DT_CharacterCreationEyeMaterialPresetTable");
+            m_bodyTable = GetDatatableByName("DT_CharacterCreationMeshPresetTable_Body");
+            m_presetTable = GetDatatableByName("DT_CharacterCreationMakeInfoPreset");
+            m_colorPresetTable = GetDatatableByName("DT_CharacterCreationColorPresetTable");
+            m_equipmentTable = GetDatatableByName("DT_CharacterCreationMeshPresetTable_Equipments");
+        }
+        catch (const std::exception& e)
+        {
+            PS::Log<LogLevel::Error>(STR("Unable to initialize {}, {}\n"), GetDisplayName(), RC::to_generic_string(e.what()));
+            return false;
+        }
 
-		m_equipmentTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/CharacteCreation/DT_CharacterCreationMeshPresetTable_Equipments.DT_CharacterCreationMeshPresetTable_Equipments"));
+        return true;
+    }
 
-        PS::Log<LogLevel::Verbose>(STR("Initialized AppearanceModLoader\n"));
-	}
+    void PalAppearanceModLoader::LoadAppearances(const nlohmann::json& data)
+    {
+        for (auto& [Key, Value] : data.items())
+        {
+            auto RowId = FName(RC::to_generic_string(Key), FNAME_Add);
+            if (!Value.contains("Type"))
+            {
+                throw std::runtime_error(std::format("{} had invalid data, property 'Type' must be set to either Hair, Head, Eyes, CharacterPreset or Equipment", Key));
+            }
 
-	void PalAppearanceModLoader::Load(const nlohmann::json& Data)
-	{
-		for (auto& [Key, Value] : Data.items())
-		{
-			auto RowId = FName(RC::to_generic_string(Key), FNAME_Add);
-			if (!Value.contains("Type"))
-			{
-				throw std::runtime_error(std::format("{} had invalid data, property 'Type' must be set to either Hair, Head, Eyes, CharacterPreset or Equipment", Key));
-			}
-			
-			if (!Value.at("Type").is_string())
-			{
-				throw std::runtime_error(std::format("{} had invalid data, property 'Type' must be a string", Key));
-			}
+            if (!Value.at("Type").is_string())
+            {
+                throw std::runtime_error(std::format("{} had invalid data, property 'Type' must be a string", Key));
+            }
 
-			auto Type = Value.at("Type").get<std::string>();
-			if (Type == "Hair")
-			{
-				Add(RowId, m_hairTable, Value, { "SkeletalMesh", "IconTexture", "ABPAsset" });
-			}
-			else if (Type == "Head")
-			{
-				Add(RowId, m_headTable, Value, { "SkeletalMesh", "SkeletalMesh_MaleHead", "IconTexture" });
-			}
-			else if (Type == "Eyes")
-			{
-				Add(RowId, m_eyesTable, Value, { "EyeMaterialInstance", "IconTexture" });
-			}
-			else if (Type == "Body")
-			{
-				Add(RowId, m_bodyTable, Value, { "SkeletalMesh", "IconTexture" });
-			}
-			else if (Type == "CharacterPreset")
-			{
-				Add(RowId, m_presetTable, Value, { "BodyMeshName", "HeadMeshName", "EquipmentBodyMeshName", "EquipmentHeadMeshName", "EyeMaterialName" });
-			}
-			else if (Type == "ColorPreset")
-			{
-				AddColorPreset(RowId, Value);
-			}
-			else if (Type == "Equipment")
-			{
-				AddEquipment(RowId, Value);
-			}
-			else
-			{
-				throw std::runtime_error(std::format("Unsupported Type '{}' in {}", Type, Key));
-			}
+            auto Type = Value.at("Type").get<std::string>();
+            if (Type == "Hair")
+            {
+                Add(RowId, m_hairTable, Value, { "SkeletalMesh", "IconTexture", "ABPAsset" });
+            }
+            else if (Type == "Head")
+            {
+                Add(RowId, m_headTable, Value, { "SkeletalMesh", "SkeletalMesh_MaleHead", "IconTexture" });
+            }
+            else if (Type == "Eyes")
+            {
+                Add(RowId, m_eyesTable, Value, { "EyeMaterialInstance", "IconTexture" });
+            }
+            else if (Type == "Body")
+            {
+                Add(RowId, m_bodyTable, Value, { "SkeletalMesh", "IconTexture" });
+            }
+            else if (Type == "CharacterPreset")
+            {
+                Add(RowId, m_presetTable, Value, { "BodyMeshName", "HeadMeshName", "EquipmentBodyMeshName", "EquipmentHeadMeshName", "EyeMaterialName" });
+            }
+            else if (Type == "ColorPreset")
+            {
+                AddColorPreset(RowId, Value);
+            }
+            else if (Type == "Equipment")
+            {
+                AddEquipment(RowId, Value);
+            }
+            else
+            {
+                throw std::runtime_error(std::format("Unsupported Type '{}' in {}", Type, Key));
+            }
 
-			PS::Log<RC::LogLevel::Normal>(STR("Added new appearance '{}' as '{}'\n"), RowId.ToString(), RC::to_generic_string(Type));
-		}
-	}
+            PS::Log<RC::LogLevel::Normal>(STR("Added new appearance '{}' as '{}'\n"), RowId.ToString(), RC::to_generic_string(Type));
+        }
+    }
 
 	void PalAppearanceModLoader::Add(const RC::Unreal::FName& RowId, RC::Unreal::UDataTable* DataTable, const nlohmann::json& Data, const std::vector<std::string>& RequiredFields)
 	{

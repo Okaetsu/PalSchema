@@ -12,6 +12,7 @@
 #include "SDK/Helper/PropertyHelper.h"
 #include "Helpers/String.hpp"
 #include "Utility/Logging.h"
+#include "Utility/JsonHelpers.h"
 #include "Loader/PalItemModLoader.h"
 #include <SDK/Structs/FPalLocalizedTextData.h>
 
@@ -19,59 +20,63 @@ using namespace RC;
 using namespace RC::Unreal;
 
 namespace Palworld {
-	PalItemModLoader::PalItemModLoader() : PalModLoaderBase("items") {}
+	PalItemModLoader::PalItemModLoader() : PalModLoaderBase("items") {
+        SetDisplayName(TEXT("Item Loader"));
+    }
 
 	PalItemModLoader::~PalItemModLoader() {}
 
-	void PalItemModLoader::Initialize()
+	void PalItemModLoader::OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase)
 	{
-		m_itemDataAsset = UECustom::UObjectGlobals::StaticFindObject<UPalStaticItemDataAsset*>(nullptr, nullptr,
-			STR("/Game/Pal/DataAsset/Item/DA_StaticItemDataAsset.DA_StaticItemDataAsset"));
+        if (engineLifecyclePhase != EEngineLifecyclePhase::GameInstanceInit)
+        {
+            return;
+        }
 
-        m_itemDataTable = UECustom::UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-            STR("/Game/Pal/DataTable/Item/DT_ItemDataTable.DT_ItemDataTable"));
-
-        m_itemRecipeTable = UECustom::UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-            STR("/Game/Pal/DataTable/Item/DT_ItemRecipeDataTable.DT_ItemRecipeDataTable"));
-
-        m_nameTranslationTable = UECustom::UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-            STR("/Game/Pal/DataTable/Text/DT_ItemNameText.DT_ItemNameText"));
-
-        m_descriptionTranslationTable = UECustom::UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-            STR("/Game/Pal/DataTable/Text/DT_ItemDescriptionText.DT_ItemDescriptionText"));
-
-        PS::Log<LogLevel::Verbose>(STR("Initialized ItemModLoader\n"));
-
-        InitializeDummyTranslations();
+        PS::JsonHelpers::ParseJsonFilesInPath(loaderPath, [&](const nlohmann::json& data) {
+            LoadItems(data);
+        });
 	}
 
-	void PalItemModLoader::Load(const nlohmann::json& Data)
-	{
-		for (auto& [Key, Value] : Data.items())
-		{
-			auto ItemId = FName(RC::to_generic_string(Key), FNAME_Add);
-            auto Row = m_itemDataAsset->StaticItemDataMap.Find(ItemId);
-            if (Value.is_null())
-            {
-                if (!Row) return;
-                m_itemDataAsset->StaticItemDataMap.Remove(ItemId);
-                PS::Log<RC::LogLevel::Normal>(STR("Deleted Item '{}'\n"), ItemId.ToString());
-            }
-            else
-            {
-                if (Row)
-                {
-                    Edit(ItemId, *Row, Value);
-                    PS::Log<RC::LogLevel::Normal>(STR("Modified Item '{}'\n"), ItemId.ToString());
-                }
-                else
-                {
-                    Add(ItemId, Value);
-                    PS::Log<RC::LogLevel::Normal>(STR("Added Item '{}'\n"), ItemId.ToString());
-                }
-            }
-		}
-	}
+    void PalItemModLoader::OnAutoReload(const RC::StringType& modName, const std::filesystem::path& modFilePath)
+    {
+        PS::JsonHelpers::ParseJsonFileInPath(modFilePath, [&](const nlohmann::json& data) {
+            LoadItems(data);
+        });
+    }
+
+    bool PalItemModLoader::CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase)
+    {
+        if (engineLifecyclePhase == EEngineLifecyclePhase::GameInstanceInit)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    bool PalItemModLoader::OnInitialize()
+    {
+        try
+        {
+            m_itemDataAsset = UECustom::UObjectGlobals::StaticFindObject<UPalStaticItemDataAsset*>(nullptr, nullptr,
+                STR("/Game/Pal/DataAsset/Item/DA_StaticItemDataAsset.DA_StaticItemDataAsset"));
+
+            m_itemDataTable = GetDatatableByName("DT_ItemDataTable");
+            m_itemRecipeTable = GetDatatableByName("DT_ItemRecipeDataTable");
+            m_nameTranslationTable = GetDatatableByName("DT_ItemNameText");
+            m_descriptionTranslationTable = GetDatatableByName("DT_ItemDescriptionText");
+
+            InitializeDummyTranslations();
+        }
+        catch (const std::exception& e)
+        {
+            PS::Log<LogLevel::Error>(STR("Unable to initialize {}, {}\n"), GetDisplayName(), RC::to_generic_string(e.what()));
+            return false;
+        }
+
+        return true;
+    }
 
     UPalStaticItemDataBase* PalItemModLoader::AddDummyItem(UPalStaticItemDataTable* StaticItemDataTable, const FName& ItemId)
     {
@@ -147,6 +152,34 @@ namespace Palworld {
         PS::Log<LogLevel::Verbose>(STR("Created a dummy item for {}\n"), ItemId.ToString());
 
         return Item;
+    }
+
+    void PalItemModLoader::LoadItems(const nlohmann::json& data)
+    {
+        for (auto& [Key, Value] : data.items())
+        {
+            auto ItemId = FName(RC::to_generic_string(Key), FNAME_Add);
+            auto Row = m_itemDataAsset->StaticItemDataMap.Find(ItemId);
+            if (Value.is_null())
+            {
+                if (!Row) return;
+                m_itemDataAsset->StaticItemDataMap.Remove(ItemId);
+                PS::Log<RC::LogLevel::Normal>(STR("Deleted Item '{}'\n"), ItemId.ToString());
+            }
+            else
+            {
+                if (Row)
+                {
+                    Edit(ItemId, *Row, Value);
+                    PS::Log<RC::LogLevel::Normal>(STR("Modified Item '{}'\n"), ItemId.ToString());
+                }
+                else
+                {
+                    Add(ItemId, Value);
+                    PS::Log<RC::LogLevel::Normal>(STR("Added Item '{}'\n"), ItemId.ToString());
+                }
+            }
+        }
     }
 
 	void PalItemModLoader::Add(const RC::Unreal::FName& ItemId, const nlohmann::json& Data)
@@ -463,6 +496,8 @@ namespace Palworld {
 
     void PalItemModLoader::InitializeDummyTranslations()
     {
+        PS::Log<LogLevel::Verbose>(STR("Skipping dummy translations...\n"));
+        return;
         FPalLocalizedTextData NewDescRow{};
         NewDescRow.TextData = FText(STR("A memory of a scrapped item from the past."));
         m_descriptionTranslationTable->AddRow(FName(STR("ITEM_DESC_StaticDummy"), FNAME_Add), NewDescRow);

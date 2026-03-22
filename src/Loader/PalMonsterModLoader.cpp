@@ -7,6 +7,7 @@
 #include "SDK/Structs/FPalBPClassDataRow.h"
 #include "SDK/Helper/PropertyHelper.h"
 #include "Utility/Logging.h"
+#include "Utility/JsonHelpers.h"
 #include "Helpers/String.hpp"
 #include "Loader/PalMonsterModLoader.h"
 
@@ -14,59 +15,83 @@ using namespace RC;
 using namespace RC::Unreal;
 
 namespace Palworld {
-	PalMonsterModLoader::PalMonsterModLoader() : PalModLoaderBase("pals") {}
+	PalMonsterModLoader::PalMonsterModLoader() : PalModLoaderBase("pals") {
+        SetDisplayName(TEXT("Pal Loader"));
+    }
 
 	PalMonsterModLoader::~PalMonsterModLoader() {}
 
-	void PalMonsterModLoader::Initialize()
+	void PalMonsterModLoader::OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase)
 	{
-		m_dataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/Character/DT_PalMonsterParameter.DT_PalMonsterParameter"));
+        if (engineLifecyclePhase != EEngineLifecyclePhase::GameInstanceInit)
+        {
+            return;
+        }
 
-		m_iconDataTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr, 
-			STR("/Game/Pal/DataTable/Character/DT_PalCharacterIconDataTable.DT_PalCharacterIconDataTable"));
-
-		m_palBpClassTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/Character/DT_PalBPClass.DT_PalBPClass"));
-
-		m_wazaMasterLevelTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/Waza/DT_WazaMasterLevel.DT_WazaMasterLevel"));
-
-		m_palDropItemTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/Character/DT_PalDropItem.DT_PalDropItem"));
-
-		m_palNameTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/Text/DT_PalNameText.DT_PalNameText"));
-
-		m_palShortDescTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/Text/DT_PalShortDescriptionText.DT_PalShortDescriptionText"));
-
-		m_palLongDescTable = UObjectGlobals::StaticFindObject<RC::Unreal::UDataTable*>(nullptr, nullptr,
-			STR("/Game/Pal/DataTable/Text/DT_PalLongDescriptionText.DT_PalLongDescriptionText"));
-
-        PS::Log<LogLevel::Verbose>(STR("Initialized MonsterModLoader\n"));
+        PS::JsonHelpers::ParseJsonFilesInPath(loaderPath, [&](const nlohmann::json& data) {
+            LoadPals(data);
+        });
 	}
 
-	void PalMonsterModLoader::Load(const nlohmann::json& json)
-	{
-		for (auto& [character_id, properties] : json.items())
-		{
-			auto CharacterId = FName(RC::to_generic_string(character_id), FNAME_Add);
-			auto TableRow = m_dataTable->FindRowUnchecked(CharacterId);
-			if (TableRow)
-			{
-				Edit(TableRow, CharacterId, properties);
-			}
-			else
-			{
-				Add(CharacterId, properties);
-			}
-		}
-	}
+    void PalMonsterModLoader::OnAutoReload(const RC::StringType& modName, const std::filesystem::path& modFilePath)
+    {
+        PS::JsonHelpers::ParseJsonFileInPath(modFilePath, [&](const nlohmann::json& data) {
+            LoadPals(data);
+        });
+    }
+
+    bool PalMonsterModLoader::CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase)
+    {
+        if (engineLifecyclePhase == EEngineLifecyclePhase::GameInstanceInit)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    bool PalMonsterModLoader::OnInitialize()
+    {
+        try
+        {
+            m_monsterDataTable = GetDatatableByName("DT_PalMonsterParameter");
+            m_iconDataTable = GetDatatableByName("DT_PalCharacterIconDataTable");
+            m_palBpClassTable = GetDatatableByName("DT_PalCharacterIconDataTable");
+            m_wazaMasterLevelTable = GetDatatableByName("DT_WazaMasterLevel");
+            m_palDropItemTable = GetDatatableByName("DT_PalDropItem");
+            m_palNameTable = GetDatatableByName("DT_PalNameText");
+            m_palShortDescTable = GetDatatableByName("DT_PalShortDescriptionText");
+            m_palLongDescTable = GetDatatableByName("DT_PalLongDescriptionText");
+        }
+        catch (const std::exception& e)
+        {
+            PS::Log<LogLevel::Error>(STR("Unable to initialize {}, {}\n"), GetDisplayName(), RC::to_generic_string(e.what()));
+            return false;
+        }
+
+        return true;
+    }
+
+    void PalMonsterModLoader::LoadPals(const nlohmann::json& data)
+    {
+        for (auto& [character_id, properties] : data.items())
+        {
+            auto CharacterId = FName(RC::to_generic_string(character_id), FNAME_Add);
+            auto TableRow = m_monsterDataTable->FindRowUnchecked(CharacterId);
+            if (TableRow)
+            {
+                Edit(TableRow, CharacterId, properties);
+            }
+            else
+            {
+                Add(CharacterId, properties);
+            }
+        }
+    }
 
 	void PalMonsterModLoader::Add(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties)
 	{
-		auto MonsterRowStruct = m_dataTable->GetRowStruct().Get();
+		auto MonsterRowStruct = m_monsterDataTable->GetRowStruct().Get();
 		auto MonsterRowData = FMemory::Malloc(MonsterRowStruct->GetStructureSize());
 		MonsterRowStruct->InitializeStruct(MonsterRowData);
 
@@ -109,16 +134,16 @@ namespace Palworld {
             *IsPalProp->ContainerPtrToValuePtr<bool>(MonsterRowData) = true;
         }
 
-		m_dataTable->AddRow(CharacterId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(MonsterRowData));
+        m_monsterDataTable->AddRow(CharacterId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(MonsterRowData));
 
-		AddTranslations(CharacterId, properties);
+        AddTranslations(CharacterId, properties);
 
         PS::Log<RC::LogLevel::Normal>(STR("Added new Pal '{}'\n"), CharacterId.ToString());
-	}
+    }
 
-	void PalMonsterModLoader::Edit(uint8_t* TableRow, const RC::Unreal::FName& CharacterId, const nlohmann::json& properties)
-	{
-		auto RowStruct = m_dataTable->GetRowStruct().Get();
+    void PalMonsterModLoader::Edit(uint8_t* TableRow, const RC::Unreal::FName& CharacterId, const nlohmann::json& properties)
+    {
+        auto RowStruct = m_monsterDataTable->GetRowStruct().Get();
 		for (auto& [key, value] : properties.items())
 		{
 			auto KeyName = RC::to_generic_string(key);

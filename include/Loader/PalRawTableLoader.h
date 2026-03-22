@@ -27,30 +27,31 @@ namespace Palworld {
 
 		void Initialize();
 
-        void OnDataTableChanged(RC::Unreal::UDataTable* Table);
+        void Apply(const RC::StringType& datatableName, RC::Unreal::UDataTable* datatable);
 
-        void Apply(const RC::StringType& TableName, RC::Unreal::UDataTable* Table);
+        void Apply(UECustom::UCompositeDataTable* compositeDatatable);
 
-        void Apply(UECustom::UCompositeDataTable* Table);
+        void Apply(const nlohmann::json& data, RC::Unreal::UDataTable* table, LoadResult& outResult);
+    protected:
+        virtual void OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase) override final;
+        virtual void OnAutoReload(const RC::StringType& modName, const std::filesystem::path& modFilePath) override final;
 
-        void Apply(const nlohmann::json& Data, RC::Unreal::UDataTable* Table, LoadResult& OutResult);
-
-		virtual void Load(const nlohmann::json& Data) override final;
-
-        void Reload(const nlohmann::json& Data);
+        virtual bool CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase) override final;
+        virtual bool OnInitialize() override final;
+        virtual void OnDatatableSerialized(RC::Unreal::UDataTable* datatable) override final;
     private:
         std::unordered_map<RC::StringType, std::vector<nlohmann::json>> m_tableDataMap;
 
-        void HandleFilters(RC::Unreal::UDataTable* Table, const nlohmann::json& Data, LoadResult& OutResult);
+        void HandleFilters(RC::Unreal::UDataTable* datatable, const nlohmann::json& data, LoadResult& outResult);
 
-        void AddRow(RC::Unreal::UDataTable* Table, const RC::Unreal::FName& RowName, const nlohmann::json& Data, LoadResult& OutResult);
+        void AddRow(RC::Unreal::UDataTable* datatable, const RC::Unreal::FName& rowName, const nlohmann::json& data, LoadResult& outResult);
 
-        void EditRow(RC::Unreal::UDataTable* Table, const RC::Unreal::FName& RowName, RC::Unreal::uint8* Row, const nlohmann::json& Data, LoadResult& OutResult);
+        void EditRow(RC::Unreal::UDataTable* datatable, const RC::Unreal::FName& rowName, RC::Unreal::uint8* row, const nlohmann::json& data, LoadResult& outResult);
 
-        void DeleteRow(RC::Unreal::UDataTable* Table, const RC::Unreal::FName& RowName, LoadResult& OutResult);
+        void DeleteRow(RC::Unreal::UDataTable* datatable, const RC::Unreal::FName& rowName, LoadResult& outResult);
 
-        void ModifyRowProperties(RC::Unreal::UDataTable* Table, const RC::Unreal::FName& RowName, void* RowPtr, const nlohmann::json& Data, LoadResult& OutResult);
+        void ModifyRowProperties(RC::Unreal::UDataTable* datatable, const RC::Unreal::FName& rowName, void* rowPtr, const nlohmann::json& data, LoadResult& outResult);
 
-        void AddToTableDataMap(const std::string& TableName, const nlohmann::json& Data);
+        void AddToTableDataMap(const std::string& datatableName, const nlohmann::json& data);
 	};
 }
