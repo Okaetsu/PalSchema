@@ -11,6 +11,7 @@
 #include "Loader/PalBlueprintModLoader.h"
 #include "SDK/Classes/KismetSystemLibrary.h"
 #include "SDK/Helper/BPGeneratedClassHelper.h"
+#include "SDK/Helper/Memory.h"
 #include "SDK/Classes/Custom/UBlueprintGeneratedClass.h"
 #include "SDK/Classes/Custom/UInheritableComponentHandler.h"
 #include "SDK/Classes/Custom/UObjectGlobals.h"
@@ -91,23 +92,21 @@ namespace Palworld {
     bool PalBlueprintModLoader::OnInitialize()
     {
         // Should in theory be more consistent than finding a signature for BlueprintGeneratedClass::PostLoad
-        auto BlueprintGeneratedClass = UECustom::UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, TEXT("/Script/Engine.BlueprintGeneratedClass"), false);
-        if (!BlueprintGeneratedClass)
+        auto vtablePtr = Palworld::GetVTablePtrByClassPath(TEXT("/Script/Engine.BlueprintGeneratedClass"));
+        if (!vtablePtr)
         {
-            PS::Log<LogLevel::Error>(TEXT("Failed to find BlueprintGeneratedClass. Cannot hook PostLoad which means blueprint mods will not function.\n"));
+            PS::Log<LogLevel::Error>(TEXT("Something went wrong getting VTable pointer for BlueprintGeneratedClass. Cannot hook PostLoad which means blueprint mods will not function.\n"));
             return false;
         }
 
-        PS::Log<LogLevel::Verbose>(TEXT("Fetching default object for UBlueprintGeneratedClass...\n"));
-        uintptr_t* BGCVTablePtr = *(uintptr_t**)BlueprintGeneratedClass->GetClassDefaultObject();
-        void* PostLoadPtr = (void*)BGCVTablePtr[20];
-        PS::Log<LogLevel::Verbose>(TEXT("Found UBlueprintGeneratedClass::PostLoad: {}\n"), PostLoadPtr);
+        void* postloadPtr = Palworld::GetVirtualFunctionFromVTable(vtablePtr, 20);
+        PS::Log<LogLevel::Verbose>(TEXT("Found UBlueprintGeneratedClass::PostLoad: {}\n"), postloadPtr);
 
         PostLoadCallback = [&](UClass* BPGeneratedClass) {
             OnPostLoadDefaultObject(BPGeneratedClass, BPGeneratedClass->GetClassDefaultObject());
         };
 
-        PostLoadHook = safetyhook::create_inline(PostLoadPtr,
+        PostLoadHook = safetyhook::create_inline(postloadPtr,
             reinterpret_cast<void*>(PostLoad));
 
         return true;
