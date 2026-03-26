@@ -2,6 +2,9 @@
 
 #include "Loader/PalModLoaderBase.h"
 #include "SDK/Classes/PalStaticItemDataAsset.h"
+#include "SDK/Classes/PalDynamicItemDataBase.h"
+#include "SDK/Structs/FPalItemId.h"
+#include "safetyhook.hpp"
 
 namespace RC::Unreal {
 	class UDataTable;
@@ -21,8 +24,6 @@ namespace Palworld {
 
         virtual bool CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase) override final;
         virtual bool OnInitialize() override final;
-    public:
-        static UPalStaticItemDataBase* AddDummyItem(UPalStaticItemDataTable* StaticItemDataTable, const RC::Unreal::FName& ItemId);
 	private:
         void LoadItems(const nlohmann::json& data);
 
@@ -41,12 +42,21 @@ namespace Palworld {
         // Handles DT_ItemDataTable stuff
         void AddItemData(const RC::Unreal::FName& ItemId, const nlohmann::json& Data);
 
-        void InitializeDummyTranslations();
+        void SetupHooks();
 
 		UPalStaticItemDataAsset* m_itemDataAsset{};
 		RC::Unreal::UDataTable* m_itemDataTable{};
 		RC::Unreal::UDataTable* m_itemRecipeTable{};
 		RC::Unreal::UDataTable* m_nameTranslationTable{};
 		RC::Unreal::UDataTable* m_descriptionTranslationTable{};
+    private:
+        static inline void* ApplyItemSaveDataAddress = nullptr;
+        static inline void* ApplyDynamicItemSaveDataAddress = nullptr;
+        static inline SafetyHookInline UpdateItem_ServerInternalHook;
+        static inline SafetyHookInline DynamicItemHook;
+
+        static bool IsValidItem(RC::Unreal::UObject* worldContextObject, const RC::Unreal::FName& staticId);
+        static void UpdateItem_Detour(RC::Unreal::UObject* self, FPalItemId* itemId, int amount, bool param4, bool param5);
+        static UPalDynamicItemDataBase* CreateDynamicItemDatabase_Detour(RC::Unreal::UObject* self, FPalDynamicItemId* dynamicItemId, RC::Unreal::FName staticId, void* itemCreateParam);
 	};
 }

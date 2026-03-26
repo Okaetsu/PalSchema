@@ -1,12 +1,14 @@
 #include "Unreal/CoreUObject/UObject/UnrealType.hpp"
 #include "Unreal/Engine/UDataTable.hpp"
 #include "SDK/Classes/Custom/UObjectGlobals.h"
+#include "SDK/Classes/PalItemIDManager.h"
 #include "SDK/Classes/PalStaticItemDataTable.h"
 #include "SDK/Classes/PalStaticArmorItemData.h"
 #include "SDK/Classes/PalStaticConsumeItemData.h"
 #include "SDK/Classes/PalStaticWeaponItemData.h"
 #include "SDK/Classes/PalDynamicWeaponItemDataBase.h"
 #include "SDK/Classes/PalDynamicArmorItemDataBase.h"
+#include "SDK/Classes/PalUtility.h"
 #include "SDK/Structs/FPalCharacterIconDataRow.h"
 #include "SDK/Structs/Custom/FManagedStruct.h"
 #include "SDK/Helper/PropertyHelper.h"
@@ -15,6 +17,7 @@
 #include "Utility/JsonHelpers.h"
 #include "Loader/PalItemModLoader.h"
 #include <SDK/Structs/FPalLocalizedTextData.h>
+#include <SDK/PalSignatures.h>
 
 using namespace RC;
 using namespace RC::Unreal;
@@ -67,7 +70,7 @@ namespace Palworld {
             m_nameTranslationTable = GetDatatableByName("DT_ItemNameText");
             m_descriptionTranslationTable = GetDatatableByName("DT_ItemDescriptionText");
 
-            InitializeDummyTranslations();
+            SetupHooks();
         }
         catch (const std::exception& e)
         {
@@ -76,82 +79,6 @@ namespace Palworld {
         }
 
         return true;
-    }
-
-    UPalStaticItemDataBase* PalItemModLoader::AddDummyItem(UPalStaticItemDataTable* StaticItemDataTable, const FName& ItemId)
-    {
-        auto DataAsset = StaticItemDataTable->GetDataAsset();
-
-        UClass* DatabaseClass = UPalStaticItemDataBase::StaticClass();
-
-        if (!DatabaseClass->GetPropertyByNameInChain(STR("ID")))
-        {
-            throw std::runtime_error("Property 'ID' has changed in DA_StaticItemDataAsset. Update to Pal Schema is needed.");
-        }
-
-        if (!DatabaseClass->GetPropertyByNameInChain(STR("DynamicItemDataClass")))
-        {
-            throw std::runtime_error("Property 'DynamicItemDataClass' has changed in DA_StaticItemDataAsset. Update to Pal Schema is needed.");
-        }
-
-        FStaticConstructObjectParameters ConstructParams(DatabaseClass, DataAsset);
-        ConstructParams.Name = NAME_None;
-
-        auto Item = UObjectGlobals::StaticConstructObject<UPalStaticItemDataBase*>(ConstructParams);
-
-        auto IDProperty = Item->GetValuePtrByPropertyNameInChain<FName>(STR("ID"));
-        if (IDProperty)
-        {
-            *IDProperty = ItemId;
-        }
-
-        auto OverrideNameMsgID = Item->GetValuePtrByPropertyNameInChain<FName>(STR("OverrideNameMsgID"));
-        if (OverrideNameMsgID)
-        {
-            *OverrideNameMsgID = ItemId;
-        }
-
-        auto OverrideDescMsgID = Item->GetValuePtrByPropertyNameInChain<FName>(STR("OverrideDescMsgID"));
-        if (OverrideDescMsgID)
-        {
-            *OverrideDescMsgID = FName(STR("ITEM_DESC_StaticDummy"), FNAME_Add);
-        }
-
-        auto IconTexture = Item->GetValuePtrByPropertyNameInChain<UECustom::TSoftObjectPtr<UObject>>(STR("IconTexture"));
-        if (IconTexture)
-        {
-            *IconTexture = UECustom::TSoftObjectPtr<UObject>(UECustom::FSoftObjectPath(STR("/Game/Pal/Texture/UI/Main_Menu/T_icon_unknown.T_icon_unknown")));
-        }
-
-        auto TypeA = Item->GetValuePtrByPropertyNameInChain<uint8>(STR("TypeA"));
-        if (TypeA)
-        {
-            *TypeA = 5U; // Material
-        }
-
-        auto TypeB = Item->GetValuePtrByPropertyNameInChain<uint8>(STR("TypeB"));
-        if (TypeB)
-        {
-            *TypeB = 28U; // MaterialProcessing
-        }
-
-        auto SortID = Item->GetValuePtrByPropertyNameInChain<int>(STR("SortID"));
-        if (SortID)
-        {
-            *SortID = 5001;
-        }
-
-        auto MaxStackCount = Item->GetValuePtrByPropertyNameInChain<int>(STR("MaxStackCount"));
-        if (MaxStackCount)
-        {
-            *MaxStackCount = 9999;
-        }
-
-        DataAsset->StaticItemDataMap.Add(ItemId, Item);
-
-        PS::Log<LogLevel::Verbose>(STR("Created a dummy item for {}\n"), ItemId.ToString());
-
-        return Item;
     }
 
     void PalItemModLoader::LoadItems(const nlohmann::json& data)
@@ -494,14 +421,89 @@ namespace Palworld {
         m_itemDataTable->AddRow(ItemId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData.GetData()));
     }
 
-    void PalItemModLoader::InitializeDummyTranslations()
+    void PalItemModLoader::SetupHooks()
     {
-        PS::Log<LogLevel::Verbose>(STR("Skipping dummy translations...\n"));
-        return;
-        FPalLocalizedTextData NewDescRow{};
-        NewDescRow.TextData = FText(STR("A memory of a scrapped item from the past."));
-        m_descriptionTranslationTable->AddRow(FName(STR("ITEM_DESC_StaticDummy"), FNAME_Add), NewDescRow);
+        try
+        {
+            auto address = Palworld::SignatureManager::GetSignature("UPalItemSlot::UpdateItem_ServerInternal");
+            if (!address)
+            {
+                throw std::runtime_error("Signature for UPalItemSlot::UpdateItem_ServerInternal could not be found");
+            }
 
-        PS::Log<LogLevel::Verbose>(STR("Initialized Dummy Translations for ItemModLoader\n"));
+            ApplyItemSaveDataAddress = Palworld::SignatureManager::GetSignature("UPalItemContainer::ApplySaveData");
+            if (!ApplyItemSaveDataAddress)
+            {
+                throw std::runtime_error("Signature for UPalItemContainer::ApplySaveData could not be found");
+            }
+
+            auto address2 = Palworld::SignatureManager::GetSignature("UPalDynamicItemWorldSubsystem::Create_ServerInternal");
+            if (!address2)
+            {
+                throw std::runtime_error("Signature for UPalDynamicItemWorldSubsystem::Create_ServerInternal could not be found");
+            }
+
+            ApplyDynamicItemSaveDataAddress = Palworld::SignatureManager::GetSignature("UPalDynamicItemWorldSubsystem::ApplyWorldSaveData");
+            if (!ApplyDynamicItemSaveDataAddress)
+            {
+                throw std::runtime_error("Signature for UPalDynamicItemWorldSubsystem::ApplyWorldSaveData could not be found");
+            }
+
+            UpdateItem_ServerInternalHook = safetyhook::create_inline(reinterpret_cast<void*>(address),
+                UpdateItem_Detour);
+
+            DynamicItemHook = safetyhook::create_inline(reinterpret_cast<void*>(address2),
+                CreateDynamicItemDatabase_Detour);
+        }
+        catch (const std::exception& e)
+        {
+            PS::Log<LogLevel::Error>(STR("{}. PalSchema will be unable to clean up invalid items and worlds with invalid items will crash on load.\n"), 
+                                     RC::to_generic_string(e.what()));
+        }
+
+    }
+
+    bool PalItemModLoader::IsValidItem(RC::Unreal::UObject* worldContextObject, const RC::Unreal::FName& staticId)
+    {
+        auto itemIdManager = UPalUtility::GetItemIDManager(worldContextObject);
+        auto staticItemData = itemIdManager->GetStaticItemData(staticId);
+        if (staticItemData)
+        {
+            return true;
+        }
+        
+        return false;
+    }
+
+    void PalItemModLoader::UpdateItem_Detour(RC::Unreal::UObject* self, FPalItemId* itemId, int amount, bool param4, bool param5)
+    {
+        if (_ReturnAddress() == ApplyItemSaveDataAddress && !IsValidItem(self, itemId->StaticId))
+        {
+            PS::Log<LogLevel::Warning>(STR("Item '{}' is invalid. Deleting.\n"), itemId->StaticId.ToString());
+            itemId->StaticId = NAME_None;
+            amount = 0;
+        }
+
+        UpdateItem_ServerInternalHook.call(self, itemId, amount, param4, param5);
+    }
+
+    UPalDynamicItemDataBase* PalItemModLoader::CreateDynamicItemDatabase_Detour(RC::Unreal::UObject* self, FPalDynamicItemId* dynamicItemId, RC::Unreal::FName staticId, void* itemCreateParam)
+    {
+        if (_ReturnAddress() == ApplyDynamicItemSaveDataAddress && !IsValidItem(self, staticId))
+        {
+            PS::Log<LogLevel::Warning>(STR("Item '{}' is invalid. Dynamic data for this item will be deleted on next save.\n"), staticId.ToString());
+
+            // Shouldn't matter what we use as the staticId as long as it meets the two conditions:
+            // 1. Must exist in the vanilla game
+            // 2. Has a DynamicItemDataBase (Weapon, Armor, Egg)
+            staticId = FName(TEXT("ClothArmor"));
+            auto dynamicItemDatabase = DynamicItemHook.call<UPalDynamicItemDataBase*>(self, dynamicItemId, staticId, itemCreateParam);
+
+            // This makes it so that when the game saves, this dynamic data will be excluded which permanently removes it from the save.
+            dynamicItemDatabase->GetIgnoreOnSave() = true;
+            return dynamicItemDatabase;
+        }
+
+        return DynamicItemHook.call<UPalDynamicItemDataBase*>(self, dynamicItemId, staticId, itemCreateParam);
     }
 }
