@@ -7,7 +7,7 @@ using namespace RC;
 using namespace RC::Unreal;
 
 namespace Palworld {
-    uintptr_t* GetVTablePtrByClassPath(const RC::StringType& classPath)
+    uintptr_t** GetVTablePtrByClassPath(const RC::StringType& classPath)
     {
         auto classObject = UECustom::UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, classPath.c_str(), false);
         if (!classObject)
@@ -23,11 +23,11 @@ namespace Palworld {
             return nullptr;
         }
 
-        uintptr_t* vtablePtr = *(uintptr_t**)classObject;
+        uintptr_t** vtablePtr = *(uintptr_t***)cdo;
         return vtablePtr;
     }
 
-    void* GetVirtualFunctionFromVTable(uintptr_t* vtable, size_t offset)
+    void* GetVirtualFunctionFromVTable(uintptr_t** vtable, size_t offset)
     {
         void* vfuncptr = (void*)vtable[offset];
         return vfuncptr;
