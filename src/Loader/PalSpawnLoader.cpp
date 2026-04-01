@@ -93,6 +93,7 @@ namespace Palworld {
 
             WorldCleanupHook = safetyhook::create_inline(reinterpret_cast<void*>(CleanupWorld_FuncPtr),
                 OnWorldCleanup);
+
             SetupWorldPartitionHooks();
         }
         catch (const std::exception& e)
@@ -118,12 +119,6 @@ namespace Palworld {
         if (cell->GetIsHLOD())
         {
             // Skip HLOD. From what I noticed, if a spawner is created inside a HLOD, it more than likely will not despawn ever which is not ideal.
-            return;
-        }
-
-        if (cell->GetLevel() == 0)
-        {
-            // Skip L0 grids, all the other spawners seem to be on L1 or above.
             return;
         }
 
