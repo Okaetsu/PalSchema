@@ -7,18 +7,15 @@
 namespace Palworld {
     class PalBlueprintMod {
     public:
-        PalBlueprintMod(const std::string& BlueprintName, const nlohmann::json& Data);
+        PalBlueprintMod(const RC::Unreal::FName& blueprintName, const nlohmann::json& data);
 
         virtual ~PalBlueprintMod() {};
     public:
         const RC::Unreal::FName& GetBlueprintName() const;
 
-        const RC::Unreal::FName& GetDefaultObjectName() const;
-
         const nlohmann::json& GetData() const;
     private:
         RC::Unreal::FName m_name;
-        RC::Unreal::FName m_defaultObjectName;
         nlohmann::json m_data;
     };
 }

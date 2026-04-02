@@ -17,8 +17,6 @@ namespace Palworld {
         PalBlueprintModLoader();
 
         ~PalBlueprintModLoader();
-
-        void OnPostLoadDefaultObject(RC::Unreal::UClass* This, RC::Unreal::UObject* DefaultObject);
     protected:
         virtual void OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase) override final;
         virtual void OnAutoReload(const std::filesystem::path::string_type& modName, const std::filesystem::path& modFilePath) override final;
@@ -26,7 +24,10 @@ namespace Palworld {
         virtual bool CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase) override final;
         virtual bool OnInitialize() override final;
     private:
-        std::unordered_map<RC::StringType, std::vector<PalBlueprintMod>> BPModRegistry;
+        std::unordered_map<RC::Unreal::FName, std::vector<PalBlueprintMod>> m_modsMap;
+
+        bool HookPostLoad();
+        bool HookPostInitComponents();
 
         // Does not call UE functions, therefore safe to call whenever
         void LoadSafe(const nlohmann::json& data);
@@ -34,20 +35,26 @@ namespace Palworld {
         // Calls UE functions, make sure UE is ready
         void LoadUnsafe(const nlohmann::json& data);
 
-        std::vector<PalBlueprintMod>& GetModsForBlueprint(const RC::StringType& Name);
+        std::vector<PalBlueprintMod>& GetModsForBlueprint(const RC::Unreal::FName& name);
+
+        void ModifyObject(RC::Unreal::UObject* object);
         
-        void ApplyMod(const PalBlueprintMod& BPMod, RC::Unreal::UObject* Object);
+        void ApplyMod(const PalBlueprintMod& mod, RC::Unreal::UObject* object);
 
-        void ApplyMod(const nlohmann::json& Data, RC::Unreal::UObject* Object);
+        void ApplyData(const nlohmann::json& data, RC::Unreal::UObject* object);
 
-        void HandleInheritableComponent(UECustom::UBlueprintGeneratedClass* BPClass, const RC::StringType& ComponentName, const nlohmann::json& ComponentData);
+        void HandleInheritableComponent(UECustom::UBlueprintGeneratedClass* bpClass, const RC::StringType& componentName, const nlohmann::json& componentData);
 
-        void HandleNodeComponent(UECustom::UBlueprintGeneratedClass* BPClass, const RC::StringType& ComponentName, const nlohmann::json& ComponentData);
+        void HandleNodeComponent(UECustom::UBlueprintGeneratedClass* bpClass, const RC::StringType& componentName, const nlohmann::json& componentData);
 
-        void ModifyComponent(RC::Unreal::UObject* Component, const nlohmann::json& ComponentData);
+        void ModifyComponent(RC::Unreal::UObject* component, const nlohmann::json& componentData);
     private:
         static inline SafetyHookInline PostLoadHook;
         static inline std::function<void(RC::Unreal::UClass*)> PostLoadCallback = nullptr;
-        static void PostLoad(RC::Unreal::UClass* This);
+        static void PostLoad(RC::Unreal::UClass* self);
+
+        static inline SafetyHookInline PostInitComponentsHook;
+        static inline std::function<void(RC::Unreal::AActor*)> PostInitComponentsCallback = nullptr;
+        static void PostInitComponents(RC::Unreal::AActor* self);
     };
 }
