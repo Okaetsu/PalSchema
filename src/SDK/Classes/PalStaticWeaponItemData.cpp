@@ -8,7 +8,7 @@ using namespace RC::Unreal;
 namespace Palworld {
 	UClass* UPalStaticWeaponItemData::StaticClass()
 	{
-		auto Class = UECustom::UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Pal.PalStaticWeaponItemData"));
+		static auto Class = UECustom::UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Pal.PalStaticWeaponItemData"));
 		return Class;
 	}
 }
