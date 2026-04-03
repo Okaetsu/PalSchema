@@ -30,6 +30,8 @@ namespace Palworld {
     PalSpawnLoader::~PalSpawnLoader() {
         auto expected = WorldCleanupHook.disable();
         WorldCleanupHook = {};
+        m_onLevelShownFunction->UnregisterHook(m_onLevelShownCallbackId);
+        m_onLevelHiddenFunction->UnregisterHook(m_onLevelHiddenCallbackId);
     }
 
     void PalSpawnLoader::Reload(const std::filesystem::path::string_type& modName, const nlohmann::json& data)
@@ -91,6 +93,8 @@ namespace Palworld {
 
             WorldCleanupHook = safetyhook::create_inline(reinterpret_cast<void*>(CleanupWorld_FuncPtr),
                 OnWorldCleanup);
+
+            SetupWorldPartitionHooks();
         }
         catch (const std::exception& e)
         {
@@ -118,12 +122,6 @@ namespace Palworld {
             return;
         }
 
-        if (cell->GetLevel() == 0)
-        {
-            // Skip L0 grids, all the other spawners seem to be on L1 or above.
-            return;
-        }
-
         m_loadedCells.Add(cell);
         ProcessCellSpawners(cell);
     }
@@ -132,6 +130,21 @@ namespace Palworld {
     {
         DestroySpawnersInCell(cell);
         m_loadedCells.Remove(cell);
+    }
+
+    void PalSpawnLoader::SetupWorldPartitionHooks()
+    {
+        m_onLevelShownFunction = UECustom::UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, STR("/Script/Engine.WorldPartitionRuntimeLevelStreamingCell:OnLevelShown"));
+        m_onLevelShownCallbackId = m_onLevelShownFunction->RegisterPostHook([&](UnrealScriptFunctionCallableContext& Context, void* CustomData) {
+            auto cell = static_cast<UECustom::UWorldPartitionRuntimeLevelStreamingCell*>(Context.Context);
+            OnCellLoaded(cell);
+        });
+
+        m_onLevelHiddenFunction = UECustom::UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, STR("/Script/Engine.WorldPartitionRuntimeLevelStreamingCell:OnLevelHidden"));
+        m_onLevelHiddenCallbackId = m_onLevelHiddenFunction->RegisterPostHook([&](UnrealScriptFunctionCallableContext& Context, void* CustomData) {
+            auto cell = static_cast<UECustom::UWorldPartitionRuntimeLevelStreamingCell*>(Context.Context);
+            OnCellUnloaded(cell);
+        });
     }
 
     void PalSpawnLoader::LoadSpawns(const RC::StringType& modName, const nlohmann::json& data)

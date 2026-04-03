@@ -46,6 +46,8 @@ namespace Palworld {
         RC::Unreal::TArray<UECustom::UWorldPartitionRuntimeLevelStreamingCell*> m_loadedCells;
         std::vector<PS::SpawnerInfo> m_spawns;
 
+        void SetupWorldPartitionHooks();
+
         void LoadSpawns(const RC::StringType& modName, const nlohmann::json& data);
 
         void RegisterSpawn(const std::filesystem::path::string_type& modName, const nlohmann::json& value);
@@ -65,6 +67,11 @@ namespace Palworld {
         void UnloadMod(const std::filesystem::path::string_type& modName);
 
         void CleanupSpawns();
+    private:
+        RC::Unreal::CallbackId m_onLevelShownCallbackId{};
+        RC::Unreal::CallbackId m_onLevelHiddenCallbackId{};
+        RC::Unreal::UFunction* m_onLevelShownFunction = nullptr;
+        RC::Unreal::UFunction* m_onLevelHiddenFunction = nullptr;
     private:
         static inline std::function<void(RC::Unreal::UWorld*, bool, bool, RC::Unreal::UWorld*)> WorldCleanupCallback = nullptr;
         static inline SafetyHookInline WorldCleanupHook;
