@@ -1,12 +1,14 @@
 #include "Unreal/CoreUObject/UObject/UnrealType.hpp"
 #include "Unreal/Engine/UDataTable.hpp"
 #include "SDK/Classes/Custom/UObjectGlobals.h"
+#include "SDK/Classes/PalItemIDManager.h"
 #include "SDK/Classes/PalStaticItemDataTable.h"
 #include "SDK/Classes/PalStaticArmorItemData.h"
 #include "SDK/Classes/PalStaticConsumeItemData.h"
 #include "SDK/Classes/PalStaticWeaponItemData.h"
 #include "SDK/Classes/PalDynamicWeaponItemDataBase.h"
 #include "SDK/Classes/PalDynamicArmorItemDataBase.h"
+#include "SDK/Classes/PalUtility.h"
 #include "SDK/Structs/FPalCharacterIconDataRow.h"
 #include "SDK/Structs/Custom/FManagedStruct.h"
 #include "SDK/Helper/PropertyHelper.h"
@@ -15,6 +17,7 @@
 #include "Utility/JsonHelpers.h"
 #include "Loader/PalItemModLoader.h"
 #include <SDK/Structs/FPalLocalizedTextData.h>
+#include <SDK/PalSignatures.h>
 
 using namespace RC;
 using namespace RC::Unreal;
@@ -60,448 +63,447 @@ namespace Palworld {
         try
         {
             m_itemDataAsset = UECustom::UObjectGlobals::StaticFindObject<UPalStaticItemDataAsset*>(nullptr, nullptr,
-                STR("/Game/Pal/DataAsset/Item/DA_StaticItemDataAsset.DA_StaticItemDataAsset"));
+                TEXT("/Game/Pal/DataAsset/Item/DA_StaticItemDataAsset.DA_StaticItemDataAsset"));
 
             m_itemDataTable = GetDatatableByName("DT_ItemDataTable");
             m_itemRecipeTable = GetDatatableByName("DT_ItemRecipeDataTable");
             m_nameTranslationTable = GetDatatableByName("DT_ItemNameText");
             m_descriptionTranslationTable = GetDatatableByName("DT_ItemDescriptionText");
 
-            InitializeDummyTranslations();
+            SetupHooks();
         }
         catch (const std::exception& e)
         {
-            PS::Log<LogLevel::Error>(STR("Unable to initialize {}, {}\n"), GetDisplayName(), RC::to_generic_string(e.what()));
+            PS::Log<LogLevel::Error>(TEXT("Unable to initialize {}, {}\n"), GetDisplayName(), RC::to_generic_string(e.what()));
             return false;
         }
 
         return true;
     }
 
-    UPalStaticItemDataBase* PalItemModLoader::AddDummyItem(UPalStaticItemDataTable* StaticItemDataTable, const FName& ItemId)
-    {
-        auto DataAsset = StaticItemDataTable->GetDataAsset();
-
-        UClass* DatabaseClass = UPalStaticItemDataBase::StaticClass();
-
-        if (!DatabaseClass->GetPropertyByNameInChain(STR("ID")))
-        {
-            throw std::runtime_error("Property 'ID' has changed in DA_StaticItemDataAsset. Update to Pal Schema is needed.");
-        }
-
-        if (!DatabaseClass->GetPropertyByNameInChain(STR("DynamicItemDataClass")))
-        {
-            throw std::runtime_error("Property 'DynamicItemDataClass' has changed in DA_StaticItemDataAsset. Update to Pal Schema is needed.");
-        }
-
-        FStaticConstructObjectParameters ConstructParams(DatabaseClass, DataAsset);
-        ConstructParams.Name = NAME_None;
-
-        auto Item = UObjectGlobals::StaticConstructObject<UPalStaticItemDataBase*>(ConstructParams);
-
-        auto IDProperty = Item->GetValuePtrByPropertyNameInChain<FName>(STR("ID"));
-        if (IDProperty)
-        {
-            *IDProperty = ItemId;
-        }
-
-        auto OverrideNameMsgID = Item->GetValuePtrByPropertyNameInChain<FName>(STR("OverrideNameMsgID"));
-        if (OverrideNameMsgID)
-        {
-            *OverrideNameMsgID = ItemId;
-        }
-
-        auto OverrideDescMsgID = Item->GetValuePtrByPropertyNameInChain<FName>(STR("OverrideDescMsgID"));
-        if (OverrideDescMsgID)
-        {
-            *OverrideDescMsgID = FName(STR("ITEM_DESC_StaticDummy"), FNAME_Add);
-        }
-
-        auto IconTexture = Item->GetValuePtrByPropertyNameInChain<UECustom::TSoftObjectPtr<UObject>>(STR("IconTexture"));
-        if (IconTexture)
-        {
-            *IconTexture = UECustom::TSoftObjectPtr<UObject>(UECustom::FSoftObjectPath(STR("/Game/Pal/Texture/UI/Main_Menu/T_icon_unknown.T_icon_unknown")));
-        }
-
-        auto TypeA = Item->GetValuePtrByPropertyNameInChain<uint8>(STR("TypeA"));
-        if (TypeA)
-        {
-            *TypeA = 5U; // Material
-        }
-
-        auto TypeB = Item->GetValuePtrByPropertyNameInChain<uint8>(STR("TypeB"));
-        if (TypeB)
-        {
-            *TypeB = 28U; // MaterialProcessing
-        }
-
-        auto SortID = Item->GetValuePtrByPropertyNameInChain<int>(STR("SortID"));
-        if (SortID)
-        {
-            *SortID = 5001;
-        }
-
-        auto MaxStackCount = Item->GetValuePtrByPropertyNameInChain<int>(STR("MaxStackCount"));
-        if (MaxStackCount)
-        {
-            *MaxStackCount = 9999;
-        }
-
-        DataAsset->StaticItemDataMap.Add(ItemId, Item);
-
-        PS::Log<LogLevel::Verbose>(STR("Created a dummy item for {}\n"), ItemId.ToString());
-
-        return Item;
-    }
-
     void PalItemModLoader::LoadItems(const nlohmann::json& data)
     {
-        for (auto& [Key, Value] : data.items())
+        for (auto& [key, value] : data.items())
         {
-            auto ItemId = FName(RC::to_generic_string(Key), FNAME_Add);
-            auto Row = m_itemDataAsset->StaticItemDataMap.Find(ItemId);
-            if (Value.is_null())
+            auto itemId = FName(RC::to_generic_string(key), FNAME_Add);
+            auto row = m_itemDataAsset->StaticItemDataMap.Find(itemId);
+            if (value.is_null())
             {
-                if (!Row) return;
-                m_itemDataAsset->StaticItemDataMap.Remove(ItemId);
-                PS::Log<RC::LogLevel::Normal>(STR("Deleted Item '{}'\n"), ItemId.ToString());
+                if (!row) return;
+                m_itemDataAsset->StaticItemDataMap.Remove(itemId);
+                PS::Log<RC::LogLevel::Normal>(TEXT("Deleted Item '{}'\n"), itemId.ToString());
             }
             else
             {
-                if (Row)
+                if (row)
                 {
-                    Edit(ItemId, *Row, Value);
-                    PS::Log<RC::LogLevel::Normal>(STR("Modified Item '{}'\n"), ItemId.ToString());
+                    Edit(itemId, *row, value);
+                    PS::Log<RC::LogLevel::Normal>(TEXT("Modified Item '{}'\n"), itemId.ToString());
                 }
                 else
                 {
-                    Add(ItemId, Value);
-                    PS::Log<RC::LogLevel::Normal>(STR("Added Item '{}'\n"), ItemId.ToString());
+                    Add(itemId, value);
+                    PS::Log<RC::LogLevel::Normal>(TEXT("Added Item '{}'\n"), itemId.ToString());
                 }
             }
         }
     }
 
-	void PalItemModLoader::Add(const RC::Unreal::FName& ItemId, const nlohmann::json& Data)
+	void PalItemModLoader::Add(const RC::Unreal::FName& itemId, const nlohmann::json& data)
 	{
-		if (ItemId == NAME_None)
+		if (itemId == NAME_None)
 		{
 			throw std::runtime_error("ID was set to None");
 		}
 
-		if (!Data.contains("Type"))
+		if (!data.contains("Type"))
 		{
-			throw std::runtime_error(std::format("You must supply a Type field in {} when adding new items", RC::to_string(ItemId.ToString())));
+			throw std::runtime_error(std::format("You must supply a Type field in {} when adding new items", RC::to_string(itemId.ToString())));
 		}
 
-		if (!Data.at("Type").is_string())
+		if (!data.at("Type").is_string())
 		{
-			throw std::runtime_error(std::format("Type must be a string in {}", RC::to_string(ItemId.ToString())));
+			throw std::runtime_error(std::format("Type must be a string in {}", RC::to_string(itemId.ToString())));
 		}
 
-		auto Type = Data.at("Type").get<std::string>();
+		auto type = data.at("Type").get<std::string>();
 
-		UClass* DatabaseClass = nullptr;
-		UClass* DynamicDatabaseClass = nullptr;
-		if (Type == "Armor" || Type == "PalStaticArmorItemData")
+		UClass* databaseClass = nullptr;
+		UClass* dynamicDatabaseClass = nullptr;
+		if (type == "Armor" || type == "PalStaticArmorItemData")
 		{
-			DatabaseClass = UPalStaticArmorItemData::StaticClass();
-			DynamicDatabaseClass = UPalDynamicArmorItemDataBase::StaticClass();
+			databaseClass = UPalStaticArmorItemData::StaticClass();
+			dynamicDatabaseClass = UPalDynamicArmorItemDataBase::StaticClass();
 		}
-		else if (Type == "Weapon" || Type == "PalStaticWeaponItemData")
+		else if (type == "Weapon" || type == "PalStaticWeaponItemData")
 		{
-			DatabaseClass = UPalStaticWeaponItemData::StaticClass();
-			DynamicDatabaseClass = UPalDynamicWeaponItemDataBase::StaticClass();
+			databaseClass = UPalStaticWeaponItemData::StaticClass();
+			dynamicDatabaseClass = UPalDynamicWeaponItemDataBase::StaticClass();
 		}
-		else if (Type == "Consumable" || Type == "PalStaticConsumeItemData")
+		else if (type == "Consumable" || type == "PalStaticConsumeItemData")
 		{
-			DatabaseClass = UPalStaticConsumeItemData::StaticClass();
+			databaseClass = UPalStaticConsumeItemData::StaticClass();
 		}
-		else if (Type == "Generic" || Type == "PalStaticItemDataBase")
+		else if (type == "Generic" || type == "PalStaticItemDataBase")
 		{
-			DatabaseClass = UPalStaticItemDataBase::StaticClass();
+			databaseClass = UPalStaticItemDataBase::StaticClass();
 		}
 		else
 		{
-			throw std::runtime_error(std::format("Type {} in {} isn't supported, must be Armor, Weapon, Consumable or Generic", Type, RC::to_string(ItemId.ToString())));
+			throw std::runtime_error(std::format("Type {} in {} isn't supported, must be Armor, Weapon, Consumable or Generic", type, RC::to_string(itemId.ToString())));
 		}
 
-		if (!DatabaseClass->GetPropertyByNameInChain(STR("ID")))
+		if (!databaseClass->GetPropertyByNameInChain(TEXT("ID")))
 		{
 			throw std::runtime_error("Property 'ID' has changed in DA_StaticItemDataAsset. Update to Pal Schema is needed.");
 		}
 
-		if (!DatabaseClass->GetPropertyByNameInChain(STR("DynamicItemDataClass")))
+		if (!databaseClass->GetPropertyByNameInChain(TEXT("DynamicItemDataClass")))
 		{
 			throw std::runtime_error("Property 'DynamicItemDataClass' has changed in DA_StaticItemDataAsset. Update to Pal Schema is needed.");
 		}
 
-		FStaticConstructObjectParameters ConstructParams(DatabaseClass, m_itemDataAsset);
-		ConstructParams.Name = NAME_None;
+		FStaticConstructObjectParameters constructParams(databaseClass, m_itemDataAsset);
+		constructParams.Name = NAME_None;
 
-		auto Item = UObjectGlobals::StaticConstructObject<UPalStaticItemDataBase*>(ConstructParams);
+		auto item = UObjectGlobals::StaticConstructObject<UPalStaticItemDataBase*>(constructParams);
 
-		auto IDProperty = Item->GetValuePtrByPropertyNameInChain<FName>(STR("ID"));
-		if (IDProperty)
+		auto idProperty = item->GetValuePtrByPropertyNameInChain<FName>(TEXT("ID"));
+		if (idProperty)
 		{
-			*IDProperty = ItemId;
+			*idProperty = itemId;
 		}
 
-		auto DynamicItemDataClassProperty = Item->GetValuePtrByPropertyNameInChain<UClass*>(STR("DynamicItemDataClass"));
-		if (DynamicItemDataClassProperty)
+		auto dynamicItemDataClassProperty = item->GetValuePtrByPropertyNameInChain<UClass*>(TEXT("DynamicItemDataClass"));
+		if (dynamicItemDataClassProperty)
 		{
-			*DynamicItemDataClassProperty = DynamicDatabaseClass;
+			*dynamicItemDataClassProperty = dynamicDatabaseClass;
 		}
 
-        for (FProperty* Property : TFieldRange<FProperty>(DatabaseClass, EFieldIterationFlags::IncludeSuper))
+        for (FProperty* property : TFieldRange<FProperty>(databaseClass, EFieldIterationFlags::IncludeSuper))
         {
-            auto PropertyName = RC::to_string(Property->GetName());
-            if (PropertyName == "DynamicItemDataClass")
+            auto propertyName = RC::to_string(property->GetName());
+            if (propertyName == "DynamicItemDataClass")
             {
                 // We've already set this earlier so we skip it.
                 continue;
             }
-            if (Data.contains(PropertyName))
+            if (data.contains(propertyName))
             {
-                PropertyHelper::CopyJsonValueToContainer(reinterpret_cast<uint8_t*>(Item), Property, Data.at(PropertyName));
+                PropertyHelper::CopyJsonValueToContainer(reinterpret_cast<uint8_t*>(item), property, data.at(propertyName));
             }
         }
 		
-		if (Data.contains("Recipe"))
+		if (data.contains("Recipe"))
 		{
-			AddRecipe(ItemId, Data.at("Recipe"));
+			AddRecipe(itemId, data.at("Recipe"));
 		}
 
-        AddItemData(ItemId, Data);
+        AddItemData(itemId, data);
 
-		AddTranslations(ItemId, Data);
+		AddTranslations(itemId, data);
 
-		m_itemDataAsset->StaticItemDataMap.Add(ItemId, Item);
+		m_itemDataAsset->StaticItemDataMap.Add(itemId, item);
 	}
 
-	void PalItemModLoader::Edit(const RC::Unreal::FName& ItemId, UPalStaticItemDataBase* Item, const nlohmann::json& Data)
+	void PalItemModLoader::Edit(const RC::Unreal::FName& itemId, UPalStaticItemDataBase* item, const nlohmann::json& data)
 	{
-        for (FProperty* Property : TFieldRange<FProperty>(Item->GetClassPrivate(), EFieldIterationFlags::IncludeSuper))
+        for (FProperty* property : TFieldRange<FProperty>(item->GetClassPrivate(), EFieldIterationFlags::IncludeSuper))
         {
-            auto PropertyName = RC::to_string(Property->GetName());
-            if (PropertyName == "DynamicItemDataClass")
+            auto propertyName = RC::to_string(property->GetName());
+            if (propertyName == "DynamicItemDataClass")
             {
                 continue;
             }
-            if (PropertyName == "ID")
+            if (propertyName == "ID")
             {
                 // Editing the ID is a bad idea, hence we skip it.
                 continue;
             }
-            if (Data.contains(PropertyName))
+            if (data.contains(propertyName))
             {
-                PropertyHelper::CopyJsonValueToContainer(reinterpret_cast<uint8_t*>(Item), Property, Data.at(PropertyName));
+                PropertyHelper::CopyJsonValueToContainer(reinterpret_cast<uint8_t*>(item), property, data.at(propertyName));
             }
         }
 
-		if (Data.contains("Recipe"))
+		if (data.contains("Recipe"))
 		{
-			EditRecipe(ItemId, Data.at("Recipe"));
+			EditRecipe(itemId, data.at("Recipe"));
 		}
 
-		EditTranslations(ItemId, Data);
+		EditTranslations(itemId, data);
 	}
 
-	void PalItemModLoader::AddRecipe(const RC::Unreal::FName& ItemId, const nlohmann::json& Recipe)
+	void PalItemModLoader::AddRecipe(const RC::Unreal::FName& itemId, const nlohmann::json& recipe)
 	{
-		auto RowStruct = m_itemRecipeTable->GetRowStruct().Get();
+		auto rowStruct = m_itemRecipeTable->GetRowStruct().Get();
 
-		auto ItemRecipeData = FMemory::Malloc(RowStruct->GetStructureSize());
-		RowStruct->InitializeStruct(ItemRecipeData);
+		auto itemRecipeData = FMemory::Malloc(rowStruct->GetStructureSize());
+		rowStruct->InitializeStruct(itemRecipeData);
 
-		for (auto& [property_name, property_value] : Recipe.items())
+		for (auto& [propertyName, propertyValue] : recipe.items())
 		{
-			auto KeyName = RC::to_generic_string(property_name);
+			auto propertyNameWide = RC::to_generic_string(propertyName);
 
-			if (KeyName == STR("Product_Id"))
-			{
-				// We will set this later based on the key used for the json object, so we skip it for now.
-				continue;
-			}
+			if (propertyNameWide == TEXT("Product_Id"))
+            {
+                // We will set this later based on the key used for the json object, so we skip it for now.
+                continue;
+            }
 
-			if (KeyName == STR("Editor_RowNameHash"))
+            if (propertyNameWide == TEXT("Editor_RowNameHash"))
 			{
 				// We don't need to change this due to it being editor related, skip.
 				continue;
 			}
 
-			auto Property = RowStruct->GetPropertyByName(KeyName.c_str());
-			if (Property)
+			auto property = rowStruct->GetPropertyByName(propertyNameWide.c_str());
+			if (property)
 			{
 				try
 				{
-					PropertyHelper::CopyJsonValueToContainer(ItemRecipeData, Property, property_value);
+					PropertyHelper::CopyJsonValueToContainer(itemRecipeData, property, propertyValue);
 				}
 				catch (const std::exception& e)
 				{
-					FMemory::Free(ItemRecipeData);
+					FMemory::Free(itemRecipeData);
 					throw std::runtime_error(e.what());
 				}
 			}
 		}
 
-		auto ProductIdProperty = RowStruct->GetPropertyByName(STR("Product_Id"));
-		if (ProductIdProperty)
+		auto productIdProperty = rowStruct->GetPropertyByName(TEXT("Product_Id"));
+		if (productIdProperty)
 		{
-			FMemory::Memcpy(ProductIdProperty->ContainerPtrToValuePtr<void>(ItemRecipeData), &ItemId, sizeof(FName));
+			FMemory::Memcpy(productIdProperty->ContainerPtrToValuePtr<void>(itemRecipeData), &itemId, sizeof(FName));
 		}
 
-		m_itemRecipeTable->AddRow(ItemId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(ItemRecipeData));
+		m_itemRecipeTable->AddRow(itemId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(itemRecipeData));
 
-        PS::Log<LogLevel::Normal>(STR("Added new Recipe for Item '{}'.\n"), ItemId.ToString());
+        PS::Log<LogLevel::Normal>(TEXT("Added new Recipe for Item '{}'.\n"), itemId.ToString());
 	}
 
-	void PalItemModLoader::EditRecipe(const RC::Unreal::FName& ItemId, const nlohmann::json& Recipe)
+	void PalItemModLoader::EditRecipe(const RC::Unreal::FName& itemId, const nlohmann::json& recipe)
 	{
-		auto RowStruct = m_itemRecipeTable->GetRowStruct().Get();
+		auto rowStruct = m_itemRecipeTable->GetRowStruct().Get();
 
-		auto RecipeRow = m_itemRecipeTable->FindRowUnchecked(ItemId);
-		if (!RecipeRow)
+		auto recipeRow = m_itemRecipeTable->FindRowUnchecked(itemId);
+		if (!recipeRow)
 		{
-			throw std::runtime_error(std::format("Row for Recipe '{}' doesn't exist", RC::to_string(ItemId.ToString())));
+			throw std::runtime_error(std::format("Row for Recipe '{}' doesn't exist", RC::to_string(itemId.ToString())));
 		}
 
-		for (auto& [property_name, property_value] : Recipe.items())
+		for (auto& [propertyName, propertyValue] : recipe.items())
 		{
-			auto KeyName = RC::to_generic_string(property_name);
-			if (KeyName == STR("Editor_RowNameHash"))
+			auto propertyNameWide = RC::to_generic_string(propertyName);
+            if (propertyNameWide == TEXT("Editor_RowNameHash"))
 			{
 				// We don't need to change this due to it being editor related, skip.
 				continue;
 			}
 
-			auto Property = RowStruct->GetPropertyByName(KeyName.c_str());
-			if (Property)
+			auto property = rowStruct->GetPropertyByName(propertyNameWide.c_str());
+			if (property)
 			{
-				PropertyHelper::CopyJsonValueToContainer(RecipeRow, Property, property_value);
+				PropertyHelper::CopyJsonValueToContainer(recipeRow, property, propertyValue);
 			}
 		}
 
-        PS::Log<LogLevel::Normal>(STR("Modified Recipe for Item '{}'.\n"), ItemId.ToString());
+        PS::Log<LogLevel::Normal>(TEXT("Modified Recipe for Item '{}'.\n"), itemId.ToString());
 	}
 
-	void PalItemModLoader::AddTranslations(const RC::Unreal::FName& ItemId, const nlohmann::json& Data)
+	void PalItemModLoader::AddTranslations(const RC::Unreal::FName& itemId, const nlohmann::json& data)
 	{
-		if (Data.contains("Name"))
+		if (data.contains("Name"))
 		{
-			auto FixedItemId = std::format(STR("ITEM_NAME_{}"), ItemId.ToString());
-			auto TranslationRowStruct = m_nameTranslationTable->GetRowStruct().Get();
-			auto TextProperty = TranslationRowStruct->GetPropertyByName(STR("TextData"));
-			if (TextProperty)
-			{
-				auto TranslationRowData = FMemory::Malloc(TranslationRowStruct->GetStructureSize());
-				TranslationRowStruct->InitializeStruct(TranslationRowData);
+			auto rowId = std::format(TEXT("ITEM_NAME_{}"), itemId.ToString());
+			auto rowStruct = m_nameTranslationTable->GetRowStruct().Get();
+			auto textDataProperty = rowStruct->GetPropertyByName(TEXT("TextData"));
+            if (textDataProperty)
+            {
+                auto rowData = FMemory::Malloc(rowStruct->GetStructureSize());
+                rowStruct->InitializeStruct(rowData);
 
-				try
-				{
-					PropertyHelper::CopyJsonValueToContainer(TranslationRowData, TextProperty, Data.at("Name"));
-				}
-				catch (const std::exception& e)
-				{
-					FMemory::Free(TranslationRowData);
+                try
+                {
+                    PropertyHelper::CopyJsonValueToContainer(rowData, textDataProperty, data.at("Name"));
+                }
+                catch (const std::exception& e)
+                {
+                    FMemory::Free(rowData);
 					throw std::runtime_error(e.what());
 				}
 
-				m_nameTranslationTable->AddRow(FName(FixedItemId, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(TranslationRowData));
+				m_nameTranslationTable->AddRow(FName(rowId, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(rowData));
 			}
 		}
 
-		if (Data.contains("Description"))
+		if (data.contains("Description"))
 		{
-			auto FixedItemId = std::format(STR("ITEM_DESC_{}"), ItemId.ToString());
-			auto TranslationRowStruct = m_descriptionTranslationTable->GetRowStruct().Get();
-			auto TextProperty = TranslationRowStruct->GetPropertyByName(STR("TextData"));
-			if (TextProperty)
-			{
-				auto TranslationRowData = FMemory::Malloc(TranslationRowStruct->GetStructureSize());
-				TranslationRowStruct->InitializeStruct(TranslationRowData);
+			auto rowId = std::format(TEXT("ITEM_DESC_{}"), itemId.ToString());
+            auto rowStruct = m_descriptionTranslationTable->GetRowStruct().Get();
+            auto textDataProperty = rowStruct->GetPropertyByName(TEXT("TextData"));
+            if (textDataProperty)
+            {
+                auto rowData = FMemory::Malloc(rowStruct->GetStructureSize());
+                rowStruct->InitializeStruct(rowData);
 
-				try
-				{
-					PropertyHelper::CopyJsonValueToContainer(TranslationRowData, TextProperty, Data.at("Description"));
-				}
-				catch (const std::exception& e)
-				{
-					FMemory::Free(TranslationRowData);
-					throw std::runtime_error(e.what());
-				}
+                try
+                {
+                    PropertyHelper::CopyJsonValueToContainer(rowData, textDataProperty, data.at("Description"));
+                }
+                catch (const std::exception& e)
+                {
+                    FMemory::Free(rowData);
+                    throw std::runtime_error(e.what());
+                }
 
-				m_descriptionTranslationTable->AddRow(FName(FixedItemId, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(TranslationRowData));
+                m_descriptionTranslationTable->AddRow(FName(rowId, FNAME_Add), *reinterpret_cast<RC::Unreal::FTableRowBase*>(rowData));
 			}
 		}
 	}
 
-	void PalItemModLoader::EditTranslations(const RC::Unreal::FName& ItemId, const nlohmann::json& Data)
+	void PalItemModLoader::EditTranslations(const RC::Unreal::FName& itemId, const nlohmann::json& data)
 	{
-		if (Data.contains("Name"))
+		if (data.contains("Name"))
 		{
-			auto FixedItemId = std::format(STR("ITEM_NAME_{}"), ItemId.ToString());
-			auto TranslationRowStruct = m_nameTranslationTable->GetRowStruct().Get();
-			auto TextProperty = TranslationRowStruct->GetPropertyByName(STR("TextData"));
-			if (TextProperty)
+			auto rowId = std::format(TEXT("ITEM_NAME_{}"), itemId.ToString());
+			auto rowStruct = m_nameTranslationTable->GetRowStruct().Get();
+			auto textDataProperty = rowStruct->GetPropertyByName(TEXT("TextData"));
+			if (textDataProperty)
 			{
-				auto Row = m_nameTranslationTable->FindRowUnchecked(FName(FixedItemId, FNAME_Add));
-				if (Row)
+				auto row = m_nameTranslationTable->FindRowUnchecked(FName(rowId, FNAME_Add));
+				if (row)
 				{
-					PropertyHelper::CopyJsonValueToContainer(Row, TextProperty, Data.at("Name"));
+					PropertyHelper::CopyJsonValueToContainer(row, textDataProperty, data.at("Name"));
 				}
 			}
 		}
 
-		if (Data.contains("Description"))
+		if (data.contains("Description"))
 		{
-			auto FixedItemId = std::format(STR("ITEM_DESC_{}"), ItemId.ToString());
-			auto TranslationRowStruct = m_nameTranslationTable->GetRowStruct().Get();
-			auto TextProperty = TranslationRowStruct->GetPropertyByName(STR("TextData"));
-			if (TextProperty)
+			auto rowId = std::format(TEXT("ITEM_DESC_{}"), itemId.ToString());
+			auto rowStruct = m_nameTranslationTable->GetRowStruct().Get();
+			auto textDataProperty = rowStruct->GetPropertyByName(TEXT("TextData"));
+			if (textDataProperty)
 			{
-				auto Row = m_descriptionTranslationTable->FindRowUnchecked(FName(FixedItemId, FNAME_Add));
-				if (Row)
+				auto row = m_descriptionTranslationTable->FindRowUnchecked(FName(rowId, FNAME_Add));
+				if (row)
 				{
-					PropertyHelper::CopyJsonValueToContainer(Row, TextProperty, Data.at("Description"));
+					PropertyHelper::CopyJsonValueToContainer(row, textDataProperty, data.at("Description"));
 				}
 			}
 		}
 	}
 
-    void PalItemModLoader::AddItemData(const RC::Unreal::FName& ItemId, const nlohmann::json& Data)
+    void PalItemModLoader::AddItemData(const RC::Unreal::FName& itemId, const nlohmann::json& data)
     {
-        auto RowStruct = m_itemDataTable->GetRowStruct().Get();
-        FManagedStruct RowData{ RowStruct };
+        auto rowStruct = m_itemDataTable->GetRowStruct().Get();
 
-        auto LegalProp = RowStruct->GetPropertyByName(STR("bLegalInGame"));
-        if (!LegalProp)
+        auto legalProp = rowStruct->GetPropertyByName(TEXT("bLegalInGame"));
+        if (!legalProp)
         {
-            PS::Log<LogLevel::Error>(STR("Property 'bLegalInGame' does not exist in DT_ItemDataTable, skipping addition of data for {}.\n"), ItemId.ToString());
+            PS::Log<LogLevel::Error>(TEXT("Property 'bLegalInGame' does not exist in DT_ItemDataTable, skipping addition of data for {}.\n"), itemId.ToString());
             return;
         }
 
-        if (Data.contains("bLegalInGame"))
+        FManagedStruct rowData{ rowStruct };
+
+        if (data.contains("bLegalInGame"))
         {
-            PropertyHelper::CopyJsonValueToContainer(RowData.GetData(), LegalProp, Data.at("bLegalInGame"));
+            PropertyHelper::CopyJsonValueToContainer(rowData.GetData(), legalProp, data.at("bLegalInGame"));
         }
         else
         {
-            bool LegalValue = true;
-            FMemory::Memcpy(LegalProp->ContainerPtrToValuePtr<void>(RowData.GetData()), &LegalValue, sizeof(bool));
+            bool legalValue = true;
+            FMemory::Memcpy(legalProp->ContainerPtrToValuePtr<void>(rowData.GetData()), &legalValue, sizeof(bool));
         }
 
-        m_itemDataTable->AddRow(ItemId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData.GetData()));
+        m_itemDataTable->AddRow(itemId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(rowData.GetData()));
     }
 
-    void PalItemModLoader::InitializeDummyTranslations()
+    void PalItemModLoader::SetupHooks()
     {
-        PS::Log<LogLevel::Verbose>(STR("Skipping dummy translations...\n"));
-        return;
-        FPalLocalizedTextData NewDescRow{};
-        NewDescRow.TextData = FText(STR("A memory of a scrapped item from the past."));
-        m_descriptionTranslationTable->AddRow(FName(STR("ITEM_DESC_StaticDummy"), FNAME_Add), NewDescRow);
+        try
+        {
+            auto address = Palworld::SignatureManager::GetSignature("UPalItemSlot::UpdateItem_ServerInternal");
+            if (!address)
+            {
+                throw std::runtime_error("Signature for UPalItemSlot::UpdateItem_ServerInternal could not be found");
+            }
 
-        PS::Log<LogLevel::Verbose>(STR("Initialized Dummy Translations for ItemModLoader\n"));
+            ApplyItemSaveDataAddress = Palworld::SignatureManager::GetSignature("UPalItemContainer::ApplySaveData");
+            if (!ApplyItemSaveDataAddress)
+            {
+                throw std::runtime_error("Signature for UPalItemContainer::ApplySaveData could not be found");
+            }
+
+            auto address2 = Palworld::SignatureManager::GetSignature("UPalDynamicItemWorldSubsystem::Create_ServerInternal");
+            if (!address2)
+            {
+                throw std::runtime_error("Signature for UPalDynamicItemWorldSubsystem::Create_ServerInternal could not be found");
+            }
+
+            ApplyDynamicItemSaveDataAddress = Palworld::SignatureManager::GetSignature("UPalDynamicItemWorldSubsystem::ApplyWorldSaveData");
+            if (!ApplyDynamicItemSaveDataAddress)
+            {
+                throw std::runtime_error("Signature for UPalDynamicItemWorldSubsystem::ApplyWorldSaveData could not be found");
+            }
+
+            UpdateItem_ServerInternalHook = safetyhook::create_inline(reinterpret_cast<void*>(address),
+                UpdateItem_Detour);
+
+            DynamicItemHook = safetyhook::create_inline(reinterpret_cast<void*>(address2),
+                CreateDynamicItemDatabase_Detour);
+        }
+        catch (const std::exception& e)
+        {
+            PS::Log<LogLevel::Error>(TEXT("{}. PalSchema will be unable to clean up invalid items and worlds with invalid items will crash on load.\n"), 
+                                     RC::to_generic_string(e.what()));
+        }
+    }
+
+    bool PalItemModLoader::IsValidItem(RC::Unreal::UObject* worldContextObject, const RC::Unreal::FName& staticId)
+    {
+        auto itemIdManager = UPalUtility::GetItemIDManager(worldContextObject);
+        auto staticItemData = itemIdManager->GetStaticItemData(staticId);
+        if (staticItemData)
+        {
+            return true;
+        }
+        
+        return false;
+    }
+
+    void PalItemModLoader::UpdateItem_Detour(RC::Unreal::UObject* self, FPalItemId* itemId, int amount, bool param4, bool param5)
+    {
+        if (_ReturnAddress() == ApplyItemSaveDataAddress && !IsValidItem(self, itemId->StaticId))
+        {
+            PS::Log<LogLevel::Warning>(TEXT("Item '{}' is invalid. Deleting.\n"), itemId->StaticId.ToString());
+            itemId->StaticId = NAME_None;
+            amount = 0;
+        }
+
+        UpdateItem_ServerInternalHook.call(self, itemId, amount, param4, param5);
+    }
+
+    UPalDynamicItemDataBase* PalItemModLoader::CreateDynamicItemDatabase_Detour(RC::Unreal::UObject* self, FPalDynamicItemId* dynamicItemId, RC::Unreal::FName staticId, void* itemCreateParam)
+    {
+        if (_ReturnAddress() == ApplyDynamicItemSaveDataAddress && !IsValidItem(self, staticId))
+        {
+            PS::Log<LogLevel::Warning>(TEXT("Item '{}' is invalid. Dynamic data for this item will be deleted on next save.\n"), staticId.ToString());
+
+            // Shouldn't matter what we use as the staticId as long as it meets the two conditions:
+            // 1. Must exist in the vanilla game
+            // 2. Has a DynamicItemDataBase (Weapon, Armor, Egg)
+            staticId = FName(TEXT("ClothArmor"));
+            auto dynamicItemDatabase = DynamicItemHook.call<UPalDynamicItemDataBase*>(self, dynamicItemId, staticId, itemCreateParam);
+
+            // This makes it so that when the game saves, this dynamic data will be excluded which permanently removes it from the save.
+            dynamicItemDatabase->GetIgnoreOnSave() = true;
+            return dynamicItemDatabase;
+        }
+
+        return DynamicItemHook.call<UPalDynamicItemDataBase*>(self, dynamicItemId, staticId, itemCreateParam);
     }
 }

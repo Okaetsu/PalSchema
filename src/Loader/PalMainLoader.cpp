@@ -51,9 +51,6 @@ namespace Palworld {
         auto expected4 = GetPakFolders_Hook.disable();
         GetPakFolders_Hook = {};
 
-        auto expected5 = StaticItemDataTable_Get_Hook.disable();
-        StaticItemDataTable_Get_Hook = {};
-
         DatatableSerializeCallbacks.clear();
         GameInstanceInitCallbacks.clear();
         GetPakFoldersCallback.clear();
@@ -62,7 +59,6 @@ namespace Palworld {
     void PalMainLoader::PreInitialize()
     {
         HookDatatableSerialize();
-        HookStaticItemDataTable_Get();
         SetupAlternativePakPathReader();
     }
 
@@ -162,21 +158,6 @@ namespace Palworld {
         });
 
         PS::Log<LogLevel::Verbose>(STR("Core pre-initialized.\n"));
-    }
-
-    void PalMainLoader::HookStaticItemDataTable_Get()
-    {
-        auto StaticItemDataTable_GetFuncPtr = Palworld::SignatureManager::GetSignature("UPalStaticItemDataTable::Get");
-        if (!StaticItemDataTable_GetFuncPtr)
-        {
-            PS::Log<LogLevel::Error>(STR("Unable to apply dummy item fix, signature for UPalStaticItemDataTable::Get is outdated.\n"));
-            return;
-        }
-
-        StaticItemDataTable_Get_Hook = safetyhook::create_inline(reinterpret_cast<void*>(StaticItemDataTable_GetFuncPtr),
-            StaticItemDataTable_Get);
-
-        PS::Log<LogLevel::Verbose>(STR("Dummy item fix applied.\n"));
     }
 
     void PalMainLoader::HookGameInstanceInit()
@@ -387,30 +368,5 @@ namespace Palworld {
         {
             Callback(This);
         }
-    }
-
-    RC::Unreal::UObject* PalMainLoader::StaticItemDataTable_Get(UPalStaticItemDataTable* This, FName ItemId)
-    {
-        auto StaticItemData = StaticItemDataTable_Get_Hook.call<UObject*>(This, ItemId);
-        if (StaticItemData)
-        {
-            return StaticItemData;
-        }
-
-        // Some callers pass in an ItemId of NONE, but actually handle nullptr properly, so it is safe to pass the return back here.
-        if (ItemId == RC::Unreal::NAME_None)
-        {
-            return StaticItemData;
-        }
-
-        if (ItemId.ToString().starts_with(STR("SkillUnlock_")))
-        {
-            return StaticItemData;
-        }
-
-        // If we got to this point, that means we actually have a nullptr to some item that used to exist, which means it is not safe to return nullptr.
-        // Instead, we'll generate a dummy item for that ItemId and return it.
-        // Subsequent calls to this hook with the same ItemId will just return in the first if block since it was added to StaticItemDataAsset.
-        return PalItemModLoader::AddDummyItem(This, ItemId);
     }
 }
