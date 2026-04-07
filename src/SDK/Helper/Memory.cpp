@@ -27,6 +27,21 @@ namespace Palworld {
         return vtablePtr;
     }
 
+    void* GetVirtualFunctionFromClass(RC::Unreal::UClass* targetClass, size_t offset)
+    {
+        auto& cdo = targetClass->GetClassDefaultObject();
+        if (!cdo)
+        {
+            PS::Log<LogLevel::Error>(STR("Unable to get VTable pointer for {}, class default object not found.\n"), targetClass->GetFullName());
+            return nullptr;
+        }
+
+        uintptr_t** vtablePtr = *(uintptr_t***)cdo;
+        void* vfuncptr = (void*)vtablePtr[offset];
+
+        return vfuncptr;
+    }
+
     void* GetVirtualFunctionFromVTable(uintptr_t** vtable, size_t offset)
     {
         void* vfuncptr = (void*)vtable[offset];
