@@ -23,6 +23,9 @@ namespace Palworld {
             { "AsyncTask", "48 8B C4 41 54 41 57 48 81 EC B8 00 00 00 48 89 58 08" },
             // Used to initialize any other loader logic like pals, items, etc
             { "AGameModeBase::InitGameState", "40 53 48 83 EC 20 48 8B 41 10 48 8B D9 48 8B 91 F0 02 00 00" },
+            { "UClass::AssembleReferenceTokenStream", "48 8B C4 55 56 48 8D 68 A1 48 81 EC A8 00 00 00 48 89 58 10 48 8D B1 F8 01 00 00" },
+            { "UClass::GetDefaultObject", "40 53 48 83 EC 20 48 83 B9 10 01 00 00 00 48 8B D9 75 1A 84 D2 74 16 48 8B 01" },
+            { "UStruct::StaticLink", "48 89 5C 24 08 57 48 81 EC C0 00 00 00 48 8B F9 0F B6 DA 48 8D 4C 24 20" },
             // UE4SS has StaticFindObject, but this lets us use it earlier.
             { "UObjectGlobals::StaticFindObject", "48 8B C4 48 89 58 08 48 89 68 18 48 89 70 20 57 41 56 41 57 48 83 EC 60 48 83 FA FF" },
             // I had issues using the IsA provided by UE4SS due to early init, so I switched to using Unreal's own.
