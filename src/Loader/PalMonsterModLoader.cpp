@@ -56,7 +56,7 @@ namespace Palworld {
         {
             m_monsterDataTable = GetDatatableByName("DT_PalMonsterParameter");
             m_iconDataTable = GetDatatableByName("DT_PalCharacterIconDataTable");
-            m_palBpClassTable = GetDatatableByName("DT_PalCharacterIconDataTable");
+            m_palBpClassTable = GetDatatableByName("DT_PalBPClass");
             m_wazaMasterLevelTable = GetDatatableByName("DT_WazaMasterLevel");
             m_palDropItemTable = GetDatatableByName("DT_PalDropItem");
             m_palNameTable = GetDatatableByName("DT_PalNameText");
