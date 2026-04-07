@@ -21,11 +21,18 @@ namespace Palworld {
         virtual bool CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase) override final;
         virtual bool OnInitialize() override final;
     private:
+        // Creates a new BP_Action_SpawnItem class and returns the class default object for it.
+        RC::Unreal::UObject* CreateSpawnItemActionByCharacterId(const RC::Unreal::FName& characterId);
+
+        void InitializeDefaultRanchPalsList();
+
         void LoadPals(const nlohmann::json& data);
 
         void Add(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties);
 
         void Edit(uint8_t* TableRow, const RC::Unreal::FName& CharacterId, const nlohmann::json& properties);
+
+        void HandleRanchSuitability(uint8_t* row, const RC::Unreal::FName& characterId, const nlohmann::json& data);
 
         void AddIcon(const RC::Unreal::FName& CharacterId, const RC::StringType& IconPath);
 
@@ -39,13 +46,16 @@ namespace Palworld {
 
         void EditTranslations(const RC::Unreal::FName& CharacterId, const nlohmann::json& Data);
 
-        RC::Unreal::UDataTable* m_monsterDataTable;
-        RC::Unreal::UDataTable* m_iconDataTable;
-        RC::Unreal::UDataTable* m_palBpClassTable;
-        RC::Unreal::UDataTable* m_wazaMasterLevelTable;
-        RC::Unreal::UDataTable* m_palDropItemTable;
-        RC::Unreal::UDataTable* m_palNameTable;
-        RC::Unreal::UDataTable* m_palShortDescTable;
-        RC::Unreal::UDataTable* m_palLongDescTable;
+        RC::Unreal::UDataTable* m_monsterDataTable{};
+        RC::Unreal::UDataTable* m_iconDataTable{};
+        RC::Unreal::UDataTable* m_palBpClassTable{};
+        RC::Unreal::UDataTable* m_wazaMasterLevelTable{};
+        RC::Unreal::UDataTable* m_palDropItemTable{};
+        RC::Unreal::UDataTable* m_palNameTable{};
+        RC::Unreal::UDataTable* m_palShortDescTable{};
+        RC::Unreal::UDataTable* m_palLongDescTable{};
+
+        RC::Unreal::UClass* m_spawnItemBaseClass{};
+        RC::Unreal::TSet<RC::Unreal::FName> m_defaultFarmPals;
     };
 }

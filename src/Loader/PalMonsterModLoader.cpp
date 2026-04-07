@@ -1,15 +1,19 @@
-#include "Unreal/UObjectGlobals.hpp"
-#include "Unreal/UScriptStruct.hpp"
-#include "Unreal/FProperty.hpp"
+#include "Unreal/CoreUObject/UObject/UnrealType.hpp"
+#include "Unreal/Property/FEnumProperty.hpp"
 #include "Unreal/Engine/UDataTable.hpp"
 #include "SDK/Classes/KismetInternationalizationLibrary.h"
+#include "SDK/Classes/Custom/UObjectGlobals.h"
 #include "SDK/Structs/FPalCharacterIconDataRow.h"
 #include "SDK/Structs/FPalBPClassDataRow.h"
 #include "SDK/Helper/PropertyHelper.h"
 #include "Utility/Logging.h"
 #include "Utility/JsonHelpers.h"
+#include "Utility/EnumHelpers.h"
 #include "Helpers/String.hpp"
 #include "Loader/PalMonsterModLoader.h"
+#include "SDK/Classes/KismetSystemLibrary.h"
+#include "SDK/Classes/Custom/UBlueprintGeneratedClass.h"
+#include "SDK/Helper/BPGeneratedClassHelper.h"
 
 using namespace RC;
 using namespace RC::Unreal;
@@ -62,6 +66,18 @@ namespace Palworld {
             m_palNameTable = GetDatatableByName("DT_PalNameText");
             m_palShortDescTable = GetDatatableByName("DT_PalShortDescriptionText");
             m_palLongDescTable = GetDatatableByName("DT_PalLongDescriptionText");
+
+            auto assetPath = TEXT("/Game/Pal/Blueprint/Action/Common/SpawnItem/Base/BP_Action_SpawnItemBase.BP_Action_SpawnItemBase_C");
+            auto softObjectPtr = UECustom::TSoftObjectPtr<UObject>(UECustom::FSoftObjectPath(assetPath));
+            auto loadedAsset = static_cast<UClass*>(UECustom::UKismetSystemLibrary::LoadAsset_Blocking(softObjectPtr));
+            if (!loadedAsset)
+            {
+                throw std::runtime_error(RC::fmt("Asset '%S' was invalid", assetPath));
+            }
+            loadedAsset->SetRootSet();
+            m_spawnItemBaseClass = loadedAsset;
+
+            InitializeDefaultRanchPalsList();
         }
         catch (const std::exception& e)
         {
@@ -70,6 +86,42 @@ namespace Palworld {
         }
 
         return true;
+    }
+
+    RC::Unreal::UObject* PalMonsterModLoader::CreateSpawnItemActionByCharacterId(const RC::Unreal::FName& characterId)
+    {
+        if (!m_spawnItemBaseClass)
+        {
+            PS::Log<LogLevel::Error>(
+                TEXT("Unable to create a Spawn Item Action Class for {}, because base spawn item class was invalid.\n"), characterId.ToString());
+            return nullptr;
+        }
+
+        auto newPackageName = FName(std::format(TEXT("/PalSchema/SpawnItem/BP_Action_SpawnItem_{}"), characterId.ToString()));
+        auto newAssetName = FName(std::format(TEXT("BP_Action_SpawnItem_{}_C"), characterId.ToString()));
+        auto objectFlags = static_cast<EObjectFlags>(RF_Public | RF_Transient);
+        auto newBPClass = UECustom::BPGeneratedClassHelper::CreateInheritedBlueprintClass(m_spawnItemBaseClass, newPackageName, newAssetName, objectFlags);
+
+        auto cdo = newBPClass->GetDefaultObject(true);
+        cdo->SetRootSet();
+
+        return cdo;
+    }
+
+    void PalMonsterModLoader::InitializeDefaultRanchPalsList()
+    {
+        auto& paramMap = m_monsterDataTable->GetRowMap();
+        auto paramRowStruct = m_monsterDataTable->GetRowStruct().Get();
+
+        for (auto& [key, value] : paramMap)
+        {
+            auto farmProperty = PropertyHelper::GetPropertyByName(paramRowStruct, TEXT("WorkSuitability_MonsterFarm"));
+            auto farmValue = *farmProperty->ContainerPtrToValuePtr<int>(value);
+            if (farmValue > 0)
+            {
+                m_defaultFarmPals.Add(key);
+            }
+        }
     }
 
     void PalMonsterModLoader::LoadPals(const nlohmann::json& data)
@@ -158,7 +210,7 @@ namespace Palworld {
 			}
 			else if (KeyName == STR("ActorClassPath"))
 			{
-				auto BlueprintTableRow = std::bit_cast<FPalBPClassDataRow*>(m_palBpClassTable->FindRowUnchecked(CharacterId));
+                auto BlueprintTableRow = std::bit_cast<FPalBPClassDataRow*>(m_palBpClassTable->FindRowUnchecked(CharacterId));
 				if (BlueprintTableRow)
 				{
 					auto BlueprintPath = RC::to_generic_string(value.get<std::string>());
@@ -179,8 +231,82 @@ namespace Palworld {
 			}
 		}
 
+        HandleRanchSuitability(TableRow, CharacterId, properties);
 		EditTranslations(CharacterId, properties);
 	}
+
+    void PalMonsterModLoader::HandleRanchSuitability(uint8_t* row, const RC::Unreal::FName& characterId, const nlohmann::json& data)
+    {
+        // Skip pals that already have ranch suitability in the base game.
+        if (m_defaultFarmPals.Contains(characterId)) return;
+
+        auto rowStruct = m_monsterDataTable->GetRowStruct().Get();
+        auto ranchSuitabilityProperty = PropertyHelper::GetPropertyByName(rowStruct, TEXT("WorkSuitability_MonsterFarm"));
+        auto ranchSuitability = *ranchSuitabilityProperty->ContainerPtrToValuePtr<int>(row);
+
+        if (ranchSuitability <= 0 || !data.contains("RanchActionData")) return;
+
+        auto& ranchActionData = data.at("RanchActionData");
+        if (!ranchActionData.is_object())
+        {
+            PS::Log<LogLevel::Error>(
+                TEXT("Unable to create a Spawn Item Action Class for {}, field 'RanchActionData' must be an object."), characterId.ToString());
+            return;
+        }
+
+        auto bpCharacterRow = std::bit_cast<FPalBPClassDataRow*>(m_palBpClassTable->FindRowUnchecked(characterId));
+        if (!bpCharacterRow)
+        {
+            PS::Log<LogLevel::Error>(
+                TEXT("Unable to create a Spawn Item Action Class for {}, DT_PalBPClass doesn't have a row for this pal."), characterId.ToString());
+            return;
+        }
+
+        auto bpCharacterPath = UECustom::TSoftObjectPtr<UObject>(UECustom::FSoftObjectPath(bpCharacterRow->BPClass.ToSoftObjectPath()));
+        auto bpCharacterClass = static_cast<UClass*>(UECustom::UKismetSystemLibrary::LoadAsset_Blocking(bpCharacterPath, true));
+        if (!bpCharacterClass)
+        {
+            PS::Log<LogLevel::Error>(
+                TEXT("Unable to create a Spawn Item Action Class for {}, failed to load character blueprint."), characterId.ToString());
+            return;
+        }
+
+        auto bpCharacterCDO = static_cast<UObject*>(bpCharacterClass->GetClassDefaultObject().Get());
+        auto actionComponentProp = PropertyHelper::GetPropertyByName(bpCharacterClass, TEXT("ActionComponent"));
+        if (!actionComponentProp)
+        {
+            PS::Log<LogLevel::Error>(
+                TEXT("Unable to create a Spawn Item Action Class for {}, failed to get 'ActionComponent' property."), characterId.ToString());
+            return;
+        }
+
+        auto actionComponent = *actionComponentProp->ContainerPtrToValuePtr<UObject*>(bpCharacterCDO);
+        if (!actionComponent) return;
+
+        auto actionMapProp = static_cast<FMapProperty*>(PropertyHelper::GetPropertyByName(actionComponent->GetClassPrivate(), TEXT("ActionMap")));
+        auto& actionMap = *actionMapProp->ContainerPtrToValuePtr<TMap<uint8_t, UClass*>>(actionComponent);
+
+        auto newSpawnAction = CreateSpawnItemActionByCharacterId(characterId);
+        if (!newSpawnAction) return;
+
+        const std::vector<std::string> validPropertyNames = { "ChargeMontage", "FunMontage", "ChargeFacialEye", "FunFacialEye", "SpawnSocketName",
+                                                              "SpawnLocationOffset", "SpawnItemRotator" };
+
+        for (auto& propertyName : validPropertyNames)
+        {
+            if (!ranchActionData.contains(propertyName)) continue;
+
+            auto propertyNameWide = RC::to_generic_string(propertyName);
+            auto property = PropertyHelper::GetPropertyByName(newSpawnAction->GetClassPrivate(), propertyNameWide.c_str());
+            PropertyHelper::CopyJsonValueToContainer(newSpawnAction, property, ranchActionData.at(propertyName));
+        }
+
+        auto actionMapKeyProp = static_cast<FEnumProperty*>(actionMapProp->GetKeyProp());
+        auto spawnItemEnumValue = PS::EnumHelpers::GetEnumValueByName(actionMapKeyProp->GetEnum(), FName(TEXT("EPalActionType::SpawnItem")));
+        actionMap.Add(static_cast<uint8>(spawnItemEnumValue), newSpawnAction->GetClassPrivate());
+        
+        PS::Log<LogLevel::Normal>(STR("Added SpawnItem action for {}\n"), characterId.ToString());
+    }
 
 	void PalMonsterModLoader::AddIcon(const RC::Unreal::FName& CharacterId, const RC::StringType& IconPath)
 	{
