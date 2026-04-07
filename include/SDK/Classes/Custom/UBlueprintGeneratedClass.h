@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Unreal/CoreUObject/UObject/Class.hpp"
+#include "SDK/Classes/Custom/UClassWrapper.h"
 #include "SDK/Classes/Custom/USimpleConstructionScript.h"
 
 namespace RC::Unreal {
@@ -10,8 +10,12 @@ namespace RC::Unreal {
 namespace UECustom {
     class UInheritableComponentHandler;
 
-    class UBlueprintGeneratedClass : public RC::Unreal::UClass {
+    class UBlueprintGeneratedClass : public UECustom::UClassWrapper {
     public:
+        static RC::Unreal::UClass* StaticClass();
+
+        void PurgeClass(bool bRecompilingOnLoad);
+
         UInheritableComponentHandler* GetInheritableComponentHandler();
 
         USimpleConstructionScript* GetSimpleConstructionScript();
