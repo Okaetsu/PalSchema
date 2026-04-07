@@ -12,7 +12,9 @@ namespace UECustom {
 
 		static FSoftObjectPath MakeSoftObjectPath(const RC::Unreal::FString& Path);
 
-		static RC::Unreal::UObject* LoadAsset_Blocking(UECustom::TSoftObjectPtr<RC::Unreal::UObject> Asset);
+		static RC::Unreal::UObject* LoadAsset_Blocking(UECustom::TSoftObjectPtr<RC::Unreal::UObject> Asset, bool bSetRootSet = false);
+
+		static RC::Unreal::UObject* LoadAsset_Blocking(const RC::StringType& AssetPath, bool bSetRootSet = false);
 	private:
 		static UKismetSystemLibrary* GetDefaultObj();
 	};
