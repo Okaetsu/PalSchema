@@ -9,4 +9,7 @@ namespace RC::Unreal {
 
 namespace PS::EnumHelpers {
     RC::Unreal::int64 GetEnumValueByName(RC::Unreal::UEnum* enum_, const std::string& enumString);
+
+    // Expects the enum name to be in the following format: Namespace::Name, e.g. EPalWazaID::TidalWave
+    RC::Unreal::int64 GetEnumValueByName(RC::Unreal::UEnum* enumClass, const RC::Unreal::FName& enumName);
 }

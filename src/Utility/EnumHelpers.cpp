@@ -29,4 +29,19 @@ namespace PS::EnumHelpers {
 
         return 0;
     }
+
+    RC::Unreal::int64 GetEnumValueByName(RC::Unreal::UEnum* enumClass, const RC::Unreal::FName& enumName)
+    {
+        for (const auto& enumPair : enumClass->GetEnumNames())
+        {
+            if (enumPair.Key == enumName)
+            {
+                return enumPair.Value;
+            }
+        }
+
+        PS::Log<LogLevel::Warning>(STR("Enum '{}' doesn't exist."), enumName.ToString());
+
+        return 0;
+    }
 }
