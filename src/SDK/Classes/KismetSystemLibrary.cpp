@@ -42,7 +42,7 @@ namespace UECustom {
 		return params.ReturnValue;
 	}
 
-    RC::Unreal::UObject* UKismetSystemLibrary::LoadAsset_Blocking(UECustom::TSoftObjectPtr<UObject> Asset)
+    RC::Unreal::UObject* UKismetSystemLibrary::LoadAsset_Blocking(UECustom::TSoftObjectPtr<UObject> Asset, bool bSetRootSet)
     {
         static auto Function = UECustom::UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, TEXT("/Script/Engine.KismetSystemLibrary:LoadAsset_Blocking"));
 
@@ -61,7 +61,19 @@ namespace UECustom {
 
         GetDefaultObj()->ProcessEvent(Function, &params);
 
+        if (params.ReturnValue && bSetRootSet)
+        {
+            params.ReturnValue->SetRootSet();
+        }
+
         return params.ReturnValue;
+    }
+
+    RC::Unreal::UObject* UKismetSystemLibrary::LoadAsset_Blocking(const RC::StringType& AssetPath, bool bSetRootSet)
+    {
+        auto SoftObjectPtr = UECustom::TSoftObjectPtr<UObject>(UECustom::FSoftObjectPath(AssetPath));
+        auto LoadedAsset = LoadAsset_Blocking(SoftObjectPtr, bSetRootSet);
+        return LoadedAsset;
     }
 
 	UKismetSystemLibrary* UKismetSystemLibrary::GetDefaultObj()
