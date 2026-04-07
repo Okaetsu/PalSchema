@@ -21,6 +21,11 @@ using namespace RC::Unreal;
 namespace Palworld {
     void PropertyHelper::CopyJsonValueToContainer(void* Container, FProperty* Property, const nlohmann::json& Value)
     {
+        if (!Property)
+        {
+            throw std::runtime_error("A null Property was supplied to PropertyHelper::CopyJsonValueToContainer.");
+        }
+
         auto PropertyName = Property->GetName();
         auto Type = Property->GetCPPType();
         auto Class = Property->GetClass();
@@ -261,23 +266,38 @@ namespace Palworld {
     {
         ValidateJsonValueType(Property, Value);
 
-        auto ParsedValue = Value.get<nlohmann::json>();
-        auto ObjectValue = *Property->ContainerPtrToValuePtr<UObject*>(Data);
-        if (ObjectValue)
+        if (Value.is_string())
         {
-            for (auto& [InnerKey, InnerValue] : Value.items())
+            auto StringValue = Value.get<std::string>();
+            auto WideStringValue = RC::to_generic_string(StringValue);
+            auto LoadedObject = UECustom::UKismetSystemLibrary::LoadAsset_Blocking(WideStringValue, true);
+            if (!LoadedObject)
             {
-                auto ObjectValue_PropertyName = RC::to_generic_string(InnerKey);
-                auto ObjectValue_Property = ObjectValue->GetPropertyByNameInChain(ObjectValue_PropertyName.c_str());
-
-                if (!ObjectValue_Property)
+                PS::Log<LogLevel::Error>(STR("Unable to apply changes to {} because provided asset was invalid.\n"), Property->GetName());
+                return;
+            }
+            *Property->ContainerPtrToValuePtr<UObject*>(Data) = LoadedObject;
+        }
+        else if (Value.is_object())
+        {
+            auto ObjectValue = *Property->ContainerPtrToValuePtr<UObject*>(Data);
+            auto ParsedValue = Value.get<nlohmann::json>();
+            if (ObjectValue)
+            {
+                for (auto& [InnerKey, InnerValue] : Value.items())
                 {
-                    ObjectValue_Property = Palworld::PropertyHelper::GetPropertyByName(ObjectValue->GetClassPrivate(), ObjectValue_PropertyName);
-                }
+                    auto ObjectValue_PropertyName = RC::to_generic_string(InnerKey);
+                    auto ObjectValue_Property = ObjectValue->GetPropertyByNameInChain(ObjectValue_PropertyName.c_str());
 
-                if (ObjectValue_Property)
-                {
-                    CopyJsonValueToContainer(ObjectValue, ObjectValue_Property, InnerValue);
+                    if (!ObjectValue_Property)
+                    {
+                        ObjectValue_Property = Palworld::PropertyHelper::GetPropertyByName(ObjectValue->GetClassPrivate(), ObjectValue_PropertyName);
+                    }
+
+                    if (ObjectValue_Property)
+                    {
+                        CopyJsonValueToContainer(ObjectValue, ObjectValue_Property, InnerValue);
+                    }
                 }
             }
         }
@@ -474,7 +494,7 @@ namespace Palworld {
         }
         else if (auto ObjectProperty = CastProperty<FObjectProperty>(Property) && PropertyClassName == STR("ObjectProperty"))
         {
-            if (!Value.is_object()) throw std::runtime_error(std::format("Property {} must be an object", PropertyName));
+            if (!Value.is_object() && !Value.is_string()) throw std::runtime_error(std::format("Property {} must be an object or string", PropertyName));
         }
         else if (auto SoftObjectProperty = CastProperty<FSoftObjectProperty>(Property) && PropertyClassName == STR("SoftObjectProperty"))
         {
