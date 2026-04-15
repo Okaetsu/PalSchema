@@ -30,7 +30,7 @@ namespace Palworld {
         auto expected = PostLoadHook.disable();
         PostLoadHook = {};
         PostLoadCallback = nullptr;
-        BPModRegistry.clear();
+        m_modsMap.clear();
     }
 
     void PalBlueprintModLoader::OnLoad(const std::filesystem::path& loaderPath, const RC::StringType& modName, const EEngineLifecyclePhase& engineLifecyclePhase)
@@ -66,44 +66,39 @@ namespace Palworld {
         return false;
     }
 
-    void PalBlueprintModLoader::OnPostLoadDefaultObject(RC::Unreal::UClass* This, RC::Unreal::UObject* DefaultObject)
-    {
-        if (!DefaultObject) return;
-
-        auto BPName = This->GetNamePrivate().ToString();
-        if (Palworld::PalBlueprintModLoader::BPModRegistry.contains(BPName))
-        {
-            auto& Mods = PalBlueprintModLoader::GetModsForBlueprint(BPName);
-            for (auto& Mod : Mods)
-            {
-                try
-                {
-                    PalBlueprintModLoader::ApplyMod(Mod, DefaultObject);
-                    PS::Log<RC::LogLevel::Normal>(TEXT("Applied modifications to {}\n"), BPName);
-                }
-                catch (const std::exception& e)
-                {
-                    PS::Log<RC::LogLevel::Error>(TEXT("Failed modifying blueprint '{}', {}\n"), BPName, RC::to_generic_string(e.what()));
-                }
-            }
-        }
-    }
-
     bool PalBlueprintModLoader::OnInitialize()
     {
-        // Should in theory be more consistent than finding a signature for BlueprintGeneratedClass::PostLoad
-        auto vtablePtr = Palworld::GetVTablePtrByClassPath(TEXT("/Script/Engine.BlueprintGeneratedClass"));
-        if (!vtablePtr)
+        // PostLoad hook handles default objects for classes
+        if (!HookPostLoad())
         {
-            PS::Log<LogLevel::Error>(TEXT("Something went wrong getting VTable pointer for BlueprintGeneratedClass. Cannot hook PostLoad which means blueprint mods will not function.\n"));
+            PS::Log<LogLevel::Error>(TEXT("Cannot hook UBlueprintGeneratedClass::PostLoad which means blueprint mods will not function properly.\n"));
             return false;
         }
 
-        void* postloadPtr = Palworld::GetVirtualFunctionFromVTable(vtablePtr, 20);
+        // PostInitComponents hook handles actor instances
+        if (!HookPostInitComponents())
+        {
+            PS::Log<LogLevel::Error>(TEXT("Cannot hook AActor::PostInitComponents which means blueprint mods will not function properly.\n"));
+            return false;
+        }
+
+        return true;
+    }
+
+    bool PalBlueprintModLoader::HookPostLoad()
+    {
+        auto vtable = Palworld::GetVTablePtrByClassPath(TEXT("/Script/Engine.BlueprintGeneratedClass"));
+        if (!vtable)
+        {
+            PS::Log<LogLevel::Error>(STR("Something went wrong with getting VTable pointer for UBlueprintGeneratedClass."));
+            return false;
+        }
+
+        void* postloadPtr = Palworld::GetVirtualFunctionFromVTable(vtable, 20);
         PS::Log<LogLevel::Verbose>(TEXT("Found UBlueprintGeneratedClass::PostLoad: {}\n"), postloadPtr);
 
-        PostLoadCallback = [&](UClass* BPGeneratedClass) {
-            OnPostLoadDefaultObject(BPGeneratedClass, BPGeneratedClass->GetClassDefaultObject());
+        PostLoadCallback = [&](UClass* actorClass) {
+            ModifyObject(actorClass->GetClassDefaultObject());
         };
 
         PostLoadHook = safetyhook::create_inline(postloadPtr,
@@ -112,221 +107,273 @@ namespace Palworld {
         return true;
     }
 
+    bool PalBlueprintModLoader::HookPostInitComponents()
+    {
+        auto vtable = Palworld::GetVTablePtrByClassPath(TEXT("/Script/Engine.Actor"));
+        if (!vtable)
+        {
+            PS::Log<LogLevel::Error>(TEXT("Something went wrong with getting VTable pointer for AActor.\n"));
+            return false;
+        }
+
+        void* postInitCompsPtr = Palworld::GetVirtualFunctionFromVTable(vtable, 159);
+        PS::Log<LogLevel::Verbose>(TEXT("Found AActor::PostInitializeComponents: {}\n"), postInitCompsPtr);
+
+        PostInitComponentsCallback = [&](AActor* self) {
+            ModifyObject(self);
+        };
+
+        PostInitComponentsHook = safetyhook::create_inline(postInitCompsPtr,
+            reinterpret_cast<void*>(PostInitComponents));
+
+        return true;
+    }
+
     void PalBlueprintModLoader::LoadSafe(const nlohmann::json& data)
     {
-        for (auto& [BlueprintName, BlueprintData] : data.items())
+        for (auto& [assetName, assetData] : data.items())
         {
-            auto BlueprintName_Conv = RC::to_generic_string(BlueprintName);
-            if (!BlueprintName_Conv.starts_with(TEXT("/Game/")))
+            auto assetNameWide = RC::to_generic_string(assetName);
+            if (!assetNameWide.starts_with(TEXT("/Game/")))
             {
-                auto NewBlueprintMod = PalBlueprintMod(BlueprintName, BlueprintData);
-                auto ModsIt = BPModRegistry.find(BlueprintName_Conv);
-                if (ModsIt != BPModRegistry.end())
+                auto assetFName = FName(assetNameWide, FNAME_Add);
+                auto newMod = PalBlueprintMod(assetFName, assetData);
+                auto it = m_modsMap.find(assetFName);
+                if (it != m_modsMap.end())
                 {
-                    BPModRegistry.at(BlueprintName_Conv).push_back(NewBlueprintMod);
+                    m_modsMap.at(assetFName).push_back(newMod);
                 }
                 else
                 {
-                    auto NewModContainer = std::vector<PalBlueprintMod>{
-                        NewBlueprintMod
+                    auto newModContainer = std::vector<PalBlueprintMod>{
+                        newMod
                     };
-                    BPModRegistry.emplace(BlueprintName_Conv, NewModContainer);
+                    m_modsMap.emplace(assetFName, newModContainer);
                 }
+
+                PS::Log<LogLevel::Normal>(STR("Loaded changes to {}\n"), assetNameWide);
             }
         }
     }
 
     void PalBlueprintModLoader::LoadUnsafe(const nlohmann::json& data)
     {
-        for (auto& [BlueprintName, BlueprintData] : data.items())
+        for (auto& [assetName, assetData] : data.items())
         {
-            auto BlueprintNameWide = RC::to_generic_string(BlueprintName);
-            if (BlueprintNameWide.starts_with(TEXT("/Game/")))
+            auto assetNameWide = RC::to_generic_string(assetName);
+            if (assetNameWide.starts_with(TEXT("/Game/")))
             {
                 static const std::wregex Pattern(LR"(^(.*/)([^/.]+)$)");
-                BlueprintNameWide = std::regex_replace(BlueprintNameWide, Pattern, TEXT("$1$2.$2_C"));
+                assetNameWide = std::regex_replace(assetNameWide, Pattern, TEXT("$1$2.$2_C"));
 
-                auto SoftObjectPtr = UECustom::TSoftObjectPtr<UObject>(UECustom::FSoftObjectPath(BlueprintNameWide));
-                auto Asset = UECustom::UKismetSystemLibrary::LoadAsset_Blocking(SoftObjectPtr);
-                if (!Asset)
+                auto softObjectPtr = UECustom::TSoftObjectPtr<UObject>(UECustom::FSoftObjectPath(assetNameWide));
+                auto asset = UECustom::UKismetSystemLibrary::LoadAsset_Blocking(softObjectPtr);
+                if (!asset)
                 {
-                    throw std::runtime_error(RC::fmt("Failed to apply blueprint changes, asset '%S' was invalid", BlueprintNameWide.c_str()));
+                    throw std::runtime_error(RC::fmt("Failed to apply blueprint changes, asset '%S' was invalid", assetNameWide.c_str()));
                 }
 
-                Asset->SetRootSet();
+                asset->SetRootSet();
 
-                auto DefaultObject = static_cast<UClass*>(Asset)->GetClassDefaultObject();
-                ApplyMod(BlueprintData, DefaultObject);
+                auto& defaultObject = static_cast<UClass*>(asset)->GetClassDefaultObject();
+                ApplyData(assetData, defaultObject.Get());
 
-                PS::Log<RC::LogLevel::Normal>(TEXT("Applied changes to {}\n"), static_cast<UClass*>(Asset)->GetNamePrivate().ToString());
+                PS::Log<RC::LogLevel::Normal>(TEXT("Applied changes to {}\n"), static_cast<UClass*>(asset)->GetNamePrivate().ToString());
             }
         }
     }
 
-    std::vector<PalBlueprintMod>& PalBlueprintModLoader::GetModsForBlueprint(const RC::StringType& Name)
+    std::vector<PalBlueprintMod>& PalBlueprintModLoader::GetModsForBlueprint(const RC::Unreal::FName& name)
     {
-        auto Iterator = BPModRegistry.find(Name);
-        if (Iterator != BPModRegistry.end())
+        auto it = m_modsMap.find(name);
+        if (it != m_modsMap.end())
         {
-            return Iterator->second;
+            return it->second;
         }
 
-        throw std::runtime_error(RC::fmt("Failed to get mods for this blueprint from BPModRegistry. Affected mod name: %S", Name.c_str()));
+        throw std::runtime_error(RC::fmt("Failed to get mods for this blueprint. Affected mod name: %S", name.ToString().c_str()));
     }
 
-    void PalBlueprintModLoader::ApplyMod(const PalBlueprintMod& BPMod, UObject* Object)
+    void PalBlueprintModLoader::ModifyObject(RC::Unreal::UObject* object)
     {
-        auto& Data = BPMod.GetData();
-        ApplyMod(Data, Object);
-    }
+        if (!object) return;
 
-    void PalBlueprintModLoader::ApplyMod(const nlohmann::json& Data, RC::Unreal::UObject* Object)
-    {
-        auto Class = static_cast<UECustom::UBlueprintGeneratedClass*>(Object->GetClassPrivate());
+        auto objectClass = object->GetClassPrivate();
+        auto& objectName = objectClass->GetNamePrivate();
 
-        for (auto& [PropertyName, PropertyValue] : Data.items())
+        if (!m_modsMap.contains(objectName))
         {
-            auto PropertyNameWide = RC::to_generic_string(PropertyName);
-            auto Property = Palworld::PropertyHelper::GetPropertyByName(Class, PropertyNameWide);
-            
-            if (!Property)
+            return;
+        }
+
+        auto& mods = GetModsForBlueprint(objectName);
+        for (auto& mod : mods)
+        {
+            try
             {
-                PS::Log<RC::LogLevel::Warning>(TEXT("Property '{}' does not exist in {}\n"), PropertyNameWide, Class->GetNamePrivate().ToString());
+                ApplyMod(mod, object);
+            }
+            catch (const std::exception& e)
+            {
+                PS::Log<RC::LogLevel::Error>(TEXT("Failed modifying blueprint '{}', {}\n"), objectName.ToString(), RC::to_generic_string(e.what()));
+            }
+        }
+    }
+
+    void PalBlueprintModLoader::ApplyMod(const PalBlueprintMod& mod, UObject* object)
+    {
+        auto& data = mod.GetData();
+        ApplyData(data, object);
+    }
+
+    void PalBlueprintModLoader::ApplyData(const nlohmann::json& data, RC::Unreal::UObject* object)
+    {
+        auto objectClass = static_cast<UECustom::UBlueprintGeneratedClass*>(object->GetClassPrivate());
+
+        for (auto& [propertyName, propertyValue] : data.items())
+        {
+            auto propertyNameWide = RC::to_generic_string(propertyName);
+            auto property = Palworld::PropertyHelper::GetPropertyByName(objectClass, propertyNameWide);
+            
+            if (!property)
+            {
+                PS::Log<RC::LogLevel::Warning>(TEXT("Property '{}' does not exist in {}\n"), propertyNameWide, objectClass->GetNamePrivate().ToString());
                 continue;
             }
 
-            if (auto ObjectProperty = CastField<FObjectProperty>(Property))
+            if (auto objectProperty = CastField<FObjectProperty>(property))
             {
-                auto ObjectValue = *Property->ContainerPtrToValuePtr<UObject*>(Object);
-                if (!ObjectValue)
+                auto objectValue = *property->ContainerPtrToValuePtr<UObject*>(object);
+                if (!objectValue)
                 {
                     // null Object means that this property could be a component template, so we should check if it has an associated GEN_VARIABLE.
-                    HandleInheritableComponent(Class, PropertyNameWide, PropertyValue);
+                    HandleInheritableComponent(objectClass, propertyNameWide, propertyValue);
                 }
                 else
                 {
                     // Object has a pointer assigned to it so we let PropertyHelper handle it.
-                    PropertyHelper::CopyJsonValueToContainer(Object, Property, PropertyValue);
+                    PropertyHelper::CopyJsonValueToContainer(object, property, propertyValue);
                 }
             }
             else
             {
                 // Any other property values get handled here like Numeric, Bool, String, etc.
-                PropertyHelper::CopyJsonValueToContainer(Object, Property, PropertyValue);
+                PropertyHelper::CopyJsonValueToContainer(object, property, propertyValue);
             }
         }
     }
 
-    void PalBlueprintModLoader::HandleInheritableComponent(UECustom::UBlueprintGeneratedClass* BPClass, const RC::StringType& ComponentName,
-                                                         const nlohmann::json& ComponentData)
+    void PalBlueprintModLoader::HandleInheritableComponent(UECustom::UBlueprintGeneratedClass* bpClass, const RC::StringType& componentName,
+                                                         const nlohmann::json& componentData)
     {
-        auto BPClassName = BPClass->GetNamePrivate().ToString();
+        auto& bpClassName = bpClass->GetNamePrivate();
 
-        if (!ComponentData.is_object())
+        if (!componentData.is_object())
         {
-            PS::Log<LogLevel::Warning>(TEXT("{} failed to apply, provided JSON value wasn't an object\n"), BPClassName);
+            PS::Log<LogLevel::Warning>(TEXT("{} failed to apply, provided JSON value wasn't an object\n"), bpClassName.ToString());
             return;
         }
 
-        auto ComponentFullName = std::format(TEXT("{}_GEN_VARIABLE"), ComponentName);
-        UObject* InheritableComponent = nullptr;
+        auto componentFullName = std::format(TEXT("{}_GEN_VARIABLE"), componentName);
+        UObject* inheritableComponent = nullptr;
 
-        auto InheritableComponentHandler = BPClass->GetInheritableComponentHandler();
-        if (InheritableComponentHandler)
+        auto inheritableComponentHandler = bpClass->GetInheritableComponentHandler();
+        if (inheritableComponentHandler)
         {
-            auto Records = InheritableComponentHandler->GetRecords();
-            for (auto& Record : Records)
+            auto records = inheritableComponentHandler->GetRecords();
+            for (auto& record : records)
             {
-                if (Record.ComponentTemplate.Get() == nullptr) continue;
+                if (record.ComponentTemplate.Get() == nullptr) continue;
 
-                if (Record.ComponentTemplate.Get()->GetName() == ComponentFullName)
+                if (record.ComponentTemplate.Get()->GetName() == componentFullName)
                 {
-                    InheritableComponent = Record.ComponentTemplate.Get();
+                    inheritableComponent = record.ComponentTemplate.Get();
                     break;
                 }
             }
         }
 
-        if (InheritableComponent)
+        if (inheritableComponent)
         {
-            ModifyComponent(InheritableComponent, ComponentData);
+            ModifyComponent(inheritableComponent, componentData);
             return;
         }
 
         // Component wasn't inside Inheritable Components list, so check SimpleConstructionScript next.
-        HandleNodeComponent(BPClass, ComponentFullName, ComponentData);
+        HandleNodeComponent(bpClass, componentFullName, componentData);
     }
 
-    void PalBlueprintModLoader::HandleNodeComponent(UECustom::UBlueprintGeneratedClass* BPClass, const RC::StringType& ComponentName, const nlohmann::json& ComponentData)
+    void PalBlueprintModLoader::HandleNodeComponent(UECustom::UBlueprintGeneratedClass* bpClass, const RC::StringType& componentName, const nlohmann::json& componentData)
     {
-        auto SimpleConstructionScript = BPClass->GetSimpleConstructionScript();
-        if (!SimpleConstructionScript)
+        auto simpleConstructionScript = bpClass->GetSimpleConstructionScript();
+        if (!simpleConstructionScript)
         {
             return;
         }
 
-        UObject* NodeComponent = nullptr;
+        UObject* nodeComponent = nullptr;
 
-        auto Nodes = SimpleConstructionScript->GetAllNodes();
-        for (auto& NodeElement : Nodes)
+        auto& nodes = simpleConstructionScript->GetAllNodes();
+        for (auto& nodeElement : nodes)
         {
-            auto NodeComponentTemplate = NodeElement->GetComponentTemplate();
-            if (!NodeComponentTemplate)
+            auto nodeComponentTemplate = nodeElement->GetComponentTemplate();
+            if (!nodeComponentTemplate)
             {
                 continue;
             }
 
-            if (NodeComponentTemplate->GetName() == ComponentName)
+            if (nodeComponentTemplate->GetName() == componentName)
             {
-                NodeComponent = NodeComponentTemplate;
+                nodeComponent = nodeComponentTemplate;
                 break;
             }
         }
 
-        if (!NodeComponent)
+        if (!nodeComponent)
         {
             return;
         }
 
-        ModifyComponent(NodeComponent, ComponentData);
+        ModifyComponent(nodeComponent, componentData);
     }
 
-    void PalBlueprintModLoader::ModifyComponent(RC::Unreal::UObject* Component, const nlohmann::json& ComponentData)
+    void PalBlueprintModLoader::ModifyComponent(RC::Unreal::UObject* component, const nlohmann::json& componentData)
     {
-        int SuccessfulChanges = 0;
-        for (auto& [InnerKey, InnerValue] : ComponentData.items())
+        for (auto& [innerKey, innerValue] : componentData.items())
         {
-            auto ComponentPropertyName = RC::to_generic_string(InnerKey);
-            auto ComponentProperty = PropertyHelper::GetPropertyByName(Component->GetClassPrivate(), ComponentPropertyName.c_str());
-            if (!ComponentProperty)
+            auto componentPropertyName = RC::to_generic_string(innerKey);
+            auto componentProperty = PropertyHelper::GetPropertyByName(component->GetClassPrivate(), componentPropertyName.c_str());
+            if (!componentProperty)
             {
-                PS::Log<LogLevel::Warning>(TEXT("Property {} doesn't exist in {}\n"), ComponentPropertyName, Component->GetName());
+                PS::Log<LogLevel::Warning>(TEXT("Property {} doesn't exist in {}\n"), componentPropertyName, component->GetName());
                 continue;
             }
 
-            PropertyHelper::CopyJsonValueToContainer(Component, ComponentProperty, InnerValue);
-            SuccessfulChanges++;
-        }
-
-        if (SuccessfulChanges > 0)
-        {
-            PS::Log<LogLevel::Normal>(TEXT("Applied changes to {}\n"), Component->GetName());
-        }
-        else
-        {
-            PS::Log<LogLevel::Normal>(TEXT("No changes were made to {}\n"), Component->GetName());
+            PropertyHelper::CopyJsonValueToContainer(component, componentProperty, innerValue);
         }
     }
 
-    void PalBlueprintModLoader::PostLoad(RC::Unreal::UClass* This)
+    void PalBlueprintModLoader::PostLoad(RC::Unreal::UClass* self)
     {
-        PostLoadHook.call(This);
+        PostLoadHook.call(self);
 
         if (!PostLoadCallback)
         {
             return;
         }
 
-        PostLoadCallback(This);
+        PostLoadCallback(self);
+    }
+
+    void PalBlueprintModLoader::PostInitComponents(RC::Unreal::AActor* self)
+    {
+        PostInitComponentsHook.call(self);
+
+        if (!PostInitComponentsCallback)
+        {
+            return;
+        }
+
+        PostInitComponentsCallback(self);
     }
 }
