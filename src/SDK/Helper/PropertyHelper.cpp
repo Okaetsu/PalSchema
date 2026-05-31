@@ -273,9 +273,20 @@ namespace Palworld {
             auto LoadedObject = UECustom::UKismetSystemLibrary::LoadAsset_Blocking(WideStringValue, true);
             if (!LoadedObject)
             {
-                PS::Log<LogLevel::Error>(STR("Unable to apply changes to {} because provided asset was invalid.\n"), Property->GetName());
-                return;
+                throw std::runtime_error(RC::fmt("Unable to apply changes to %S. Asset was invalid.", Property->GetName().c_str()));
             }
+
+            auto& ExpectedClass = Property->GetPropertyClass();
+            if (!LoadedObject->IsA(ExpectedClass))
+            {
+                throw std::runtime_error(RC::fmt(
+                    "Unable to apply changes to %S. Asset didn't match the expected class for this property. Expected '%S', got '%S'", 
+                    Property->GetName().c_str(),
+                    ExpectedClass->GetName().c_str(),
+                    LoadedObject->GetClassPrivate()->GetName().c_str())
+                );
+            }
+
             *Property->ContainerPtrToValuePtr<UObject*>(Data) = LoadedObject;
         }
         else if (Value.is_object())
