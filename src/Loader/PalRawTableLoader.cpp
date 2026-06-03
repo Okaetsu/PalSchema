@@ -44,6 +44,11 @@ namespace Palworld {
 
     void PalRawTableLoader::Apply(UECustom::UCompositeDataTable* compositeDatatable)
     {
+        /* TODO: Add better handling for composite datatables similar to what UDataTableRegistry::GetDatatableByName does.
+        *  This works for now since there is always only one _Common datatable counterpart, but isn't future proof due to potential naming changes, etc.
+        *  Also runs the risk of applying modifications twice when two parent tables have _Common at the end.
+        */
+
         auto parentTables = compositeDatatable->GetParentTables();
         for (auto& parentTable : parentTables)
         {

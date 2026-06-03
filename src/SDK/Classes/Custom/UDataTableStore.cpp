@@ -1,3 +1,4 @@
+#include "SDK/Classes/UCompositeDataTable.h"
 #include "SDK/Classes/Custom/UDataTableStore.h"
 #include "SDK/Classes/Custom/UObjectGlobals.h"
 #include "Utility/Logging.h"
@@ -12,10 +13,16 @@ using namespace RC::Unreal;
 namespace UECustom {
     RC::Unreal::UDataTable* UDataTableRegistry::GetDatatableByName(const std::string& name)
     {
-        auto datatable = m_datatableMap.find(name);
-        if (datatable != m_datatableMap.end())
+        auto parentDatatableIt = m_parentTableNameToCompositeDatatableMap.find(name);
+        if (parentDatatableIt != m_parentTableNameToCompositeDatatableMap.end())
         {
-            return datatable->second;
+            return parentDatatableIt->second;
+        }
+
+        auto datatableIt = m_datatableMap.find(name);
+        if (datatableIt != m_datatableMap.end())
+        {
+            return datatableIt->second;
         }
 
         return nullptr;
@@ -40,6 +47,15 @@ namespace UECustom {
     {
         m_datatableMap.insert_or_assign(name, datatable);
 
+        if (datatable->GetClassPrivate() == UECustom::UCompositeDataTable::StaticClass())
+        {
+            auto compositeDatatable = static_cast<UECustom::UCompositeDataTable*>(datatable);
+            for (auto& parentTable : compositeDatatable->GetParentTables())
+            {
+                m_parentTableNameToCompositeDatatableMap.emplace(RC::to_string(parentTable->GetName()), compositeDatatable);
+            }
+        }
+
         std::lock_guard<std::mutex> guard(m_mutex);
         for (auto& [callbackId, callback] : m_callbackMap)
         {
@@ -51,32 +67,6 @@ namespace UECustom {
     {
         auto name = datatable->GetNamePrivate().ToString();
         Add(RC::to_string(name), datatable);
-    }
-
-    void UDataTableRegistry::Initialize()
-    {
-        TArray<UObject*> results;
-
-        auto datatableClass = RC::Unreal::UDataTable::StaticClass();
-        if (!datatableClass)
-        {
-            PS::Log<LogLevel::Error>(STR("Unable to initialize UDataTableRegistry, failed to get /Script/Engine.DataTable\n"));
-            return;
-        }
-
-        PS::Log<LogLevel::Verbose>(STR("UClass for UDataTable found, fetching UDataTables...\n"));
-        UECustom::UObjectGlobals::GetObjectsOfClass(datatableClass, results);
-
-        int addedDatatables = 0;
-        for (auto& object : results)
-        {
-            auto datatable = static_cast<RC::Unreal::UDataTable*>(object);
-            auto name = object->GetNamePrivate().ToString();
-            Add(RC::to_string(name), datatable);
-            addedDatatables++;
-        }
-
-        PS::Log<LogLevel::Verbose>(STR("Finished mapping {} UDataTables.\n"), addedDatatables);
     }
 
     DatatableSerializeCallbackId UDataTableRegistry::GenerateDatatableSerializeCallbackId()
