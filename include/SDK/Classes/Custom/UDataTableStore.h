@@ -24,8 +24,6 @@ namespace UECustom {
         void Add(const std::string& name, RC::Unreal::UDataTable* datatable);
 
         void Add(RC::Unreal::UDataTable* datatable);
-
-        void Initialize();
     private:
         std::mutex m_mutex;
         std::unordered_map<std::string, RC::Unreal::UDataTable*> m_datatableMap;

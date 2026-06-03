@@ -69,32 +69,6 @@ namespace UECustom {
         Add(RC::to_string(name), datatable);
     }
 
-    void UDataTableRegistry::Initialize()
-    {
-        TArray<UObject*> results;
-
-        auto datatableClass = RC::Unreal::UDataTable::StaticClass();
-        if (!datatableClass)
-        {
-            PS::Log<LogLevel::Error>(STR("Unable to initialize UDataTableRegistry, failed to get /Script/Engine.DataTable\n"));
-            return;
-        }
-
-        PS::Log<LogLevel::Verbose>(STR("UClass for UDataTable found, fetching UDataTables...\n"));
-        UECustom::UObjectGlobals::GetObjectsOfClass(datatableClass, results);
-
-        int addedDatatables = 0;
-        for (auto& object : results)
-        {
-            auto datatable = static_cast<RC::Unreal::UDataTable*>(object);
-            auto name = object->GetNamePrivate().ToString();
-            Add(RC::to_string(name), datatable);
-            addedDatatables++;
-        }
-
-        PS::Log<LogLevel::Verbose>(STR("Finished mapping {} UDataTables.\n"), addedDatatables);
-    }
-
     DatatableSerializeCallbackId UDataTableRegistry::GenerateDatatableSerializeCallbackId()
     {
         static RC::Unreal::uint64 datatableSerializeCallbackId = 0;
