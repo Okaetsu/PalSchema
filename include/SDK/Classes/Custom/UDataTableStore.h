@@ -29,6 +29,7 @@ namespace UECustom {
     private:
         std::mutex m_mutex;
         std::unordered_map<std::string, RC::Unreal::UDataTable*> m_datatableMap;
+        std::unordered_map<std::string, RC::Unreal::UDataTable*> m_parentTableNameToCompositeDatatableMap;
         std::unordered_map<DatatableSerializeCallbackId, DatatableSerializeCallback> m_callbackMap;
 
         static DatatableSerializeCallbackId GenerateDatatableSerializeCallbackId();
