@@ -56,6 +56,7 @@ namespace Palworld {
         RC::Unreal::UDataTable* m_palLongDescTable{};
 
         RC::Unreal::UClass* m_spawnItemBaseClass{};
+        RC::Unreal::TMap<RC::Unreal::FName, RC::Unreal::UClass*> m_cachedSpawnItemActionsByName;
         RC::Unreal::TSet<RC::Unreal::FName> m_defaultFarmPals;
     };
 }

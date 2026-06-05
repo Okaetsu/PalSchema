@@ -99,11 +99,19 @@ namespace Palworld {
 
         auto newPackageName = FName(std::format(TEXT("/PalSchema/SpawnItem/BP_Action_SpawnItem_{}"), characterId.ToString()));
         auto newAssetName = FName(std::format(TEXT("BP_Action_SpawnItem_{}_C"), characterId.ToString()));
+
+        if (auto cachedSpawnItemActionClass = m_cachedSpawnItemActionsByName.Find(newAssetName))
+        {
+            return (*cachedSpawnItemActionClass)->GetClassDefaultObject();
+        }
+
         auto objectFlags = static_cast<EObjectFlags>(RF_Public | RF_Transient);
         auto newBPClass = UECustom::BPGeneratedClassHelper::CreateInheritedBlueprintClass(m_spawnItemBaseClass, newPackageName, newAssetName, objectFlags);
 
         auto cdo = newBPClass->GetDefaultObject(true);
         cdo->SetRootSet();
+
+        m_cachedSpawnItemActionsByName.Add(newAssetName, newBPClass);
 
         return cdo;
     }
