@@ -1,0 +1,73 @@
+{
+    "DT_ItemLotteryDataTable": {
+        // Row name doesn't matter, but make it something unique to avoid accidentally editing existing rows unless that's your goal.
+        "PinkCatRanch_001": {
+            // FieldName is important and will be referenced by the pal's blueprint.
+            "FieldName": "CharacterSpawnItem_PinkCat_1",
+
+            // SlotNo should always be 1, for ranch suitability no other slots work.
+            "SlotNo": 1,
+
+            // WeightInSlot is only relevant if you have other Lottery entries sharing the same slot.
+            // You can look up Vixy's Lottery entries in FModel for a random spawn example (DT_ItemLotteryDataTable): Ctrl+F -> "CharacterSpawnItem_CuteFoxRank1"
+            "WeightInSlot": 1.0,
+
+            // StaticItemId is the ID of the item we want to spawn which in this example corresponds to Gold.
+            // Refer to https://paldeck.cc/items for a list of items and their IDs.
+            "StaticItemId": "Money",
+
+            // MinNum is the minimum quantity to spawn.
+            "MinNum": 1,
+
+            // MaxNum is the maximum quantity to spawn.
+            "MaxNum": 1,
+
+            // Should generally be 1 except in the case of Money where MinNum, MaxNum and NumUnit must match or weird things will happen.
+            // Once again, see "CharacterSpawnItem_CuteFoxRank1" for a good example of how to use these three values correctly.
+            "NumUnit": 1,
+
+            // Always keep this as EPalMapObjectTreasureGradeType::Grade1 for ranch.
+            "TreasureBoxGrade": "EPalMapObjectTreasureGradeType::Grade1"
+        },
+        "PinkCatRanch_002": {
+            "FieldName": "CharacterSpawnItem_PinkCat_2",
+            "SlotNo": 1,
+            "WeightInSlot": 1.0,
+            "StaticItemId": "Money",
+            "MinNum": 5,
+            "MaxNum": 5,
+            "NumUnit": 5,
+            "TreasureBoxGrade": "EPalMapObjectTreasureGradeType::Grade1"
+        },
+        "PinkCatRanch_003": {
+            "FieldName": "CharacterSpawnItem_PinkCat_3",
+            "SlotNo": 1,
+            "WeightInSlot": 1.0,
+            "StaticItemId": "Money",
+            "MinNum": 10,
+            "MaxNum": 10,
+            "NumUnit": 10,
+            "TreasureBoxGrade": "EPalMapObjectTreasureGradeType::Grade1"
+        },
+        "PinkCatRanch_004": {
+            "FieldName": "CharacterSpawnItem_PinkCat_4",
+            "SlotNo": 1,
+            "WeightInSlot": 1.0,
+            "StaticItemId": "Money",
+            "MinNum": 15,
+            "MaxNum": 15,
+            "NumUnit": 15,
+            "TreasureBoxGrade": "EPalMapObjectTreasureGradeType::Grade1"
+        },
+        "PinkCatRanch_005": {
+            "FieldName": "CharacterSpawnItem_PinkCat_5",
+            "SlotNo": 1,
+            "WeightInSlot": 1.0,
+            "StaticItemId": "Money",
+            "MinNum": 20,
+            "MaxNum": 20,
+            "NumUnit": 20,
+            "TreasureBoxGrade": "EPalMapObjectTreasureGradeType::Grade1"
+        }
+    }
+}
