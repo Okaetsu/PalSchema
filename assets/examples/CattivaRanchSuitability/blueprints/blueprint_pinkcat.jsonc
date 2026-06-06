@@ -1,0 +1,43 @@
+{
+    "BP_PinkCat_C": {
+        "StaticCharacterParameterComponent": {
+            "SpawnItem": {
+                // Key (Rank) == Star levels of your pals
+                // Internally there is no concept of 0-star and ranks start from 1 which is equivalent to 0-star with 5 being equivalent to 4-star.
+                // Value corresponds to an entry in 'DT_ItemLotteryDataTable' by its 'FieldName'. See the lottery.jsonc file in raw folder.
+                "FieldLotteryNameByRank": [
+                  {
+                    "Key": 1,
+                    "Value": {
+                      "Key": "CharacterSpawnItem_PinkCat_1"
+                    }
+                  },
+                  {
+                    "Key": 2,
+                    "Value": {
+                      "Key": "CharacterSpawnItem_PinkCat_2"
+                    }
+                  },
+                  {
+                    "Key": 3,
+                    "Value": {
+                      "Key": "CharacterSpawnItem_PinkCat_3"
+                    }
+                  },
+                  {
+                    "Key": 4,
+                    "Value": {
+                      "Key": "CharacterSpawnItem_PinkCat_4"
+                    }
+                  },
+                  {
+                    "Key": 5,
+                    "Value": {
+                      "Key": "CharacterSpawnItem_PinkCat_5"
+                    }
+                  }
+                ]
+            }
+        }
+    }
+}

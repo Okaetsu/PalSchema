@@ -1,0 +1,23 @@
+{
+    // When you add a new "FieldName" in DT_ItemLotteryDataTable, always remember to create a corresponding entry in DT_FieldLotteryNameDataTable.
+    // Your custom entries will not work otherwise!!
+    "DT_FieldLotteryNameDataTable": {
+        // Row name should correspond to a "FieldName" in DT_ItemLotteryDataTable.
+        "CharacterSpawnItem_PinkCat_1": {
+            // Percent chance of the pal actually creating a drop at the ranch. 0% - 100%
+            "ItemSlot1_ProbabilityPercent": 100.0
+        },
+        "CharacterSpawnItem_PinkCat_2": {
+            "ItemSlot1_ProbabilityPercent": 100.0
+        },
+        "CharacterSpawnItem_PinkCat_3": {
+            "ItemSlot1_ProbabilityPercent": 100.0
+        },
+        "CharacterSpawnItem_PinkCat_4": {
+            "ItemSlot1_ProbabilityPercent": 100.0
+        },
+        "CharacterSpawnItem_PinkCat_5": {
+            "ItemSlot1_ProbabilityPercent": 100.0
+        }
+    }
+}

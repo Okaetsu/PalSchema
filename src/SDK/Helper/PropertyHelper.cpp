@@ -21,6 +21,11 @@ using namespace RC::Unreal;
 namespace Palworld {
     void PropertyHelper::CopyJsonValueToContainer(void* Container, FProperty* Property, const nlohmann::json& Value)
     {
+        if (!Property)
+        {
+            throw std::runtime_error("A null Property was supplied to PropertyHelper::CopyJsonValueToContainer.");
+        }
+
         auto PropertyName = Property->GetName();
         auto Type = Property->GetCPPType();
         auto Class = Property->GetClass();
@@ -261,23 +266,49 @@ namespace Palworld {
     {
         ValidateJsonValueType(Property, Value);
 
-        auto ParsedValue = Value.get<nlohmann::json>();
-        auto ObjectValue = *Property->ContainerPtrToValuePtr<UObject*>(Data);
-        if (ObjectValue)
+        if (Value.is_string())
         {
-            for (auto& [InnerKey, InnerValue] : Value.items())
+            auto StringValue = Value.get<std::string>();
+            auto WideStringValue = RC::to_generic_string(StringValue);
+            auto LoadedObject = UECustom::UKismetSystemLibrary::LoadAsset_Blocking(WideStringValue, true);
+            if (!LoadedObject)
             {
-                auto ObjectValue_PropertyName = RC::to_generic_string(InnerKey);
-                auto ObjectValue_Property = ObjectValue->GetPropertyByNameInChain(ObjectValue_PropertyName.c_str());
+                throw std::runtime_error(RC::fmt("Unable to apply changes to %S. Asset was invalid.", Property->GetName().c_str()));
+            }
 
-                if (!ObjectValue_Property)
-                {
-                    ObjectValue_Property = Palworld::PropertyHelper::GetPropertyByName(ObjectValue->GetClassPrivate(), ObjectValue_PropertyName);
-                }
+            auto& ExpectedClass = Property->GetPropertyClass();
+            if (!LoadedObject->IsA(ExpectedClass))
+            {
+                throw std::runtime_error(RC::fmt(
+                    "Unable to apply changes to %S. Asset didn't match the expected class for this property. Expected '%S', got '%S'", 
+                    Property->GetName().c_str(),
+                    ExpectedClass->GetName().c_str(),
+                    LoadedObject->GetClassPrivate()->GetName().c_str())
+                );
+            }
 
-                if (ObjectValue_Property)
+            *Property->ContainerPtrToValuePtr<UObject*>(Data) = LoadedObject;
+        }
+        else if (Value.is_object())
+        {
+            auto ObjectValue = *Property->ContainerPtrToValuePtr<UObject*>(Data);
+            auto ParsedValue = Value.get<nlohmann::json>();
+            if (ObjectValue)
+            {
+                for (auto& [InnerKey, InnerValue] : Value.items())
                 {
-                    CopyJsonValueToContainer(ObjectValue, ObjectValue_Property, InnerValue);
+                    auto ObjectValue_PropertyName = RC::to_generic_string(InnerKey);
+                    auto ObjectValue_Property = ObjectValue->GetPropertyByNameInChain(ObjectValue_PropertyName.c_str());
+
+                    if (!ObjectValue_Property)
+                    {
+                        ObjectValue_Property = Palworld::PropertyHelper::GetPropertyByName(ObjectValue->GetClassPrivate(), ObjectValue_PropertyName);
+                    }
+
+                    if (ObjectValue_Property)
+                    {
+                        CopyJsonValueToContainer(ObjectValue, ObjectValue_Property, InnerValue);
+                    }
                 }
             }
         }
@@ -474,7 +505,7 @@ namespace Palworld {
         }
         else if (auto ObjectProperty = CastProperty<FObjectProperty>(Property) && PropertyClassName == STR("ObjectProperty"))
         {
-            if (!Value.is_object()) throw std::runtime_error(std::format("Property {} must be an object", PropertyName));
+            if (!Value.is_object() && !Value.is_string()) throw std::runtime_error(std::format("Property {} must be an object or string", PropertyName));
         }
         else if (auto SoftObjectProperty = CastProperty<FSoftObjectProperty>(Property) && PropertyClassName == STR("SoftObjectProperty"))
         {

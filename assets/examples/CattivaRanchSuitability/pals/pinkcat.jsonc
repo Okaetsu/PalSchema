@@ -1,0 +1,37 @@
+{
+    "PinkCat": {
+        // Values higher than 1 in WorkSuitability_MonsterFarm add no benefit.
+        "WorkSuitability_MonsterFarm": 1,
+        // Game itself does not care about RanchActionData, this is specifically only read by PalSchema to aid in creation of a custom SpawnItem action.
+        "RanchActionData": {
+            // Animation loop to play once the spawn action starts.
+            "ChargeMontage": "/Game/Pal/Animation/Character/Monster/PinkCat/AM_PinkCat_FarSkill_ActionLoop.AM_PinkCat_FarSkill_ActionLoop",
+
+            // Animation to play once the item is spawned. Make sure it's not a loop, otherwise the pal will get stuck forever.
+            "FunMontage": "/Game/Pal/Animation/Character/Monster/PinkCat/AM_PinkCat_Damage.AM_PinkCat_Damage",
+
+            // Facial expression to show during spawn action.
+            "ChargeFacialEye": "EPalFacialEyeType::Pain",
+
+            // Facial expression to show when the item is spawned.
+            "FunFacialEye": "EPalFacialEyeType::Smile",
+
+            // Name of the bone in a Pal's skeleton to spawn the item from. Leaving it as None is usually fine if you're unsure.
+            "SpawnSocketName": "None",
+
+            // The spawned item's relative location from the Pal's selected bone socket.
+            "SpawnLocationOffset": {
+                "X": 0.0,
+                "Y": 0.0,
+                "Z": 0.0
+            },
+
+            // Initial rotation of the spawned item.
+            "SpawnItemRotator": {
+              "Pitch": 0.0,
+              "Yaw": 0.0,
+              "Roll": 0.0
+            }
+        }
+    }
+}
