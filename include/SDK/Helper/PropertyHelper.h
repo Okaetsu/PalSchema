@@ -23,6 +23,10 @@ namespace RC::Unreal {
     class FMapProperty;
 }
 
+namespace Palworld {
+    class FPalEnumProperty;
+}
+
 namespace Palworld::PropertyHelper {
     void CopyJsonValueToContainer(void* Container, RC::Unreal::FProperty* Property, const nlohmann::json& Value);
 
@@ -104,6 +108,10 @@ namespace Palworld::PropertyHelper {
     bool IsPropertyA(RC::Unreal::FField* Field)
     {
         if constexpr (std::is_same_v<FFieldDerivedType, RC::Unreal::FEnumProperty>)
+        {
+            return IsPropertyA(Field, Palworld::StaticClassStorage::EnumPropertyStaticClass);
+        }
+        else if constexpr (std::is_same_v<FFieldDerivedType, Palworld::FPalEnumProperty>)
         {
             return IsPropertyA(Field, Palworld::StaticClassStorage::EnumPropertyStaticClass);
         }
