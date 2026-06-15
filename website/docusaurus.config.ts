@@ -95,6 +95,7 @@ const config: Config = {
         },
         {
           href: 'https://github.com/Okaetsu/PalSchema',
+          label: 'GitHub',
           position: 'right',
           className: 'header-github-link',
           'aria-label': 'GitHub Repository',
@@ -102,6 +103,7 @@ const config: Config = {
         },
         {
           href: 'https://discord.gg/pR2yyCJgaY',
+          label: 'Discord',
           position: 'right',
           className: 'header-discord-link',
           'aria-label': 'Discord Server',
