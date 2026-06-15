@@ -20,4 +20,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 1rem;
+}
+
+.headerImage {
+  width: 100%;
+  max-width: 480px;
+  max-height: 120px;
 }

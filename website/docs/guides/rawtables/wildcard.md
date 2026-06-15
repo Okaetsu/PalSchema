@@ -2,7 +2,7 @@
 sidebar_position: 2
 ---
 
-# Wildcard
+# Raw Table Wildcards
 
 In Raw Tables, you have the ability to use wildcards to apply changes to every row of the table you're targeting. This can be a very useful alternative to just manually duplicating your change to every row.
 

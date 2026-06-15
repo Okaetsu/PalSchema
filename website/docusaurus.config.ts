@@ -1,8 +1,10 @@
-import {themes as prismThemes} from 'prism-react-renderer';
 import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
+
+import PrismLight from './src/theme/prismLight';
+import PrismDark from './src/theme/prismDark';
 
 const config: Config = {
   title: 'PalSchema',
@@ -38,6 +40,14 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
+          showLastUpdateTime: true,
+          includeCurrentVersion: true,
+          versions: {
+            current: {
+              label: 'Development',
+              path: 'dev',
+            }
+          },
         },
         blog: {
           showReadingTime: true,
@@ -68,9 +78,20 @@ const config: Config = {
       items: [
         {
           type: 'docSidebar',
+          sidebarId: 'homeSidebar',
+          position: 'left',
+          label: 'Home',
+        },
+        {
+          type: 'docSidebar',
           sidebarId: 'documentationSidebar',
           position: 'left',
           label: 'Documentation',
+        },
+        {
+          type: 'docsVersionDropdown',
+          position: 'right',
+          versions: ['current', '0.5.2'],
         },
         {
           href: 'https://github.com/Okaetsu/PalSchema',
@@ -79,16 +100,23 @@ const config: Config = {
           'aria-label': 'GitHub Repository',
           'title': 'GitHub Repository'
         },
+        {
+          href: 'https://discord.gg/pR2yyCJgaY',
+          position: 'right',
+          className: 'header-discord-link',
+          'aria-label': 'Discord Server',
+          'title': 'Discord Server'
+        },
       ],
     },
     footer: {
       style: 'dark',
       links: [
         {
-          title: 'Docs',
+          title: 'Documentation',
           items: [
             {
-              label: 'Documentation',
+              label: 'Getting Started',
               to: '/docs/gettingstarted',
             },
           ],
@@ -106,8 +134,8 @@ const config: Config = {
       copyright: `Copyright © ${new Date().getFullYear()} PalSchema, Inc. Built with Docusaurus. Not Affiliated with Pocket Pair, Inc.`,
     },
     prism: {
-      theme: prismThemes.github,
-      darkTheme: prismThemes.dracula,
+      theme: PrismLight,
+      darkTheme: PrismDark,
     },
   } satisfies Preset.ThemeConfig,
 };
