@@ -1,0 +1,99 @@
+---
+sidebar_position: 2
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Installation
+
+Written by **[TheGameAce](https://next.nexusmods.com/profile/TheGameAceReal/mods?gameId=6063)**
+
+This guide will get you through the installation & setup process for PalSchema so you can get to making your own mods or enjoy using other's mods created with this new modding tool! If you have any issues with this process, feel free to reach out at the Palworld Modding Community on Discord for further assistance: **https://discord.gg/r9j9W67xhA**
+
+## Getting PalSchema
+
+The first step in this process will be getting the latest version of PalSchema, which can be found on GitHub here: **https://github.com/Okaetsu/PalSchema/releases/latest**
+
+Under each release, you'll see an "Assets" tab at the bottom that you can click on. It's under this tab that you'll see all downloadable contents. Within here you'll see two PalSchema downloads and two corresponding source code downloads. You'll want one of the former two downloads. Both of these have the same process.
+
+ - **Regular Edition**: The first download option in descending order, this version of PalSchema is perfect for regular players who want to use PalSchema mods. Get this version if you don't have any intention of making your own mods via PalSchema.
+ - **Dev Edition**: The second download option in descending order, this version of PalSchema works like the regular version with added features designed for mod developers. If you intend to make your own mods with PalSchema, this is the recommended option.
+
+## UE4SS - Correct Version + Installation
+
+The next step of this process is making sure you have UE4SS installed properly, and more specifically the right version of it. As of Palworld patch 0.4.1.5, you'll need the Palworld specific version of UE4SS from **[here](https://github.com/Okaetsu/RE-UE4SS/releases/tag/experimental-palworld)** since they changed some engine related stuff. If you skip this step, you will experience crashing when you start Palworld, you've been warned.
+
+If you already have this version of UE4SS installed, skip to the next **[step](#ue4ss-settings--mod-settings).** If not, here's how to set it up:
+Firstly, find your Palworld installation location. This will vary from person to person based on installation choices.
+
+<Tabs
+  defaultValue="gamepass"
+  values={[
+    {label: 'Game Pass', value: 'gamepass'},
+    {label: 'Steam', value: 'steam'},
+  ]}>
+  <TabItem value="gamepass">
+    For Gamepass users, open up the Xbox app on your computer and go to the Palworld page. In the top right there should be a button with three dots "...". Select this and hit "manage". The below window should pop up, in which you should select the "Files" tab.
+
+    ![](https://i.gyazo.com/ae58f3b0b400855cb2bebac98d8e37d1.png)
+
+    Here, you can see the installation location for Palworld on your computer. If you select "Browse", this location will be brought up in your file explorer.
+
+    Now that we've gotten to Palworld's installation location, we'll want to navigate through the folders. It should go `Content -> Pal -> Binaries -> WinGDK`. Put the UE4SS zip file you downloaded in here. Select the zip and then right click -> extract all. If you're using the default Windows way of extracting the files, make sure you extract the contents of the zip rather than extracting UE4SS as a folder. I'll include two examples below for correct and incorrect extraction:
+
+    ![](assets/correct_ue4ss_install.png) ![](assets/wrong_ue4ss_install.png)
+
+    Congratulations, you just installed UE4SS for Palworld!
+
+    **Note**: If you already have UE4SS installed, that's ok. This process will be the same, except you'll want to allow the file dwmapi.dll to override your current one, to direct the game to using the newly installed version instead. You'll also want to move the mods from your current Mods folder under WinGDK, to the Mods folder in the ue4ss folder instead.
+  </TabItem>
+
+  <TabItem value="steam">
+    For Steam users, open up your Steam library, click on Palworld and then click the gear icon on the right side, then go to "Manage" and "Browse local files".
+
+    ![](assets/steam_palworld_settings.png)
+
+    ![](assets/steam_browse_local_files.png)
+
+    If you select "Browse local files", this location will bring you to the root of your Palworld install in file explorer.
+
+    Now that we've gotten to Palworld's installation location, we'll want to navigate through the folders. It should go `Pal -> Binaries -> Win64`. Put the UE4SS zip file you downloaded in here. Select the zip and then right click -> extract all. If you're using the default Windows way of extracting the files, make sure you extract the contents of the zip rather than extracting UE4SS as a folder. I'll include two examples below for correct and incorrect extraction:
+
+    ![](assets/steam_correct_ue4ss_install.png) ![](assets/steam_wrong_ue4ss_install.png)
+
+    Congratulations, you just installed UE4SS for Palworld!
+
+    **Note**: If you already have UE4SS installed, that's ok. This process will be the same, except you'll want to allow the file dwmapi.dll to override your current one, to direct the game to using the newly installed version instead. You'll also want to move the mods from your current Mods folder under Win64, to the Mods folder in the ue4ss folder instead.
+  </TabItem>
+</Tabs>
+
+## UE4SS Settings & Mod Settings
+Before moving forward, you'll want to make sure that your settings for UE4SS and your Mods folder are correct. For UE4SS, check the UE4SS-settings.ini file.
+![](https://i.gyazo.com/db0632ec3346f1264587163082247c72.png)
+
+This can be edited with any text editor, such as Windows notepad or Notepad++. In here, the most common two adjustments that have to be made are setting GraphicsAPI to dx11, and setting bUseUObjectArrayCache to false.
+
+![](assets/bUseUObjectArrayCache.png)
+
+![](assets/GraphicsAPI.png)
+
+Within your Mods folder under UE4SS, you'll see two files at the bottom: mods.json, and mods.txt.
+![](https://i.gyazo.com/2e748d9a93866388b947b2762cf03b6f.png)
+
+Both of these files need to be modified the same way. Using mods.txt as an example:
+
+![](https://i.gyazo.com/7e5308a40fe5d58a152f25f6f1978c04.png)
+
+In mods.txt here, a value of 0 equates to a value of "false" in mods.json, while a value of 1 equates to a value of true. CheatManagerEnablerMod, ConsoleCommandsMod, ConsoleEnablerMod, BPModLoaderMod, and BPML_Genericfunctions should all be set to 1 or "true" across both files.
+
+## Installing PalSchema
+Now that UE4SS is ready to go, we're ready for the long and arduous journey to install PalSchema!
+
+...
+
+Just kidding, it's a quick and easy process from here. Simply take the PalSchema zip you downloaded, extract it, and place the PalSchema folder that results under the Mods folder within UE4SS. You've now successfully installed PalSchema!
+
+![](assets/palschema_location.png) ![](assets/palschema_location2.png)
+
+If your goal is mod development, you can get a quick start in the **[Getting Started](./gettingstarted.md)** section.

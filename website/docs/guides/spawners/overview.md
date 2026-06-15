@@ -2,7 +2,7 @@
 sidebar_position: 1
 ---
 
-# Overview
+# Custom Spawners
 
 Starting with 0.5.0, you are now able to create new spawns for pals and NPCs which function the exact same as how the game would spawn pals, bosses, npcs, etc. Editing is not currently available and you should use the `blueprints` method of doing it. See the example [BossMammorestSpawnReplacer](https://github.com/Okaetsu/PalSchema/blob/main/assets/examples/BossMammorestSpawnReplacer/blueprints/mammorest_spawn_replacer.jsonc) mod for editing spawns.
 
