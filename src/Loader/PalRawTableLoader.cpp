@@ -176,9 +176,9 @@ namespace Palworld {
             else
             {
                 PS::WildcardFilters wildcardFilters;
-                if (data.contains("Filters"))
+                if (data.contains("$Filters"))
                 {
-                    wildcardFilters.Parse(data.at("Filters"), datatable->GetRowStruct());
+                    wildcardFilters.Parse(data.at("$Filters"), datatable->GetRowStruct());
                 }
 
                 for (auto& [key, row] : datatable->GetRowMap())
@@ -249,7 +249,7 @@ namespace Palworld {
         bool wasRowModified = false;
         for (auto& [key, value] : data.items())
         {
-            if (key == "Filters") continue;
+            if (key == "$Filters") continue;
 
             auto keyWide = RC::to_generic_string(key);
             auto property = PropertyHelper::GetPropertyByName(rowStruct, keyWide);

@@ -18,7 +18,7 @@ namespace PS {
     {
         if (!data.is_array())
         {
-            throw std::runtime_error("'Filters' must be an array of objects.");
+            throw std::runtime_error("'$Filters' must be an array of objects.");
         }
 
         auto filterListData = data.get<std::vector<nlohmann::json>>();
