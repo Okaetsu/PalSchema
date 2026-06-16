@@ -1,10 +1,6 @@
----
-sidebar_position: 6
----
+# Numeric
 
-# Numeric Property
-
-All numeric properties in Pal Schema are treated the same. `Pal/Content/Pal/DataTable/Character/DT_PalMonsterParameter.uasset` as an example:
+All numeric properties in PalSchema are treated the same. `Pal/Content/Pal/DataTable/Character/DT_PalMonsterParameter.uasset` as an example:
 
 ```json
 "Rarity": 4,

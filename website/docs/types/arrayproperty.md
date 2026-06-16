@@ -1,10 +1,6 @@
----
-sidebar_position: 8
----
+# Array
 
-# TArray
-
-Array Properties in Pal Schema have two ways of defining them. `Pal/Content/Pal/DataTable/ItemShop/DT_ItemShopCreateData.uasset` will be used as an example.
+Array Properties in PalSchema have two ways of defining them. `Pal/Content/Pal/DataTable/ItemShop/DT_ItemShopCreateData.uasset` will be used as an example.
 
 ## Replacing the Array
 
@@ -48,4 +44,4 @@ If you wanted to append to the end of the array instead, you would specify the v
 
 Now you've added Paldium Fragments to the Small Settlement shop along with other existing items.
 
-`Items` field is not specific to this table, it is part of Pal Schema syntax which tells the code that these are the items you want to append to your array. So regardless of what array it is, always include the `Items` field in your array object if you're looking to insert into the array.
+`Items` field is not specific to this table, it is part of PalSchema syntax which tells the code that these are the items you want to append to your array. So regardless of what array it is, always include the `Items` field in your array object if you're looking to insert into the array.
