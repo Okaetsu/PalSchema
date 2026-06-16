@@ -25,6 +25,8 @@ const sidebars: SidebarsConfig = {
         'types/arrayproperty',
         'types/mapproperty',
         'types/structproperty',
+        'types/objectproperty',
+        'types/classproperty',
         'types/softobjectptr',
         'types/softclassptr',
       ],

@@ -1,10 +1,6 @@
----
-sidebar_position: 3
----
-
 # FText
 
-FText in Pal Schema will have some differences compared to FModel. `Pal/Content/L10N/en/Pal/DataTable/Text/DT_ItemNameText.uasset` will be used as an example.
+FText in PalSchema will have some differences compared to FModel. `Pal/Content/L10N/en/Pal/DataTable/Text/DT_ItemNameText.uasset` will be used as an example.
 
 Firstly let's look at how FModel displays an FText entry:
 ```json
@@ -18,7 +14,7 @@ Firstly let's look at how FModel displays an FText entry:
 }
 ```
 
-It's very verbose. In Pal Schema you would define it like this:
+It's very verbose. In PalSchema you would define it like this:
 ```json
 "ITEM_NAME_Accessory_NormalResist_1": "Ring of Neutral Resistance"
 ```

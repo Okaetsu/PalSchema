@@ -1,24 +1,29 @@
----
-sidebar_position: 10
----
+# SoftObject
 
-# TSoftObjectPtr
-
-TSoftObjectPtr Properties in Pal Schema are defined as strings that point to an asset path.
+SoftObject properties in PalSchema are defined as strings that point to a soft asset reference which holds a pointer to the asset in memory if it's present.
 
 ## Example
 
 `Pal/Content/Pal/DataTable/Character/DT_PalCharacterIconDataTable.uasset`
 
-`Icon` in `DT_PalCharacterIconDataTable` is a TSoftObjectPtr Property. You can tell from the long path that looks something like this: `/Game/Pal/Texture/PalIcon/Normal/T_Anubis_icon_normal.T_Anubis_icon_normal`, in FModel this would translate to `Pal/Content/Pal/Texture/PalIcon/Normal/T_Anubis_icon_normal.T_Anubis_icon_normal`.
+`Icon` in `DT_PalCharacterIconDataTable` is a SoftObject property.
 
-In Pal Schema you want to convert the beginning `Pal/Content` into `/Game/`. Make sure it has a forward slash in the beginning, otherwise your path will not be read correctly, so don't do something like this: `Game/etc`
+Below is an example of what a SoftObject property looks like in FModel:
+```json
+"Icon": {
+    "AssetPathName": "/Game/Pal/Texture/PalIcon/Normal/T_Anubis_icon_normal.T_Anubis_icon_normal",
+    "SubPathString": ""
+}
+```
 
+You can see that it's a json object which has the fields `AssetPathName` and `SubPathString` which is different from the [Object](./objectproperty.md) property.
+
+PalSchema Example:
 ```json
 {
     "DT_PalCharacterIconDataTable": {
         "Anubis": {
-            "Icon": "/Game/Pal/Texture/PalIcon/Normal/T_PinkCat_icon_normal.T_PinkCat_icon_normal"
+            "Icon": "/Game/Pal/Texture/PalIcon/Normal/T_Anubis_icon_normal.T_Anubis_icon_normal"
         }
     }
 }
