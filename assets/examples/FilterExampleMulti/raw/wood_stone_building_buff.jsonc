@@ -1,0 +1,23 @@
+// This example sets the health of wooden and stone buildings with less than 10000 health to 10000.
+{
+    "DT_MapObjectMasterDataTable": {
+        // * (Asterisk) indicates that it should go through every row in the chosen datatable (DT_MapObjectMasterDataTable)
+        "*": {
+            // $Filters is an array of filter objects and is parsed by PalSchema.
+            // Every filter in the array must match for the current row and changes will be applied to those rows that match the chosen filters.
+            "$Filters": [
+                {
+                    "FieldName": "MaterialType",
+                    "Operation": "Equal", // Equals, Equal and == are all valid depending on your personal preference.
+                    "Values": ["Stone", "Wood"] // Checks if MaterialType is Stone or Wood and returns true if either type matches. "Values" allows you to do OR matching with multiple values.
+                },
+                {
+                    "FieldName": "Hp",
+                    "Operation": "LessThan", // LessThan and < are both valid depending on your personal preference. A < B where A is the row being compared and B is the value(s) you supplied to the filter.
+                    "Value": 10000 // Checks if the building base health is less than 10000
+                }
+            ],
+            "Hp": 10000
+        }
+    }
+}

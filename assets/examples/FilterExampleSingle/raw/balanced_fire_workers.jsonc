@@ -1,0 +1,19 @@
+// This example sets every Fire element pal's base kindling to Lv1
+{
+    "DT_PalMonsterParameter": {
+        // * (Asterisk) indicates that it should go through every row in the chosen datatable (DT_PalMonsterParameter)
+        "*": {
+            // $Filters is an array of filter objects and is parsed by PalSchema.
+            // Every filter in the array must match for the current row and changes will be applied to those rows that match the chosen filters.
+            // In this case, we're only interested in applying "WorkSuitability_EmitFlame": 1 to everything with Fire element.
+            "$Filters": [
+                {
+                    "FieldName": "ElementType1",
+                    "Operation": "Equal", // Equals, Equal and == are all valid depending on your personal preference.
+                    "Value": "Fire"
+                }
+            ],
+            "WorkSuitability_EmitFlame": 1
+        }
+    }
+}

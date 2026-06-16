@@ -11,6 +11,7 @@
 #include "Utility/Logging.h"
 #include "Utility/JsonHelpers.h"
 #include "Loader/PalRawTableLoader.h"
+#include "Loader/WildcardFilter/WildcardFilters.h"
 
 using namespace RC;
 using namespace RC::Unreal;
@@ -174,10 +175,18 @@ namespace Palworld {
             }
             else
             {
+                PS::WildcardFilters wildcardFilters;
+                if (data.contains("$Filters"))
+                {
+                    wildcardFilters.Parse(data.at("$Filters"), datatable->GetRowStruct());
+                }
+
                 for (auto& [key, row] : datatable->GetRowMap())
                 {
-                    ModifyRowProperties(datatable, key, row, data, outResult);
-                    outResult.SuccessfulModifications++;
+                    if (wildcardFilters.IsEmpty() || wildcardFilters.Match(row))
+                    {
+                        ModifyRowProperties(datatable, key, row, data, outResult);
+                    }
                 }
             }
         }
@@ -237,19 +246,28 @@ namespace Palworld {
         }
 
         auto rowStruct = datatable->GetRowStruct().Get();
+        bool wasRowModified = false;
         for (auto& [key, value] : data.items())
         {
+            if (key == "$Filters") continue;
+
             auto keyWide = RC::to_generic_string(key);
             auto property = PropertyHelper::GetPropertyByName(rowStruct, keyWide);
             if (property)
             {
                 PropertyHelper::CopyJsonValueToContainer(rowPtr, property, value);
+                wasRowModified = true;
             }
             else
             {
                 outResult.ErrorCount++;
                 PS::Log<LogLevel::Warning>(STR("Property '{}' not found in Row '{}' in {}.\n"), keyWide, rowName.ToString(), datatable->GetNamePrivate().ToString());
             }
+        }
+
+        if (wasRowModified)
+        {
+            outResult.SuccessfulModifications++;
         }
     }
 
