@@ -1,0 +1,380 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Pal Schema",
+    "type": "object",
+    "additionalProperties": {
+        "type": "object",
+        "properties": {
+        "IconAssetPath": {
+            "type": "string",
+            "pattern": "^/Game(?:/[^/]+)*/([A-Za-z0-9_]+)\\.\\1$"
+        },
+        "BlueprintAssetPath": {
+            "type": "string",
+            "pattern": "^/Game(?:/[^/]+)*/([A-Za-z0-9_]+)\\.\\1$"
+        },
+        "IsPal": {
+            "type": "boolean",
+            "description": "Used to differentiate between humans and pals, keep this true.",
+            "default": true
+        },
+        "Tribe": {
+            "$ref": "enums.schema.json#/definitions/EPalTribeID"
+        },
+        "BPClass": {
+            "type": "string"
+        },
+        "ZukanIndex": {
+            "type": "integer",
+            "description": "Zukan Index refers to the entry number in Paldeck. Setting this to -1 means it won't show up in the Paldeck.",
+            "minimum": -1,
+            "default": -1
+        },
+        "ZukanIndexSuffix": {
+            "type": "string"
+        },
+        "Size": {
+            "$ref": "enums.schema.json#/definitions/EPalSizeType",
+            "description": "Doesn't seem to do anything currently? Actual size is normally set inside the pal's actor blueprint on the skeletal mesh."
+        },
+        "Rarity": {
+            "type": "integer"
+        },
+        "ElementType1": {
+            "$ref": "enums.schema.json#/definitions/EPalElementType"
+        },
+        "ElementType2": {
+            "$ref": "enums.schema.json#/definitions/EPalElementType"
+        },
+        "GenusCategory": {
+            "$ref": "enums.schema.json#/definitions/EPalGenusCategoryType"
+        },
+        "Organization": {
+            "$ref": "enums.schema.json#/definitions/EPalOrganizationType"
+        },
+        "Weapon": {
+            "$ref": "enums.schema.json#/definitions/EPalWeaponType"
+        },
+        "WeaponEquip": {
+            "type": "boolean",
+            "default": false
+        },
+        "Hp": {
+            "type": "integer"
+        },
+        "MeleeAttack": {
+            "type": "integer"
+        },
+        "ShotAttack": {
+            "type": "integer"
+        },
+        "Defense": {
+            "type": "integer"
+        },
+        "Support": {
+            "type": "integer",
+            "description": "Unsure what this value is for."
+        },
+        "CraftSpeed": {
+            "type": "integer"
+        },
+        "EnemyMaxHPRate": {
+            "type": "number",
+            "description": "Health multiplier for wild pals, will not apply on player owned pals.\nMust be a float value e.g. 1.0",
+            "minimum": 0.0,
+            "default": 1.0,
+            "not": { "type": "integer" }
+        },
+        "EnemyReceiveDamageRate": {
+            "type": "number",
+            "description": "Must be a float value e.g. 1.0",
+            "minimum": 0.0,
+            "default": 1.0,
+            "not": { "type": "integer" }
+        },
+        "EnemyInflictDamageRate": {
+            "type": "number",
+            "description": "Must be a float value e.g. 1.0",
+            "minimum": 0.0,
+            "default": 1.0,
+            "not": { "type": "integer" }
+        },
+        "CaptureRateCorrect": {
+            "type": "number",
+            "description": "Must be a float value e.g. 1.0",
+            "minimum": 0.0,
+            "default": 1.0,
+            "not": { "type": "integer" }
+        },
+        "ExpRatio": {
+            "type": "number",
+            "description": "Must be a float value e.g. 1.0",
+            "minimum": 0.0,
+            "default": 1.0,
+            "not": { "type": "integer" }
+        },
+        "Price": {
+            "type": "number",
+            "description": "Must be a float value e.g. 0.0",
+            "minimum": 0.0,
+            "default": 0.0,
+            "not": { "type": "integer" }
+        },
+        "StatusResistUpRate": {
+            "type": "number",
+            "description": "Must be a float value e.g. 1.0",
+            "default": 1.0,
+            "not": { "type": "integer" }
+        },
+        "AIResponse": {
+            "type": "string",
+            "enum": ["None", "Boss", "Default", "Escape", "Escape_to_Battle", "Friendly", "Kill_All", "NotInterested", "VillageNPC", "Warlike"]
+        },
+        "AISightResponse": {
+            "type": "string",
+            "enum": ["None", "Citizen", "Police", "Villain"]
+        },
+        "SlowWalkSpeed": {
+            "type": "integer"
+        },
+        "WalkSpeed": {
+            "type": "integer"
+        },
+        "RunSpeed": {
+            "type": "integer"
+        },
+        "RideSprintSpeed": {
+            "type": "integer"
+        },
+        "TransportSpeed": {
+            "type": "integer"
+        },
+        "IsBoss": {
+            "type": "boolean"
+        },
+        "IsTowerBoss": {
+            "type": "boolean"
+        },
+        "IsRaidBoss": {
+            "type": "boolean"
+        },
+        "UseBossHPGauge": {
+            "type": "boolean",
+            "description": "Controls if the pal should have a big health bar similar to Alpha pals."
+        },
+        "BattleBGM": {
+            "$ref": "enums.schema.json#/definitions/EPalBattleBGMType",
+            "description": "The music that plays when fighting this pal."
+        },
+        "IgnoreLeanBack": {
+            "type": "boolean",
+            "description": "Determines if the pal should ignore flinch when receiving large amounts of damage or criticals."
+        },
+        "IgnoreBlowAway": {
+            "type": "boolean",
+            "description": "Determines if the pal should ignore knockback from explosions."
+        },
+        "MaxFullStomach": {
+            "type": "integer",
+            "description": "Hunger"
+        },
+        "FullStomachDecreaseRate": {
+            "type": "number",
+            "description": "Must be a float value e.g. 1.0",
+            "minimum": 0.0,
+            "default": 1.0,
+            "not": { "type": "integer" }
+        },
+        "FoodAmount": {
+            "type": "integer"
+        },
+        "ViewingDistance": {
+            "type": "integer"
+        },
+        "ViewingAngle": {
+            "type": "integer"
+        },
+        "HearingRate": {
+            "type": "number",
+            "description": "Must be a float value e.g. 0.0",
+            "minimum": 0.0,
+            "default": 1.0,
+            "not": { "type": "integer" }
+        },
+        "NooseTrap": {
+            "type": "boolean",
+            "description": "Most likely used to control if the pal can be trapped."
+        },
+        "Nocturnal": {
+            "type": "boolean",
+            "description": "Controls if the pal sleeps at all?"
+        },
+        "BiologicalGrade": {
+            "type": "integer"
+        },
+        "Predator": {
+            "type": "boolean"
+        },
+        "Edible": {
+            "type": "boolean"
+        },
+        "Stamina": {
+            "type": "integer",
+            "default": 100
+        },
+        "MaleProbability": {
+            "type": "integer",
+            "default": 50
+        },
+        "CombiRank": {
+            "type": "integer"
+        },
+        "WorkSuitability_EmitFlame": {
+            "type": "integer",
+            "description": "Kindling",
+            "minimum": 0,
+            "maximum": 4
+        },
+        "WorkSuitability_Watering": {
+            "type": "integer",
+            "description": "Watering",
+            "minimum": 0,
+            "maximum": 4
+        },
+        "WorkSuitability_Seeding": {
+            "type": "integer",
+            "description": "Planting",
+            "minimum": 0,
+            "maximum": 4
+        },
+        "WorkSuitability_GenerateElectricity": {
+            "type": "integer",
+            "description": "Generating Electricity",
+            "minimum": 0,
+            "maximum": 4
+        },
+        "WorkSuitability_Handcraft": {
+            "type": "integer",
+            "description": "Handiwork",
+            "minimum": 0,
+            "maximum": 4
+        },
+        "WorkSuitability_Collection": {
+            "type": "integer",
+            "description": "Gathering",
+            "minimum": 0,
+            "maximum": 4
+        },
+        "WorkSuitability_Deforest": {
+            "type": "integer",
+            "description": "Lumbering",
+            "minimum": 0,
+            "maximum": 4
+        },
+        "WorkSuitability_Mining": {
+            "type": "integer",
+            "description": "Mining",
+            "minimum": 0,
+            "maximum": 4
+        },
+        "WorkSuitability_OilExtraction": {
+            "type": "integer",
+            "description": "Currently unused as of version 3.1.12",
+            "minimum": 0,
+            "maximum": 4
+        },
+        "WorkSuitability_ProductMedicine": {
+            "type": "integer",
+            "description": "Medicine Production",
+            "minimum": 0,
+            "maximum": 4
+        },
+        "WorkSuitability_Cool": {
+            "type": "integer",
+            "description": "Cooling",
+            "minimum": 0,
+            "maximum": 4
+        },
+        "WorkSuitability_Transport": {
+            "type": "integer",
+            "description": "Transporting",
+            "minimum": 0,
+            "maximum": 4
+        },
+        "WorkSuitability_MonsterFarm": {
+            "type": "integer",
+            "description": "Farming",
+            "minimum": 0,
+            "maximum": 4
+        },
+        "PassiveSkill1": {
+            "type": "string",
+            "description": "Guaranteed passive that appears on this pal in the wild, leave as None to make it random."
+        },
+        "PassiveSkill2": {
+            "type": "string",
+            "description": "Guaranteed passive that appears on this pal in the wild, leave as None to make it random."
+        },
+        "PassiveSkill3": {
+            "type": "string",
+            "description": "Guaranteed passive that appears on this pal in the wild, leave as None to make it random."
+        },
+        "PassiveSkill4": {
+            "type": "string",
+            "description": "Guaranteed passive that appears on this pal in the wild, leave as None to make it random."
+        },
+        "FirstDefeatRewardItemID": {
+            "type": "string",
+            "description": "First time item reward for defeating this character."
+        },
+        "AbilitiesByLevel": {
+            "type": "array",
+            "description": "Controls the abilities that should unlock for the pal as they level up.",
+            "uniqueItems": true,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "WazaID": {
+                        "$ref": "enums.schema.json#/definitions/EPalWazaID"
+                    },
+                    "Level": {
+                        "type": "integer",
+                        "description": "What level should the ability unlock at?",
+                        "minimum": 0
+                    }
+                },
+                "required": ["WazaID", "Level"]
+            }
+        },
+        "Loot": {
+            "type": "array",
+            "description": "Controls what loot should be dropped by the pal when they're captured or killed.",
+            "items": {
+                "type": "object",
+                "maxItems": 10,
+                "properties": {
+                    "ItemId": {
+                        "type": "string"
+                    },
+                    "DropChance": {
+                        "type": "number",
+                        "description": "Must be a float value e.g. 0.0",
+                        "minimum": 0.0,
+                        "default": 0.00,
+                        "multipleOf": 0.1,
+                        "examples": [0.00, 1.5, 2.3],
+                        "not": { "type": "integer" }
+                    },
+                    "Min": {
+                        "type": "integer"
+                    },
+                    "Max": {
+                        "type": "integer"
+                    }
+                },
+                "required": ["ItemId", "DropChance", "Min", "Max"]
+            }
+        }
+        }
+    }
+}  

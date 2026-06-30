@@ -1,0 +1,362 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Buildings Schema",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "properties": {
+      "OverrideNameMsgID": {
+        "type": "string"
+      },
+      "Name": {
+        "type": "string",
+        "description": "Translated name of the building that shows up in build wheel, applies to all languages.\nCreate a translation table mod if you need language support."
+      },
+      "Description": {
+        "type": "string",
+        "description": "Translated description of the building that shows up in build wheel, applies to all languages.\nCreate a translation table mod if you need language support."
+      },
+      "BlueprintClassName": {
+        "type": "string",
+        "description": "Unknown, but fill it anyway."
+      },
+      "BlueprintClassSoft": {
+        "type": "string",
+        "pattern": "^/Game(?:/[^/]+)*/([A-Za-z0-9_]+)\\.\\1_C$",
+        "description": "Example of a correct path format: /Game/Pal/Blueprint/MapObject/BuildObject/BP_BuildObject_WorkBench.BP_BuildObject_WorkBench_C\nIn FModel or Unreal Editor, the path would look like Pal/Content/Pal/Blueprint/MapObject/BuildObject/BP_BuildObject_WorkBench"
+      },
+      "MaterialType": {
+        "type": "string",
+        "$ref": "enums.schema.json#/definitions/EPalMapObjectMaterialType",
+        "description": "Primary material type for a building, mostly used for determining damage modifiers."
+      },
+      "MaterialSubType": {
+        "type": "string",
+        "$ref": "enums.schema.json#/definitions/EPalMapObjectMaterialSubType",
+        "description": "Sub material type for a building, mostly used for determining damage modifiers."
+      },
+      "Hp": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "How much health the building should have."
+      },
+      "Defense": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "bBelongToBaseCamp": {
+        "type": "boolean",
+        "description": "Unknown."
+      },
+      "DistributeExpAroundPlayer": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "Unknown."
+      },
+      "DeteriorationDamage": {
+        "type": "number",
+        "minimum": 0,
+        "description": "Controls the amount of damage this building takes per tick when it's outside the Palbox range."
+      },
+      "ExtinguishBurnWorkAmount": {
+        "type": "number",
+        "minimum": 0
+      },
+      "bShowHPGauge": {
+        "type": "boolean"
+      },
+      "bInDevelop": {
+        "type": "boolean",
+        "description": "Unknown."
+      },
+      "Editor_RowNameHash": {
+        "type": "integer",
+        "description": "You don't need to fill this."
+      },
+      "BuildingData": {
+        "type": "object",
+        "properties": {
+          "MapObjectId": {
+            "type": "string",
+            "description": "You don't need to fill this, Pal Schema automatically fills this based on the key you used for this building entry."
+          },
+          "TypeA": {
+            "type": "string",
+            "$ref": "enums.schema.json#/definitions/EPalBuildObjectTypeA"
+          },
+          "TypeB": {
+            "type": "string",
+            "$ref": "enums.schema.json#/definitions/EPalBuildObjectTypeB"
+          },
+          "RedialIndex": {
+            "type": "integer",
+            "description": "Don't fill this, Pal Schema handles this automatically for every new building that gets added."
+          },
+          "Rank": {
+            "type": "integer",
+            "description": "Most likely only used by crafting stations, unsure if anything else uses this field."
+          },
+          "BuildCapacity": {
+            "type": "integer",
+            "description": "Unknown."
+          },
+          "RequiredBuildWorkAmount": {
+            "type": "number"
+          },
+          "AssetValue": {
+            "type": "integer",
+            "description": "Unknown."
+          },
+          "RequiredEnergyType": {
+            "type": "string",
+            "$ref": "enums.schema.json#/definitions/EPalEnergyType"
+          },
+          "ConsumeEnergySpeed": {
+            "type": "number"
+          },
+          "Material1_Id": {
+            "type": "string",
+            "description": "ID of the required item for constructing this building."
+          },
+          "Material1_Count": {
+            "type": "integer",
+            "description": "Amount of the specified item required for constructing this building."
+          },
+          "Material2_Id": {
+            "type": "string",
+            "description": "ID of the required item for constructing this building."
+          },
+          "Material2_Count": {
+            "type": "integer",
+            "description": "Amount of the specified item required for constructing this building."
+          },
+          "Material3_Id": {
+            "type": "string",
+            "description": "ID of the required item for constructing this building."
+          },
+          "Material3_Count": {
+            "type": "integer",
+            "description": "Amount of the specified item required for constructing this building."
+          },
+          "Material4_Id": {
+            "type": "string",
+            "description": "ID of the required item for constructing this building."
+          },
+          "Material4_Count": {
+            "type": "integer",
+            "description": "Amount of the specified item required for constructing this building."
+          },
+          "OverrideDescMsgID": {
+            "type": "string"
+          },
+          "bInstallAtReticle": {
+            "type": "boolean",
+            "description": "Unknown."
+          },
+          "InstallNeighborThreshold": {
+            "type": "number",
+            "description": "Unknown."
+          },
+          "bIsInstallOnlyOnBase": {
+            "type": "boolean"
+          },
+          "bIsInstallOnlyInDoor": {
+            "type": "boolean"
+          },
+          "bIsInstallOnlyHubAround": {
+            "type": "boolean",
+            "description": "Unknown."
+          },
+          "InstallMaxNumInBaseCamp": {
+            "type": "integer"
+          },
+          "bInstallableNoObstacleFromCamera": {
+            "type": "boolean",
+            "description": "Unknown."
+          },
+          "BuildExpRate": {
+            "type": "number"
+          }
+        }
+      },
+      "Assignments": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "GenusCategory": {
+                  "type": "string",
+                  "$ref": "enums.schema.json#/definitions/EPalGenusCategoryType"
+                },
+                "ElementType": {
+                  "type": "string",
+                  "$ref": "enums.schema.json#/definitions/EPalElementType"
+                },
+                "WorkSuitability": {
+                  "type": "string",
+                  "$ref": "enums.schema.json#/definitions/EPalWorkSuitability"
+                },
+                "WorkSuitabilityRank": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "bPlayerWorkable": {
+                  "type": "boolean"
+                },
+                "bBaseCampWorkerWorkable": {
+                  "type": "boolean"
+                },
+                "WorkableTribeIDs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "WorkableSizeMin": {
+                  "type": "string",
+                  "$ref": "enums.schema.json#/definitions/EPalSizeType"
+                },
+                "WorkableSizeMax": {
+                  "type": "string",
+                  "$ref": "enums.schema.json#/definitions/EPalSizeType"
+                },
+                "WorkType": {
+                  "type": "string",
+                  "$ref": "enums.schema.json#/definitions/EPalWorkType"
+                },
+                "WorkActionType": {
+                  "type": "string",
+                  "$ref": "enums.schema.json#/definitions/EPalActionType"
+                },
+                "WorkerMaxNum": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "AffectSanityValue": {
+                  "type": "number"
+                },
+                "AffectFullStomachValue": {
+                  "type": "number"
+                }
+            }
+        }
+      },
+      "Technology": {
+        "type": "object",
+        "properties": {
+          "UnlockBuildObjects": {
+            "type": "array",
+            "description": "Array of Building IDs to unlock.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "UnlockItemRecipes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "Name": {
+            "type": "string",
+            "description": "Name of the Technology unlock that shows in the Technology tab."
+          },
+          "Description": {
+            "type": "string",
+            "description": "Description of the Technology unlock that shows in the Technology tab."
+          },
+          "IconName": {
+            "type": "string"
+          },
+          "RequireDefeatTowerBoss": {
+            "type": "string",
+            "$ref": "enums.schema.json#/definitions/EPalBossType"
+          },
+          "RequireTechnology": {
+            "type": "string"
+          },
+          "RequireResearchId": {
+            "type": "string"
+          },
+          "IsBossTechnology": {
+            "type": "boolean"
+          },
+          "LevelCap": {
+            "type": "integer"
+          },
+          "Tier": {
+            "type": "integer"
+          },
+          "Cost": {
+            "type": "integer"
+          }
+        }
+      },
+      "Crop": {
+        "type": "object",
+        "description": "Required for Crop type buildings like Berry Plantation, Wheat Plantation, etc.",
+        "properties": {
+          "CropBlueprintClassName": {
+            "type": "string",
+            "description": "Unknown, but fill it anyway."
+          },
+          "CropClassPath": {
+            "type": "string",
+            "pattern": "^/Game(?:/[^/]+)*/([A-Za-z0-9_]+)\\.\\1_C$",
+            "description": "Example of a correct path format: /Game/Pal/Blueprint/MapObject/FarmCrop/BP_PalMapObjectFarmCrop_Wheat.BP_PalMapObjectFarmCrop_Wheat_C\nIn FModel or Unreal Editor, the path would look like Pal/Content/Pal/Blueprint/MapObject/FarmCrop/BP_PalMapObjectFarmCrop_Wheat"
+          },
+          "CropItemId": {
+            "type": "string"
+          },
+          "GrowupTime": {
+            "type": "number"
+          },
+          "CropItemNum": {
+            "type": "integer"
+          },
+          "SeedingWorkAmount": {
+            "type": "number"
+          },
+          "WateringWorkAmount": {
+            "type": "number"
+          },
+          "HarvestWorkAmount": {
+            "type": "number"
+          },
+          "MaterialItem1_Id": {
+            "type": "string"
+          },
+          "MaterialItem1_Num": {
+            "type": "integer"
+          },
+          "MaterialItem2_Id": {
+            "type": "string"
+          },
+          "MaterialItem2_Num": {
+            "type": "integer"
+          },
+          "Editor_RowNameHash": {
+            "type": "integer",
+            "description": "You don't need to fill this."
+          }
+        }
+      },
+      "ItemProductData": {
+        "type": "object",
+        "description": "Required for Production type buildings like Logging Site, Stone Pit, etc.",
+        "properties": {
+            "Product_Id": {
+              "type": "string",
+              "description": "ID of the Item to be produced."
+            },
+            "RequiredWorkAmount": {
+              "type": "number"
+            },
+            "AutoWorkAmountBySec": {
+              "type": "number"
+            }
+        }
+      }
+    }
+  }
+}
