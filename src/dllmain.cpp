@@ -1,6 +1,7 @@
 #include "Mod/CppUserModBase.hpp"
 #include "UE4SSProgram.hpp"
 #include "Loader/PalMainLoader.h"
+#include "Generator/JsonSchema/JsonSchemaGenerator.h"
 #include "Utility/Config.h"
 #include "Utility/Logging.h"
 #include "SDK/PalSignatures.h"
@@ -55,24 +56,40 @@ public:
         return fs::exists(MemberVariableLayoutFile);
     }
 
-    auto on_ui_init() -> void override
+    auto render_schema_generator()
     {
-        if (!UE4SSProgram::settings_manager.Debug.DebugConsoleEnabled)
+        static bool bGeneratingSchemas = false;
+        if (ImGui::Button("Generate JSON Schema Files"))
         {
-            return;
+            if (!bGeneratingSchemas)
+            {
+                bGeneratingSchemas = true;
+                UECustom::AsyncTask(UECustom::ENamedThreads::GameThread, [&]() {
+                    PS::JsonSchemaGenerator::GenerateSchemaFiles();
+                    bGeneratingSchemas = false;
+                });
+            }
         }
 
-        PS::Log<LogLevel::Verbose>(STR("GUI Console is enabled, enabling ImGui for PalSchema...\n"));
+        if (bGeneratingSchemas)
+        {
+            ImGui::ProgressBar(-0.5f * (float)ImGui::GetTime(), ImVec2(0.0f, 0.0f), "Generating...");
+        }
+    }
 
-        UE4SS_ENABLE_IMGUI()
-
-        PS::Log<LogLevel::Verbose>(STR("Registering Pal Schema tab in GUI Console...\n"));
+    auto on_ui_init() -> void override
+    {
         register_tab(STR("Pal Schema"), [](CppUserModBase* instance) {
+            UE4SS_ENABLE_IMGUI()
+
             auto mod = dynamic_cast<PalSchema*>(instance);
             if (!mod)
             {
                 return;
             }
+
+            ImGui::SeparatorText("Generators");
+            mod->render_schema_generator();
         });
 
         PS::Log<LogLevel::Verbose>(STR("Finished registering Pal Schema tab for GUI Console.\n"));
