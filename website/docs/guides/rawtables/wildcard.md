@@ -95,7 +95,7 @@ Comparisons are done in A/B fashion where A is the current row being processed a
 
 | Operation | Aliases | Supported Types |
 |-----------|----------|----------------|
-| Equals | `Equal`, `==` | FName, FString, FText, Bool, Numbers |
+| Equals | `Equal`, `==` | FName, FString, FText, Enum, Bool, Numbers |
 | GreaterThan | `>` | Numbers |
 | GreaterThanOrEqual | `>=` | Numbers |
 | LessThan | `<` | Numbers |
@@ -109,5 +109,6 @@ Comparisons are done in A/B fashion where A is the current row being processed a
 Only basic properties are supported as filters which are the following:
 
 * FName, FString, FText
+* Enum
 * Number
 * Bool
