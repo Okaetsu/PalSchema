@@ -185,7 +185,10 @@ namespace Palworld {
                 {
                     if (wildcardFilters.IsEmpty() || wildcardFilters.Match(row))
                     {
-                        ModifyRowProperties(datatable, key, row, data, outResult);
+                        if (ModifyRowProperties(datatable, key, row, data, outResult))
+                        {
+                            outResult.SuccessfulModifications++;
+                        }
                     }
                 }
             }
@@ -204,9 +207,11 @@ namespace Palworld {
 
         try
         {
-            ModifyRowProperties(datatable, rowName, newRowData.GetData(), data, outResult);
-            datatable->AddRow(rowName, *reinterpret_cast<RC::Unreal::FTableRowBase*>(newRowData.GetData()));
-            outResult.SuccessfulAdditions++;
+            if (ModifyRowProperties(datatable, rowName, newRowData.GetData(), data, outResult))
+            {
+                datatable->AddRow(rowName, *reinterpret_cast<RC::Unreal::FTableRowBase*>(newRowData.GetData()));
+                outResult.SuccessfulAdditions++;
+            }
         }
         catch (const std::exception& e)
         {
@@ -220,8 +225,10 @@ namespace Palworld {
     {
         try
         {
-            ModifyRowProperties(datatable, rowName, row, data, outResult);
-            outResult.SuccessfulModifications++;
+            if (ModifyRowProperties(datatable, rowName, row, data, outResult))
+            {
+                outResult.SuccessfulModifications++;
+            }
         }
         catch (const std::exception& e)
         {
@@ -237,7 +244,7 @@ namespace Palworld {
         outResult.SuccessfulDeletions++;
     }
 
-    void PalRawTableLoader::ModifyRowProperties(RC::Unreal::UDataTable* datatable, const FName& rowName, void* rowPtr, const nlohmann::json& data,
+    bool PalRawTableLoader::ModifyRowProperties(RC::Unreal::UDataTable* datatable, const FName& rowName, void* rowPtr, const nlohmann::json& data,
                                                 LoadResult& outResult)
     {
         if (!data.is_object())
@@ -265,10 +272,7 @@ namespace Palworld {
             }
         }
 
-        if (wasRowModified)
-        {
-            outResult.SuccessfulModifications++;
-        }
+        return wasRowModified;
     }
 
     void PalRawTableLoader::AddToTableDataMap(const std::string& datatableName, const nlohmann::json& data)

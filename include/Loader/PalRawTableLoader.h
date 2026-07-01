@@ -50,7 +50,7 @@ namespace Palworld {
 
         void DeleteRow(RC::Unreal::UDataTable* datatable, const RC::Unreal::FName& rowName, LoadResult& outResult);
 
-        void ModifyRowProperties(RC::Unreal::UDataTable* datatable, const RC::Unreal::FName& rowName, void* rowPtr, const nlohmann::json& data, LoadResult& outResult);
+        bool ModifyRowProperties(RC::Unreal::UDataTable* datatable, const RC::Unreal::FName& rowName, void* rowPtr, const nlohmann::json& data, LoadResult& outResult);
 
         void AddToTableDataMap(const std::string& datatableName, const nlohmann::json& data);
 	};
