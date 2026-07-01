@@ -6,7 +6,9 @@ sidebar_position: 1
 
 ## Requirements
 
-- You've done everything in [Getting Started](../../gettingstarted.md) and [Palworld Modding Kit](https://pwmodding.wiki/docs/palworld-modding-kit/install-part-1).
+- [Palworld Modding Kit](https://pwmodding.wiki/docs/developers/palworld-modding-kit/prerequisites)
+
+- You've done everything in [Getting Started](../../gettingstarted.md).
 
 - Dummy Blueprints which can be found in the [Resources](../../resources) section.
 

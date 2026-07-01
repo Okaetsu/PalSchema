@@ -10,7 +10,7 @@ A disclaimer regarding the requirements for this guide as you'll be needing the 
 
 ## Requirements
 
-- [Palworld Modding Kit](https://pwmodding.wiki/docs/palworld-modding-kit/install-part-1)
+- [Palworld Modding Kit](https://pwmodding.wiki/docs/developers/palworld-modding-kit/prerequisites)
 - [Assets](https://drive.google.com/file/d/1eghfagtz3WvyB7i4PXGWSt01qfQLzfOc/view?usp=sharing) - Contains empty animation montages for each Pal and a dummy asset for `BP_Action_SpawnItemBase` which will be used as a base for your preferred Pal's item spawning action blueprint.
 
 ## Palworld Modding Kit

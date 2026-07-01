@@ -6,7 +6,9 @@ sidebar_position: 1
 
 ## Requirements
 
-- You've done everything in [Getting Started](../../gettingstarted.md) and [Palworld Modding Kit](https://pwmodding.wiki/docs/palworld-modding-kit/install-part-1).
+- [Palworld Modding Kit](https://pwmodding.wiki/docs/developers/palworld-modding-kit/prerequisites)
+
+- You've done everything in [Getting Started](../../gettingstarted.md).
 
 - You've done eveything in [Creating a New Bow](../items/creatingabow.md) to understand dummy assets and how to package your mod.
 

@@ -20,7 +20,7 @@ With setup done, we move on to setting up the newly created .json file with prop
 
 ![image](https://i.gyazo.com/7bc91b1d4d005097c8e4d80f6c7117ec.png)
 
-Now before we take the next step, pull up FModel so that we can look inside Palworld's container file. If you don't have FModel or haven't set it up yet, refer to the following: [FModel Setup](https://pwmodding.wiki/docs/asset-swapping/StartingOut).
+Now before we take the next step, pull up FModel so that we can look inside Palworld's container file. If you don't have FModel or haven't set it up yet, refer to the following: [FModel Setup](https://pwmodding.wiki/docs/developers/useful-tools/fmodel).
 
 Once you have FModel up, open up Palworld's main container file. For Gamepass users, this should be called `Pal-WinGDK.utoc`. For Steam users, this should be called `Pal-Windows.pak`. Now that you're in, navigate to the file you want to edit or add to. If you know the file's name, use the search function found under the "Packages" toolbar option at the top of FModel for faster navigation.
 
