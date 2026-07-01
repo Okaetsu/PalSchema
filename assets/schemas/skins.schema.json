@@ -1,0 +1,38 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Skin Schema",
+    "type": "object",
+    "additionalProperties": {
+        "type": "object",
+        "properties": {
+            "NormalCharacterClass": {
+                "type": "string",
+                "pattern": "^/Game(?:/[^/]+)*/([A-Za-z0-9_]+)\\.\\1_C$",
+                "description": "Example: /Game/Pal/Blueprint/Character/Monster/PalActorBP/PinkCat/BP_PinkCat_Skin001.BP_PinkCat_Skin001_C"
+            },
+            "BossCharacterClass": {
+                "type": "string",
+                "pattern": "^/Game(?:/[^/]+)*/([A-Za-z0-9_]+)\\.\\1_C$",
+                "description": "Example: /Game/Pal/Blueprint/Character/Monster/PalActorBP/PinkCat/BP_PinkCat_BOSS_Skin001.BP_PinkCat_BOSS_Skin001_C"
+            },
+            "SkinName": {
+                "type": "string",
+                "description": "You don't need to fill this as it automatically uses the object key as the name."
+            },
+            "SkinType": {
+                "$ref": "enums.schema.json#/definitions/EPalSkinType"
+            },
+            "TargetPalName": {
+                "type": "string"
+            },
+            "bAutoGetItem": {
+                "type": "boolean"
+            },
+            "IconTexture": {
+                "type": "string",
+                "pattern": "^/Game(?:/[^/]+)*/([A-Za-z0-9_]+)\\.\\1$"
+            }
+        },
+        "required": ["NormalCharacterClass", "BossCharacterClass", "SkinType", "TargetPalName", "bAutoGetItem", "IconTexture"]
+    }
+}

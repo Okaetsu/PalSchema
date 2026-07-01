@@ -1,0 +1,12 @@
+{
+    "definitions": {
+        "ObjectPathRegex": {
+            "description": "Object Path must start with /Game/ and end with AssetName.AssetName\nExample: /Game/Others/InventoryItemIcon/Texture/T_itemicon_Armor_Head015.T_itemicon_Armor_Head015",
+            "pattern": "^/Game(?:/[^/]+)*/([A-Za-z0-9_]+)\\.\\1$"
+        },
+        "ClassPathRegex": {
+            "description": "Class Path must start with /Game/ and end with AssetName.AssetName_C\nExample: /Game/Pal/Blueprint/Character/Monster/PalActorBP/Anubis/BP_Anubis.BP_Anubis_C",
+            "pattern": "^/Game(?:/[^/]+)*/([A-Za-z0-9_]+)\\.\\1_C$"
+        }
+    }
+}

@@ -1,7 +1,3 @@
----
-sidebar_position: 5
----
-
 # Getting Started
 
 ## Essentials
@@ -12,17 +8,39 @@ NOTE: Make sure to check `Add "Open with Code"` for both checkboxes as seen in t
 
 ![Visual Studio Code necessary checkboxes](assets/vscode_install.png)
 
-* [UE4SS Palworld](https://github.com/Okaetsu/RE-UE4SS/releases/tag/experimental-palworld) - You'll want to get the linked version rather than the latest one because Palworld did some engine modifications which now requires a `MemberVariableLayout.ini` with UE4SS. If you don't get the linked version you will experience crashes with certain mods and PalSchema is one of them. See issue [here](https://github.com/UE4SS-RE/RE-UE4SS/issues/802). UE4SS is required as PalSchema relies on it.
+* [UE4SS Palworld](https://github.com/Okaetsu/RE-UE4SS/releases/tag/experimental-palworld) - You'll want to get the linked version for two reasons: 
+  1. Palworld did some engine modifications which now requires a `MemberVariableLayout.ini` with UE4SS. If you don't get the linked version you will experience crashes with certain mods and PalSchema is one of them. See issue [here](https://github.com/UE4SS-RE/RE-UE4SS/issues/802).
+  2. PalSchema is specifically built on the linked version of UE4SS. If you get the latest experimental that isn't the linked version, PalSchema will simply not work due to potential API incompatibility.
 
 * [FModel](https://fmodel.app/) - Very useful for exploring Palworld files in general, you'll want this for referencing different data tables and assets in the game. Setup guide for FModel can be found [here](https://pwmodding.wiki/docs/developers/useful-tools/fmodel).
 
-* [PalSchema](https://github.com/Okaetsu/PalSchema/releases) - You'll obviously need PalSchema itself. Make sure you get the PalSchema_x.x.x_Dev-beta version where x.x.x is the latest version available.
+* [PalSchema](https://github.com/Okaetsu/PalSchema/releases) - You'll obviously need PalSchema itself. Select the latest available release and get the `PalSchema_x.x.x_Dev.zip` at the bottom under **Assets** where x.x.x is the latest version available.
 
 Installation guide for PalSchema can be found in [here](./installation.mdx).
 
 ## Setting Up
 
-Now that you've got everything installed, head over to the Mods folder where you installed PalSchema and right click on the PalSchema folder.
+Now that you've got everything installed, we want to setup a few things to make using PalSchema a bit easier.
+
+### Generating Schema Files
+
+1. Navigate to the `ue4ss` folder where you installed UE4SS and open up `UE4SS-settings.ini`.
+
+2. Scroll down to the `[Debug]` section and set both `GuiConsoleEnabled` and `GuiConsoleVisible` to 1. UE4SS GUI Console is only recommended to be enabled during development due to performance impact so make sure to disable it when you're playing the game normally and not developing mods.
+
+3. Launch Palworld and the UE4SS Debugging Tools window should appear.
+
+4. Navigate to the Pal Schema tab and click on `Generate JSON Schema Files`. This will take a moment and you'll see a progress bar which will disappear once it's done generating the schema files.
+
+![Showcasing Generate JSON Schema Files button in the UE4SS Debugging Tools](./assets/gui_console_palschema_tab.png)
+
+:::warning
+If you have graphical issues in the GUI Console, try changing `GraphicsAPI` from `opengl` to `dx11` or vice-versa.
+:::
+
+### The Mods Folder
+
+Next, head over to the Mods folder where you installed PalSchema and right click on the PalSchema folder.
 
 You should see an `Open with Code` option as seen in the image below.
 
@@ -32,119 +50,195 @@ VSCode (Visual Studio Code) will now be open in a new window and you should see 
 
 ![What the folder structure should look like when Visual Studio Code is open](assets/vscode_project_structure.png)
 
-## Explanation of Different Folders
+* .vscode - This tells VSCode where to look for the schema files and which mods to apply each schema to, don't touch this.
 
-You'll notice there's a dlls, examples, mods and schemas folder.
+* config - This is the [configuration](./configuration.md) file where you can enable/disable and modify certain features of PalSchema.
 
 * dlls - This is where the main file for PalSchema resides and is the one handling loading of PalSchema mods, leave it be.
 
-* examples - I've included an example mod inside this folder that you can just drag into the mods folder and experiment with.
+* examples - This contains example mods with comments that you can just drag into the mods folder and experiment with.
 
-* mods - This is where you'll want to put your mod files.
+* mods - This is where you'll want to put your PalSchema mods.
 
 * schemas - This is where VSCode will come in handy as it can read from the schema files inside to make sure our .json files are properly structured. Do not touch the files inside this folder.
 
-If we take a look inside the examples folder, we'll see the following folders inside ExampleMod:
-
-* appearance - This is where character creation related mods go like hair styles, eyes, head types, colors, etc...
-
-* items - This is where item related mods go.
-
-* pals - Pal related mods go here.
-
-* raw - This is for table mods that aren't categorized so you can modify any tables here, will explain at the end of the list.
-
-* skins - Pal skins and any other future skin types like buildings, weapons, etc.
-
-* translations - This is where translations for anything in the game goes and you can specify which language the translation is for by naming the folder after any of the localizations listed in the L10N folder of Palworld or you can also do custom localization. Palworld natively supports de, en, es, fr, it, ko, pt-BR, ru, zh-Hans, zh-Hant and you can easily add support for other unsupported languages with custom localization mods.
-
-Any mod that isn't a raw data table mod has some convenience logic behind them to make it so that you can edit multiple data tables without having to reference those other tables. You also get some neat autocompletion, detailed descriptions of each field and error checking.
-
 ## Creating a Mod
 
-Now that we have all of that covered, let's get started. We'll start by creating an entirely new item based on an existing item in the game.
+Now that we have all of that covered, let's get started. We'll start by editing an existing data table in the game.
 
-1. You'll want to right-click on the mods folder in VSCode, select `New Folder...` and name it `MyFirstMod`. You can also create the folders and files outside VSCode if it's easier.
+### Folder Structure
 
-2. Inside MyFirstMod create an `items` folder.
+1. Right-click on the `mods` folder in VSCode, select `New Folder...` and name it `MyFirstMod`. The folder we just created is the name of our mod which will show up as `MyFirstMod`.
 
-3. Now create a `my_item.json` file inside `items` folder. You can call it anything as long as it ends with .json
+![](./assets/creating_a_mod_newfolder.png)
 
-![Picture of an opened my_item.json file](assets/my_item.png)
+2. Next, right-click on `MyFirstMod`, select `New Folder...` again and this time name it `raw`. We must call this folder `raw` since PalSchema applies different logic based on the subfolder's name. We will go through every subfolder name and their purpose at the end of this tutorial.
 
-4. Next, we'll define our item inside `my_item.json`. write the following or copy-paste:
+3. Once more, right-click on the `raw` folder, but this time you want to select `New File...`. We'll name it `mymod.json`, but you can call it anything as long as it ends with `.json` as this is the file extension required by PalSchema. [`.jsonc`](https://jsonc.org/) is also supported if you want to include comments in your file.
+
+4. Your folder structure should now look like the image below.
+
+![Image of the folder structure in vscode showing MyFirstMod and raw folders with mymod.json in the raw folder](./assets/creating_a_mod_folderstructure.png)
+
+### Introduction to JSON
+
+Before we get into writing our mod, we'll want to go through some JSON basics. Note that this isn't meant to be a comprehensive tutorial to JSON and there are better resources for that on the internet if you google for it.
+
+JSON stands for **JavaScript Object Notation** which is meant for expressing structured data and is used for a variety of things with PalSchema being one of those!
+
+A JSON file will generally look like the below example:
 
 ```json
 {
-    "MOD_Raspberry": {
-        "Name": "Raspberry",
-        "Description": "It's very tasty.",
-        "Type": "Consumable",
-        "IconTexture": "/Game/Others/InventoryItemIcon/Texture/T_itemicon_Food_Berries.T_itemicon_Food_Berries",
-        "TypeA": "Food",
-        "TypeB": "FoodDishVegetable",
-        "Rank": 1,
-        "Rarity": 1,
-        "Price": 9999,
-        "MaxStackCount": 9999,
-        "Weight": 0.2,
-        "VisualBlueprintClassSoft": "/Game/Pal/Blueprint/Item/VisualModel/BP_Item_BerryRed.BP_Item_BerryRed_C",
-        "RestoreSatiety": 125,
-        "RestoreHP": 25,
-        "CorruptionFactor": 1.0,
-        "Recipe": {
-            "Product_Count": 1,
-            "WorkAmount": 10.0,
-            "Material1_Count": 1,
-            "Material1_Id": "Stone"
-        }
-    }
+  "person": {
+    "name": "Carl",
+    "age": 30,
+    "hasPets": true
+  }
 }
 ```
 
-I'll explain the above structure:
+`{}` curly brackets indicate an object which contains key/value pairs where the key is always a string while the value can be different things. In this case `person` is the key and the content within the following `{}` is the value (`{
+    "name": "Carl",
+    "age": 30,
+    "hasPets": true
+  }`).
 
-- `MOD_Raspberry` will be the internal code for our item that the game will use to identify which item we're referring to. You can make this anything, but you might be wondering why the MOD_ prefix? This is not required, but is good practice to avoid potential conflicts with future game updates as we can never know if they add an official item with the code `Raspberry` into the game. Do note that if this is set to an existing item id, it will modify that item instead rather than adding a new one. This can be particularly useful if you want to adjust the weight of existing items for example or anything else.
+`name` is a string as indicated by the quotes `""` around the value `Carl`.
 
-- Name is a field provided by PalSchema and provides a global translation for all languages. For specifying a localized name for a specific language, look into creating a translations language mod.
+`age` is a number
 
-- Description is a field provided by PalSchema and provides a global translation for all languages. For specifying a localized description for a specific language, look into creating a translations language mod.
+`hasPets` is a boolean which can be either `true` or `false`
 
-- Type is self explanatory and determines the logic for this item. Valid values are Weapon, Armor, Consumable and Generic with Generic having no special logic. Generic items are typically things like Materials (Stone, Wood, etc).
+You'll notice the first opening and closing pair of `{}` don't have a key associated and that's because their only purpose is to serve as a container for the JSON file. You'll always want to start your JSON file with either `{}` or `[]`.
 
-- TypeA and TypeB are used for determining what station the item can be crafted at.
+There's also `[]` square brackets which indicates a list of multiple values, for example:
 
-- Rank is the tier of the station that's required to craft it. 1 being all of them.
+```json
+{
+  "people": [
+    {
+      "name": "Carl",
+      "age": 30,
+      "hasPets": true
+    },
+    {
+      "name": "Steve",
+      "age": 32,
+      "hasPets": false
+    }
+  ]
+}
+```
 
-- Rarity defines the icon background color and text color for the item.
-  - 0 = Common
-  - 1 = Uncommon
-  - 2 = Rare
-  - 3 = Epic
-  - 4 = Legendary
+`people` contains a list of objects, but you can also use the square brackets with other values like numbers `[1, 2, 3, 4]` depending on what data is expected.
 
-- Price requires some manual calculation as it doesn't reflect the final value. You can get the final price by dividing the price by 10, so in our case 9999 / 10 = 999 gold in-game.
+```json
+{
+  "numbers": [1, 2, 3, 4]
+}
+```
 
-- MaxStackCount is self explanatory. Just don't go over 9999 due to duplication issue present in the Vanilla game.
+JSON supports six data types which are the following:
 
-- RestoreSatiety controls the amount of hunger replenished.
+* String - "Hello World"
+* Number and Integer - 13.37 and 128
+* Boolean - true/false
+* Null - Used to express emptiness
+* Object - Container for key/value pairs
+* Array - List of values
 
-- RestoreHP is most likely health recovery gained from eating the item?
+### Editing a Data Table
 
-- CorruptionFactor controls how quickly the food spoils. 1.0 is default, lower values make the item spoil slower while higher values make it spoil faster. Fun fact: You can use this for any item, not just consumables.
+Let's start writing our mod now that we have the basics down.
 
-- Recipe is something that doesn't normally exist within the table row and is something provided by PalSchema for convenience. This field automatically adds to the item recipe table. Product_Count is how many items are produced, WorkAmount is how long it should take to craft, Material_Count and Material_Id are the required materials and their count. Can go from 1 to 4. We've set the Raspberry to be craftable at any cooking station for 1 Stone.
+1. Click on the `mymod.json` file which will open it in the editor.
 
-Any fields not covered, you can just hover over it and you'll get a detailed description of what it is for. VisualBlueprintClassSoft as an example:
+2. Start by writing `{}` as covered in previous section. Your text cursor should be automatically placed in the middle of those curly brackets in which case press `Enter` to create some space so it looks like this:
 
-![VisualBlueprintClassSoft Tooltip](assets/visual_blueprint_class_soft.png)
+```json title="mymod.json"
+{
 
-Here's an example of suggestions as well:
+}
+```
 
-![Schema Suggestions](assets/schema_suggestions.png)
+3. Next we want to create an object with a key of `DT_PalMonsterParameter` which will be the name of the data table we're targeting. There are 400+ data tables in the game to choose from, but for this tutorial we'll use `DT_PalMonsterParameter` which in FModel is located in `Pal/Content/Pal/DataTable/Character/DT_PalMonsterParameter` if you want to use it as a reference.
 
-5. Done, That's everything! If you're used to having to package the mod into a .pak file, that step is completely removed with PalSchema as it loads the .json file directly when you launch the game. Let's test the mod in-game!
+```json title="mymod.json"
+{
+  "DT_PalMonsterParameter": {
+      
+  }
+}
+```
 
-![alt text](assets/congratulations.png)
+You might notice that while writing the data table name, it'll show results for other data tables. This is called autocomplete and it's provided by the schema files in the `schemas` folder. 
 
-Success! We've created our first new item in Palworld! Now keep in mind that if you have any modded items in your world and you remove the mod, your world will not be playable anymore.
+You can press either `Enter` or `Tab` while the autocompletion box is open to have VSCode autofill for you.
+
+4. We'll want to create another object where the key this time is the row name in the data table. We'll use `Kitsunebi` which is the internal identifier (ID) for Foxparks, see [Paldeck](https://paldeck.cc/pals) for a comprehensive list of IDs for different things.
+
+
+```json title="mymod.json"
+{
+  "DT_PalMonsterParameter": {
+    "Kitsunebi": {
+      
+    }
+  }
+}
+```
+
+Let's modify the properties of `Kitsunebi` (Foxparks) and give it a bit of a buff.
+
+5. Inside the `Kitsunebi` row object, start writing `WorkSuitability_EmitFlame` which is Kindling and it should show up a bunch of suggestions. Hit `Tab` or `Enter` to autocomplete on `WorkSuitability_EmitFlame` and it should fill in `WorkSuitability_EmitFlame: 0`, we'll set the value to 3.
+
+```json title="mymod.json"
+{
+  "DT_PalMonsterParameter": {
+    "Kitsunebi": {
+      "WorkSuitability_EmitFlame": 3
+    }
+  }
+}
+```
+
+:::tip
+PalSchema will only modify properties and rows that we target in our `.json` files which means every other value will be left as is. This is ideal to prevent conflicts with other mods that can happen with other methods of editing the game's asset files due to those methods overwriting the entire asset rather than only the targeted values.
+:::
+
+## End Result
+
+Launch the game, load up into the game and try to find yourself a Foxparks if you don't have one yet. If we look at the Kindling level for Foxparks, we'll see it's at Lv. 3 now!
+
+![](./assets/foxparks_kindling_lv3.png)
+
+Congrats, you've made your first PalSchema mod! You should now be equipped with the knowledge to start modifying some data tables or even add new data!
+
+I recommend checking the **Guides** section in the docs as well since there's a lot of things you can do with PalSchema like adding new items, buildings or even pal variants if that's something you're interested in.
+
+## Final Notes
+
+I promised earlier to cover the different folder types aside from `raw` and this is very important to understand and remember.
+
+* `appearance` - This is where character creation related mods go like hair styles, eyes, head types, colors, etc...
+
+* `blueprints` - Blueprint edit asset mods go in here. [Intro to Blueprint Editing](./guides/blueprints/intro.md).
+
+* `buildings` - [Building related](./guides/buildings/craftingstation.md) mods go here.
+
+* `enums` - This is where you can [add new enums](./guides/enums/newenums.md).
+
+* `helpguide` - Survival Guide related mods go here. [Working with Survival Guide](./guides/helpguide/intro.md).
+
+* `items` - [Item related](./guides/items/creatingabow.md) mods go here.
+
+* `pals` - Pal related mods go here.
+
+* `raw` - This is for any data table mods and as the name implies, it has no hand holding safety logic in PalSchema like the other mod types.
+
+* `skins` - Pal skins and any other future skin types like buildings, weapons, etc.
+
+* `spawns` - Custom spawners for pals and npcs go in here. [Custom Spawners](./guides/spawners/overview.md).
+
+* `translations` - This is where translations for anything in the game goes and you can specify which language the translation is for by naming the folder after any of the localizations listed in the L10N folder of Palworld or you can also do custom localization. Palworld natively supports de, en, es, fr, it, ko, pt-BR, ru, zh-Hans, zh-Hant and you can easily add support for other unsupported languages with custom localization mods. [Intro to Translations](./guides/translations/intro.md).

@@ -1,0 +1,24 @@
+{
+    "json.schemas": [
+        {
+            "fileMatch": ["items/*.json"],
+            "url": "./schemas/items.schema.json"
+        },
+        {
+            "fileMatch": ["pals/*.json"],
+            "url": "./schemas/pals.schema.json"
+        },
+        {
+            "fileMatch": ["skins/*.json"],
+            "url": "./schemas/skins.schema.json"
+        },
+        {
+            "fileMatch": ["buildings/*.json"],
+            "url": "./schemas/buildings.schema.json"
+        },
+        {
+            "fileMatch": ["raw/*.json"],
+            "url": "./schemas/raw.schema.json"
+        },
+    ]
+}

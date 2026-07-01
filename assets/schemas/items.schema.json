@@ -1,0 +1,206 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Items Schema",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "properties": {
+      "Name": {
+        "type": "string",
+        "description": "Translated name of the item, applies to all languages.\nCreate a translation table mod if you need language support."
+      },
+      "Description": {
+        "type": "string",
+        "description": "Translated description of the item, applies to all languages.\nCreate a translation table mod if you need language support."
+      },
+      "Type": {
+        "type": "string",
+        "enum": ["Weapon", "Armor", "Consumable", "Generic"],
+        "description": "Type to use, must be either Weapon, Armor, Consumable or Generic"
+      },
+      "IconTexture": {
+        "type": "string",
+        "pattern": "^/Game(?:/[^/]+)*/([A-Za-z0-9_]+)\\.\\1$",
+        "description": "Example of a correct path format: /Game/Others/InventoryItemIcon/Texture/T_itemicon_Food_Berries.T_itemicon_Food_Berries\nIn FModel or Unreal Editor, the path would look like Pal/Content/Pal/Others/InventoryItemIcon/Texture/T_itemicon_Food_Berries"
+      },
+      "TypeA": {
+        "type": "string",
+        "$ref": "enums.schema.json#/definitions/EPalItemTypeA",
+        "description": "Primary category for an item, mostly used for determining where the item can be crafted."
+      },
+      "TypeB": {
+        "type": "string",
+        "$ref": "enums.schema.json#/definitions/EPalItemTypeB",
+        "description": "Secondary category for an item, mostly used for determining where the item can be crafted."
+      },
+      "Rank": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "Rank determines which tier crafting station is required and this field is only relevant for crafting.\nRefer to https://paldb.cc/en/Production or https://paldb.cc/en/Pal and click on each crafting station to see what their rank is. The field you're looking for is the Rank Max field at the bottom of the page.\nExamples:\nPrimitive Workbench has a Rank Max of 1\nHigh Quality Workbench has a Rank Max of 2"
+      },
+      "Rarity": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 4,
+        "default": 0,
+        "description": "Self explanatory, determines the background color of the icon.\nValid values are between 0 and 4 and correspond to Common, Uncommon, Rare, Epic and Legendary."
+      },
+      "Price": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "Price in shops, divide by 10 to get the real value in-game.\nExample: If you want the item to cost 50 Gold, you would have to enter 500 as the price.\nThis is subject to change if Pocketpair ever decides to make adjustments to the math behind it."
+      },
+      "MaxStackCount": {
+        "type": "integer",
+        "minimum": 1,
+        "default": 1,
+        "description": "Self explanatory, recommended value for equippable items is 1.\nThe game doesn't like the stack size being higher than 9999 and will cause items to duplicate when moving them around, so try not to go above 9999."
+      },
+      "SortID": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "This determines the sorting order in inventories when pressing the sort button."
+      },
+      "Weight": {
+        "type": "number",
+        "description": "Must be a float value e.g. 0.0",
+        "minimum": 0.0,
+        "not": {
+          "type": "integer"
+        }
+      },
+      "VisualBlueprintClassSoft": {
+        "type": "string",
+        "pattern": "^/Game(?:/[^/]+)*/([A-Za-z0-9_]+)\\.\\1_C$",
+        "description": "This is the item's 3D model that shows up in the world, for example when dropping the item on the ground.\nExample of a correct path format: /Game/Pal/Blueprint/Item/VisualModel/BP_Item_BerryRed.BP_Item_BerryRed_C\nIn FModel or Unreal Editor, the path would look like Pal/Content/Pal/Blueprint/Item/VisualModel/BP_Item_BerryRed"
+      },
+      "CorruptionFactor": {
+        "type": "number",
+        "minimum": 0.0,
+        "default": 0.0,
+        "description": "Determines if the item should expire after a certain amount of time. The higher the value, the longer it takes for one item in the stack to expire.\n0.0 means it will never spoil.\nMust be a float value e.g. 0.0",
+        "not": {
+          "type": "integer"
+        }
+      },
+      "OverrideNameMsgID": {
+        "type": "string",
+        "description": "Manually determines which translation entry should be used for this item. This is generally used for tiered items with different rarities like weapons or armor.\nExample: AssaultRifle_Default1 has no override for this, but AssaultRifle_Default2 has an override since it's essentially the same item, but better, so it just uses the same item name."
+      },
+      "OverrideDescMsgID": {
+        "type": "string",
+        "description": "Manually determines which translation entry should be used for this item. This is generally used for tiered items with different rarities like weapons or armor.\nExample: AssaultRifle_Default1 has no override for this, but AssaultRifle_Default2 has an override since it's essentially the same item, but better, so it just uses the same item description."
+      },
+      "Recipe": {
+        "type": "object",
+        "properties": {
+          "Product_Count": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1,
+            "description": "The number of items produced."
+          },
+          "WorkAmount": {
+            "type": "number",
+            "minimum": 0.0,
+            "default": 0.0,
+            "description": "Determines how long it should take to craft this recipe.\nMust be a float value e.g. 0.0",
+            "not": {
+              "type": "integer"
+            }
+          },
+          "WorkableAttribute": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1,
+            "description": "Unsure what this is, leave it at 1."
+          },
+          "UnlockItemID": {
+            "type": "string",
+            "description": "The ID of the item required to unlock this recipe."
+          },
+          "Material1_Id": {
+            "type": "string"
+          },
+          "Material1_Count": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "Material2_Id": {
+            "type": "string"
+          },
+          "Material2_Count": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "Material3_Id": {
+            "type": "string"
+          },
+          "Material3_Count": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          }
+        },
+        "required": ["Product_Count", "WorkAmount", "Material1_Id", "Material1_Count"]
+      }
+    },
+    "required": [
+      "Type",
+      "IconTexture",
+      "TypeA",
+      "TypeB",
+      "Rank",
+      "Rarity",
+      "MaxStackCount"
+    ],
+    "anyOf": [
+      {
+        "properties": {
+          "Type": { "const": "Generic" }
+        }
+      },
+      {
+        "properties": {
+          "Type": { "const": "Consumable" },
+          "RestoreHP": { "type": "integer" },
+          "RestoreSatiety": { "type": "integer", "description": "This is the amount of hunger that is recovered." }
+        },
+        "required": ["Type", "RestoreHP", "RestoreSatiety"]
+      },
+      {
+        "properties": {
+          "Type": { "const": "Weapon" },
+          "AttackPower": { "type": "integer" },
+          "SneakAttackRate": { "type": "number", "description": "Must be a float value e.g. 0.0", "default": 1.0, "not": { "type": "integer" } },
+          "Durability": { "type": "number", "description": "Must be a float value e.g. 0.0", "minimum": 0.0, "default": 100.0, "not": { "type": "integer" } },
+          "actorClass": {
+            "type": "string",
+            "description": "This should be path to the Weapon blueprint that defines your weapon's logic.\nExample of a correct path format: /Game/Pal/Blueprint/Weapon/BP_MyWeapon.BP_MyWeapon_C\nIn FModel or Unreal Editor, the path would look like Pal/Content/Pal/Blueprint/Weapon/BP_MyWeapon"
+          },
+          "PassiveSkill": { "type": "string" },
+          "PassiveSkill2": { "type": "string" },
+          "PassiveSkill3": { "type": "string" },
+          "PassiveSkill4": { "type": "string" }
+        },
+        "required": ["Type", "AttackValue", "SneakAttackRate", "Durability", "actorClass"]
+      },
+      {
+        "properties": {
+          "Type": { "const": "Armor" },
+          "DefenseValue": { "type": "integer", "minimum": 0 },
+          "HPValue": { "type": "integer", "minimum": 0 },
+          "ShieldValue": { "type": "integer", "minimum": 0 },
+          "Durability": { "type": "number", "description": "Must be a float value e.g. 0.0", "minimum": 0.0, "default": 100.0, "not": { "type": "integer" } },
+          "PassiveSkill": { "type": "string" },
+          "PassiveSkill2": { "type": "string" },
+          "PassiveSkill3": { "type": "string" },
+          "PassiveSkill4": { "type": "string" }
+        },
+        "required": ["Type", "DefenseValue", "HPValue", "ShieldValue", "Durability"]
+      }
+    ]
+  }
+}
