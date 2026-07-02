@@ -5,6 +5,7 @@ import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 
 import HeaderImageSVG from '@site/static/img/palschema_card.svg';
+import HomepageFeatures from '@site/src/components/HomepageFeatures';
 import styles from './index.module.css';
 
 function HomepageHeader() {
@@ -37,9 +38,12 @@ export default function Home(): ReactNode {
     <Layout
       title={`${siteConfig.title}`}
       description="">
-      <HomepageHeader />
-      <main>
-      </main>
+      <div className={styles.homeWrapper}>
+        <HomepageHeader />
+        <main>
+          <HomepageFeatures />
+        </main>
+      </div>
     </Layout>
   );
 }

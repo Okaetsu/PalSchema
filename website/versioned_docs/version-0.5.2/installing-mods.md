@@ -12,7 +12,7 @@ In this guide, we'll cover how to install PalSchema mods. This will apply **univ
 Before installing any PalSchema mods, **make sure you've properly done the following:**
 
  - **[Install the Experimental Fork of UE4SS](./installation.mdx#ue4ss---correct-version--installation)**
- - **[Install PalSchema](./installation.mdx#installing-palschema--using-palschema-mods)**
+ - **[Install PalSchema](./installation.mdx#installing-palschema)**
  - **Remove Files From Older UE4SS Install**:
     - **Mods Folder Under Win64 or WinGDK Folders** - If you still have a **Mods** folder under **Win64 (Steam)** or **WinGDK (Gamepass)**, it **WILL** cause crashes and prevent proper functionality.
     - **UE4SS.dll, UE4SS-settings.ini Under Win64 or WinGDK** - If you have a **UE4SS-settings.ini** or **UE4SS.dll** in your **Win64 (Steam)** or **WinGDK (Game Pass)**, delete these as they are most likely from an old UE4SS install and **WILL** interfere with your new install, causing the old UE4SS to load instead, ***which in turn causes Pal Schema and its mods to not function correctly.***
