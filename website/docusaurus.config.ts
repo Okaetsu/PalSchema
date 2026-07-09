@@ -69,6 +69,11 @@ const config: Config = {
 
   themeConfig: {
     image: 'img/palschema_card.png',
+    docs: {
+      sidebar: {
+        autoCollapseCategories: true,
+      }
+    },
     navbar: {
       title: 'PalSchema',
       logo: {

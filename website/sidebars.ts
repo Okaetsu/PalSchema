@@ -35,18 +35,73 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Guides',
       items: [
-        'guides/items/creatingabow',
-        'guides/blueprints/intro',
-        'guides/blueprints/components',
-        'guides/rawtables/intro',
-        'guides/rawtables/wildcard',
-        'guides/buildings/craftingstation',
-        'guides/enums/newenums',
-        'guides/translations/intro',
-        'guides/pals/addingranchsuitabilitynew',
-        'guides/resources/importingimages',
-        'guides/helpguide/intro',
-        'guides/spawners/overview',
+        {
+          type: 'category',
+          label: 'Items',
+          items: [
+            'guides/items/creatingabow',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Blueprints',
+          items: [
+            'guides/blueprints/intro',
+            'guides/blueprints/components',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Raw Tables',
+          items: [
+            'guides/rawtables/intro',
+            'guides/rawtables/wildcard',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Buildings',
+          items: [
+            'guides/buildings/craftingstation',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Enums',
+          items: [
+            'guides/enums/newenums',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Localization',
+          items: [
+            'guides/translations/intro',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Pals',
+          items: [
+            'guides/pals/addingranchsuitabilitynew',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Misc',
+          items: [
+            'guides/resources/importingimages',
+            'guides/helpguide/intro',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Spawners',
+          items: [
+            'guides/spawners/overview',
+
+          ],
+        },
       ],
     },
   ]

@@ -55,3 +55,7 @@ These fields are only available when `Type` is set to `Sheet`.
 ### Additional Notes
 
 - A small implementation detail regarding the `SpawnerName` field when adding spawns: PalSchema will automatically append the name of your mod to the front, so if the name of your mod's main folder is called `MySpawnerMod` and the `SpawnerName` is `Cattiva001`, the final name will be `MySpawnerMod_Cattiva001`. This is to prevent any name collisions with other mods that add spawns with the same name.
+
+## Examples
+
+- [NewSpawnsAtPlateau](https://github.com/Okaetsu/PalSchema/blob/main/assets/examples/NewSpawnsAtPlateau/spawns/new_spawns.jsonc) example mod that adds a merchant and a boss Xenolord at the plateau of beginnings.
