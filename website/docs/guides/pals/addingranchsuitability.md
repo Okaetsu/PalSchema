@@ -1,8 +1,8 @@
----
-sidebar_position: 1
----
+# Adding Ranch Suitability (Legacy)
 
-# Adding Ranch Suitability
+:::warning
+This is for older PalSchema versions before 0.6.0. See the [newer version](./addingranchsuitabilitynew.md) of this guide.
+:::
 
 So you've been wondering if you could make Tocotoco generate Gunpowder at the Ranch? Well, wonder no longer as we are finally able to do just that!
 

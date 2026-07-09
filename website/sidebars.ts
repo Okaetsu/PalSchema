@@ -43,7 +43,7 @@ const sidebars: SidebarsConfig = {
         'guides/buildings/craftingstation',
         'guides/enums/newenums',
         'guides/translations/intro',
-        'guides/pals/addingranchsuitability',
+        'guides/pals/addingranchsuitabilitynew',
         'guides/resources/importingimages',
         'guides/helpguide/intro',
         'guides/spawners/overview',
