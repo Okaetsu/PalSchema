@@ -96,7 +96,7 @@ const config: Config = {
         {
           type: 'docsVersionDropdown',
           position: 'right',
-          versions: ['current', '0.5.2'],
+          versions: ['current', '0.6.0'],
         },
         {
           href: 'https://github.com/Okaetsu/PalSchema',
