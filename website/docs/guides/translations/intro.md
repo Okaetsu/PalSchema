@@ -1,8 +1,4 @@
----
-sidebar_position: 1
----
-
-# Intro to Translations
+# Intro to Localization Mods
 
 Hello there! So you're interested in creating new localization entries for the game? You've come to the right place!
 
