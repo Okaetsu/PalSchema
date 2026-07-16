@@ -72,12 +72,10 @@ namespace Palworld {
             auto loadedAsset = static_cast<UClass*>(UECustom::UKismetSystemLibrary::LoadAsset_Blocking(softObjectPtr));
             if (!loadedAsset)
             {
-                throw std::runtime_error(RC::fmt("Asset '%S' was invalid", assetPath));
+                throw std::runtime_error(RC::fmt("Asset '%S' was invalid, unable to setup ranch suitabilities.", assetPath));
             }
             loadedAsset->SetRootSet();
             m_spawnItemBaseClass = loadedAsset;
-
-            InitializeDefaultRanchPalsList();
         }
         catch (const std::exception& e)
         {
@@ -114,22 +112,6 @@ namespace Palworld {
         m_cachedSpawnItemActionsByName.Add(newAssetName, newBPClass);
 
         return cdo;
-    }
-
-    void PalMonsterModLoader::InitializeDefaultRanchPalsList()
-    {
-        auto& paramMap = m_monsterDataTable->GetRowMap();
-        auto paramRowStruct = m_monsterDataTable->GetRowStruct().Get();
-
-        for (auto& [key, value] : paramMap)
-        {
-            auto farmProperty = PropertyHelper::GetPropertyByName(paramRowStruct, TEXT("WorkSuitability_MonsterFarm"));
-            auto farmValue = *farmProperty->ContainerPtrToValuePtr<int>(value);
-            if (farmValue > 0)
-            {
-                m_defaultFarmPals.Add(key);
-            }
-        }
     }
 
     void PalMonsterModLoader::LoadPals(const nlohmann::json& data)
@@ -245,14 +227,13 @@ namespace Palworld {
 
     void PalMonsterModLoader::HandleRanchSuitability(uint8_t* row, const RC::Unreal::FName& characterId, const nlohmann::json& data)
     {
-        // Skip pals that already have ranch suitability in the base game.
-        if (m_defaultFarmPals.Contains(characterId)) return;
+        if (!data.contains("RanchActionData")) return;
 
         auto rowStruct = m_monsterDataTable->GetRowStruct().Get();
         auto ranchSuitabilityProperty = PropertyHelper::GetPropertyByName(rowStruct, TEXT("WorkSuitability_MonsterFarm"));
         auto ranchSuitability = *ranchSuitabilityProperty->ContainerPtrToValuePtr<int>(row);
 
-        if (ranchSuitability <= 0 || !data.contains("RanchActionData")) return;
+        if (ranchSuitability <= 0) return;
 
         auto& ranchActionData = data.at("RanchActionData");
         if (!ranchActionData.is_object())
@@ -313,7 +294,7 @@ namespace Palworld {
         auto spawnItemEnumValue = PS::EnumHelpers::GetEnumValueByName(actionMapKeyProp->GetEnum(), FName(TEXT("EPalActionType::SpawnItem")));
         actionMap.Add(static_cast<uint8>(spawnItemEnumValue), newSpawnAction->GetClassPrivate());
         
-        PS::Log<LogLevel::Normal>(STR("Added SpawnItem action for {}\n"), characterId.ToString());
+        PS::Log<LogLevel::Verbose>(STR("Added Ranch SpawnItem action for {}\n"), characterId.ToString());
     }
 
 	void PalMonsterModLoader::AddIcon(const RC::Unreal::FName& CharacterId, const RC::StringType& IconPath)
