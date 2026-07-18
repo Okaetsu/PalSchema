@@ -24,8 +24,6 @@ namespace Palworld {
         // Creates a new BP_Action_SpawnItem class and returns the class default object for it.
         RC::Unreal::UObject* CreateSpawnItemActionByCharacterId(const RC::Unreal::FName& characterId);
 
-        void InitializeDefaultRanchPalsList();
-
         void LoadPals(const nlohmann::json& data);
 
         void Add(const RC::Unreal::FName& CharacterId, const nlohmann::json& properties);
@@ -57,6 +55,5 @@ namespace Palworld {
 
         RC::Unreal::UClass* m_spawnItemBaseClass{};
         RC::Unreal::TMap<RC::Unreal::FName, RC::Unreal::UClass*> m_cachedSpawnItemActionsByName;
-        RC::Unreal::TSet<RC::Unreal::FName> m_defaultFarmPals;
     };
 }
