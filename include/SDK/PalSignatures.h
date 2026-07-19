@@ -33,9 +33,11 @@ namespace Palworld {
             // Important, we need this early.
             { "FName::Constructor", "48 89 5C 24 08 57 48 83 EC 30 48 8B D9 48 89 54 24 20" },
             // Points towards the MOV instruction in UPalItemContainer::ApplySaveData after the CALL to UPalItemSlot::UpdateItem_ServerInternal
-            { "UPalItemContainer::ApplySaveData", "48 8B CB E8 ?? ?? ?? ?? 48 8B CB E8 ?? ?? ?? ?? 48 8D 4B 28" },
+            { "UPalItemContainer::ApplySaveData", "48 8B CB E8 ?? ?? ?? ?? 48 8B CB E8 ?? ?? ?? ?? 48 89 5C 24 48" },
             // Points towards the MOV instruction in UPalDynamicItemWorldSubsystem::ApplyWorldSaveData after the CALL to UPalDynamicItemWorldSubsystem::Create_ServerInternal
-            { "UPalDynamicItemWorldSubsystem::ApplyWorldSaveData", "48 8B 4C 24 60 48 8B D8 48 85 C9 74 05 E8 ?? ?? ?? ?? 48 8D ?? ?? ?? ?? ?? 4C 89 65 50" },
+            { "UPalDynamicItemWorldSubsystem::ApplyWorldSaveData", "48 8B D8 48 8B 4C 24 50 48 85 C9 74 06 E8 ?? ?? ?? ?? 90 48 85 DB" },
+            { "ValidateWorldSaveDynamicItemStaticIds", "48 89 5C 24 10 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 60 FF FF FF 48 81 EC A0 01 00 00 48 8B ?? ?? ?? ?? ?? 48 33 C4 48 89 85 90 00 00 00 4D 8B E9" },
+            { "ValidateDynamicItemSaveData", "40 55 53 56 57 41 54 41 56 41 57 48 8D AC 24 80 FE FF FF 48 81 EC 80 02 00 00 48 8B ?? ?? ?? ?? ?? 48 33 C4 48 89 85 70 01 00 00" },
         };
         static inline std::unordered_map<std::string, std::string> SignaturesCallResolve {
             // Don't ask, I know it's long..
@@ -48,8 +50,8 @@ namespace Palworld {
             { "FMemory::Free", "E8 ?? ?? ?? ?? 4C 8D 45 D7 48 8D 55 27 48 8D 4D 17 E8" },
             // Raw Tables
             { "UDataTable::Serialize", "E8 ?? ?? ?? ?? 41 F6 06 01 0F 84 1D 03 00 00 48 89 5C 24 50" },
-            { "UPalDynamicItemWorldSubsystem::Create_ServerInternal", "E8 ?? ?? ?? ?? 48 8B 4C 24 60 48 8B D8 48 85 C9 74 05 E8 ?? ?? ?? ?? 48 8D ?? ?? ?? ?? ?? 4C 89 65 50 48 8D ?? ?? ?? ?? ?? 48 89" },
-            { "UPalItemSlot::UpdateItem_ServerInternal", "E8 ?? ?? ?? ?? 48 8B CB E8 ?? ?? ?? ?? 48 8B CB E8 ?? ?? ?? ?? 48 8D 4B 28" },
+            { "UPalDynamicItemWorldSubsystem::Create_ServerInternal", "E8 ?? ?? ?? ?? 48 8B D8 48 8B 4C 24 50 48 85 C9 74 06 E8 ?? ?? ?? ?? 90 48 85 DB" },
+            { "UPalItemSlot::UpdateItem_ServerInternal", "E8 ?? ?? ?? ?? 48 8B CB E8 ?? ?? ?? ?? 48 8B CB E8 ?? ?? ?? ?? 48 89 5C 24 48" },
             { "UWorld::CleanupWorld", "E8 ?? ?? ?? ?? 8B 55 A7 FF C2 49 83 C5 08 89 55 A7" },
         };
     };

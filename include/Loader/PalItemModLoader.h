@@ -54,9 +54,13 @@ namespace Palworld {
         static inline void* ApplyDynamicItemSaveDataAddress = nullptr;
         static inline SafetyHookInline UpdateItem_ServerInternalHook;
         static inline SafetyHookInline DynamicItemHook;
+        static inline SafetyHookInline ValidateWorldSaveDynamicItemStaticIdsHook;
+        static inline SafetyHookInline ValidateDynamicItemSaveDataHook;
 
         static bool IsValidItem(RC::Unreal::UObject* worldContextObject, const RC::Unreal::FName& staticId);
         static void UpdateItem_Detour(RC::Unreal::UObject* self, FPalItemId* itemId, int amount, bool param4, bool param5);
         static UPalDynamicItemDataBase* CreateDynamicItemDatabase_Detour(RC::Unreal::UObject* self, FPalDynamicItemId* dynamicItemId, RC::Unreal::FName staticId, void* itemCreateParam);
+        static bool ValidateWorldSaveDynamicItemStaticIds(RC::Unreal::UObject* idk, RC::Unreal::UObject* SaveGame, RC::Unreal::FString& idk3, RC::Unreal::FString& idk4);
+        static bool ValidateDynamicItemSaveData(void* idk, RC::Unreal::UObject* DynamicItemDataBase, RC::Unreal::UObject* ItemIDManager, const RC::StringType& idk2);
 	};
 }
