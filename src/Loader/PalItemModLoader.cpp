@@ -450,11 +450,32 @@ namespace Palworld {
                 throw std::runtime_error("Signature for UPalDynamicItemWorldSubsystem::ApplyWorldSaveData could not be found");
             }
 
+            auto address3 = Palworld::SignatureManager::GetSignature("ValidateWorldSaveDynamicItemStaticIds");
+            if (!address3)
+            {
+                throw std::runtime_error("Signature for ValidateWorldSaveDynamicItemStaticIds could not be found");
+            }
+
+            auto address4 = Palworld::SignatureManager::GetSignature("ValidateDynamicItemSaveData");
+            if (!address4)
+            {
+                throw std::runtime_error("Signature for ValidateDynamicItemSaveData could not be found");
+            }
+
             UpdateItem_ServerInternalHook = safetyhook::create_inline(reinterpret_cast<void*>(address),
                 UpdateItem_Detour);
 
             DynamicItemHook = safetyhook::create_inline(reinterpret_cast<void*>(address2),
                 CreateDynamicItemDatabase_Detour);
+
+            // If I have to add anymore detours and signatures for this functionality I'm going to lose it
+            // Probably a good reason to finally look into how the FPalMemoryReader works
+
+            ValidateWorldSaveDynamicItemStaticIdsHook = safetyhook::create_inline(reinterpret_cast<void*>(address3),
+                ValidateWorldSaveDynamicItemStaticIds);
+
+            ValidateDynamicItemSaveDataHook = safetyhook::create_inline(reinterpret_cast<void*>(address4),
+                ValidateDynamicItemSaveData);
         }
         catch (const std::exception& e)
         {
@@ -505,5 +526,15 @@ namespace Palworld {
         }
 
         return DynamicItemHook.call<UPalDynamicItemDataBase*>(self, dynamicItemId, staticId, itemCreateParam);
+    }
+
+    bool PalItemModLoader::ValidateWorldSaveDynamicItemStaticIds(UObject* idk, UObject* SaveGame,FString& idk3, FString& idk4)
+    {
+        return true;
+    }
+
+    bool PalItemModLoader::ValidateDynamicItemSaveData(void* idk, UObject* DynamicItemDataBase, UObject* ItemIDManager, const RC::StringType& idk2)
+    {
+        return true;
     }
 }
