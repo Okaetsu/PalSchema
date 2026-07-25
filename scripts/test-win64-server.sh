@@ -22,6 +22,7 @@ show_usage() {
 }
 
 project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$project_root/scripts/lib/process-scan.sh"
 game_dir=""
 cycles=3
 game_port=18211
@@ -138,9 +139,16 @@ for required_command in "${required_commands[@]}"; do
     fi
 done
 
-if pgrep -f -- "$server_exe" >/dev/null 2>&1; then
+if palschema_target_process_status server /proc; then
     printf 'The selected Win64 server is already running: %s\n' "$server_exe" >&2
     exit 1
+else
+    process_status=$?
+    if ((process_status == 2)); then
+        printf '%s\n' \
+            "Cannot confirm that the isolated Win64 server is stopped because /proc visibility is incomplete." >&2
+        exit 1
+    fi
 fi
 
 port_is_open() {

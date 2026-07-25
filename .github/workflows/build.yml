@@ -61,7 +61,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up MSVC
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
         with:
           arch: x64
 
@@ -141,7 +141,9 @@ jobs:
             build/win64-xwin-shipping/PalSchema.dll \
             --json-output build/win64-xwin-shipping/pe-contract.json
           scripts/package-linux.sh shipping --output-dir dist
-          unzip -l dist/PalSchema_*_Win64*.zip
+          for archive in dist/PalSchema_*_Win64*.zip; do
+            unzip -l "$archive"
+          done
 
       - name: Upload Linux-hosted Win64 outputs
         uses: actions/upload-artifact@v7

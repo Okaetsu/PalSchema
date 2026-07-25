@@ -7,10 +7,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import shutil
+import struct
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -87,18 +90,118 @@ def version_resource_bytes(output: str) -> bytes:
     return b"".join(chunks)
 
 
-def has_version_string(resource: bytes, key: str, value: str) -> bool:
-    key_marker = f"{key}\0".encode("utf-16-le")
-    value_marker = f"{value}\0".encode("utf-16-le")
-    key_offset = resource.find(key_marker)
-    if key_offset < 0:
-        return False
-    value_offset = resource.find(
-        value_marker,
-        key_offset + len(key_marker),
-        key_offset + len(key_marker) + 512,
+def align4(offset: int) -> int:
+    return (offset + 3) & ~3
+
+
+def read_utf16_z(data: bytes, offset: int, end: int) -> tuple[str, int]:
+    cursor = offset
+    while cursor + 2 <= end:
+        if data[cursor : cursor + 2] == b"\0\0":
+            return data[offset:cursor].decode("utf-16-le"), cursor + 2
+        cursor += 2
+    raise RuntimeError("VERSIONINFO contains an unterminated UTF-16 key.")
+
+
+def parse_version_node(
+    data: bytes,
+    offset: int,
+    limit: int,
+) -> tuple[dict[str, object], int]:
+    if offset + 6 > limit:
+        raise RuntimeError("VERSIONINFO node header is truncated.")
+    length, value_length, value_type = struct.unpack_from("<HHH", data, offset)
+    if length < 6 or offset + length > limit:
+        raise RuntimeError("VERSIONINFO node length is invalid.")
+    end = offset + length
+    key, key_end = read_utf16_z(data, offset + 6, end)
+    value_offset = align4(key_end)
+    value_size = value_length * 2 if value_type == 1 else value_length
+    value_end = value_offset + value_size
+    if value_end > end:
+        raise RuntimeError(f"VERSIONINFO value for {key!r} is truncated.")
+    if value_type == 1:
+        value: bytes | str = data[value_offset:value_end].decode(
+            "utf-16-le",
+        ).rstrip("\0")
+    else:
+        value = data[value_offset:value_end]
+
+    children: list[dict[str, object]] = []
+    cursor = align4(value_end)
+    while cursor + 2 <= end:
+        if data[cursor:end].strip(b"\0") == b"":
+            break
+        child, child_end = parse_version_node(data, cursor, end)
+        children.append(child)
+        cursor = align4(child_end)
+    return {
+        "key": key,
+        "value": value,
+        "children": children,
+    }, end
+
+
+def decode_version_info(
+    resource: bytes,
+) -> tuple[tuple[int, int, int, int], dict[str, list[str]]]:
+    root, _ = parse_version_node(resource, 0, len(resource))
+    if root["key"] != "VS_VERSION_INFO":
+        raise RuntimeError("VERSIONINFO root key is invalid.")
+    fixed = root["value"]
+    if not isinstance(fixed, bytes) or len(fixed) < 52:
+        raise RuntimeError("VS_FIXEDFILEINFO is missing or truncated.")
+    fields = struct.unpack_from("<13I", fixed)
+    if fields[0] != 0xFEEF04BD:
+        raise RuntimeError("VS_FIXEDFILEINFO signature is invalid.")
+    product_version = (
+        fields[4] >> 16,
+        fields[4] & 0xFFFF,
+        fields[5] >> 16,
+        fields[5] & 0xFFFF,
     )
-    return value_offset >= 0
+
+    strings: dict[str, list[str]] = {}
+
+    def collect(node: dict[str, object], under_string_table: bool = False) -> None:
+        key = node["key"]
+        children = node["children"]
+        if not isinstance(key, str) or not isinstance(children, list):
+            raise RuntimeError("VERSIONINFO contains an invalid node.")
+        is_string_table = under_string_table or key == "StringFileInfo"
+        value = node["value"]
+        if is_string_table and isinstance(value, str) and key not in {
+            "StringFileInfo",
+        }:
+            strings.setdefault(key, []).append(value)
+        for child in children:
+            if not isinstance(child, dict):
+                raise RuntimeError("VERSIONINFO contains an invalid child.")
+            collect(child, is_string_table)
+
+    collect(root)
+    return product_version, strings
+
+
+def parse_flag_block(output: str, parent: str, heading: str) -> set[str]:
+    flags: set[str] = set()
+    in_parent = False
+    in_block = False
+    for raw_line in output.splitlines():
+        line = raw_line.strip()
+        if line == f"{parent} {{":
+            in_parent = True
+            continue
+        if in_parent and line.startswith(f"{heading} ["):
+            in_block = True
+            continue
+        if in_block and line == "]":
+            break
+        if in_block:
+            match = re.match(r"^(IMAGE_[A-Z0-9_]+)(?:\s|\(|$)", line)
+            if match:
+                flags.add(match.group(1))
+    return flags
 
 
 def inspect_artifact(
@@ -148,15 +251,25 @@ def inspect_artifact(
         elif block == "import":
             imports.add(name)
 
+    file_characteristics = parse_flag_block(
+        output,
+        "ImageFileHeader",
+        "Characteristics",
+    )
+    dll_characteristics = parse_flag_block(
+        output,
+        "ImageOptionalHeader",
+        "Characteristics",
+    )
     missing_characteristics = sorted(
         characteristic
         for characteristic in REQUIRED_DLL_CHARACTERISTICS
-        if characteristic not in output
+        if characteristic not in dll_characteristics
     )
     errors: list[str] = []
     if "Format: COFF-x86-64" not in output:
         errors.append("artifact is not COFF x86-64")
-    if "IMAGE_FILE_DLL" not in output:
+    if "IMAGE_FILE_DLL" not in file_characteristics:
         errors.append("artifact is not marked as a DLL")
     if exports != EXPECTED_EXPORTS:
         errors.append(
@@ -170,22 +283,25 @@ def inspect_artifact(
         errors.append("VERSIONINFO resource is missing")
     elif not resource_bytes:
         errors.append("VERSIONINFO resource data is missing")
-    if not has_version_string(
-        resource_bytes,
-        "ProductName",
-        EXPECTED_PRODUCT_NAME,
-    ):
-        errors.append(
-            f"VERSIONINFO product identity {EXPECTED_PRODUCT_NAME!r} is missing"
-        )
-    if not has_version_string(
-        resource_bytes,
-        "ProductVersion",
-        expected_version,
-    ):
-        errors.append(
-            f"VERSIONINFO product version {expected_version!r} is missing"
-        )
+    if resource_bytes:
+        try:
+            fixed_version, version_strings = decode_version_info(resource_bytes)
+            expected_components = tuple(int(value) for value in expected_version.split("."))
+            if fixed_version != expected_components:
+                errors.append(
+                    "VS_FIXEDFILEINFO product version differs: "
+                    f"expected {expected_components}, found {fixed_version}"
+                )
+            if version_strings.get("ProductName") != [EXPECTED_PRODUCT_NAME]:
+                errors.append(
+                    f"VERSIONINFO product identity {EXPECTED_PRODUCT_NAME!r} is missing"
+                )
+            if version_strings.get("ProductVersion") != [expected_version]:
+                errors.append(
+                    f"VERSIONINFO product version {expected_version!r} is missing"
+                )
+        except RuntimeError as error:
+            errors.append(str(error))
     if missing_characteristics:
         errors.append(
             "missing DLL security characteristics: "
@@ -232,9 +348,36 @@ def main() -> int:
 
     serialized = json.dumps(contract, indent=2) + "\n"
     if args.json_output:
-        output_path = args.json_output.resolve()
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(serialized, encoding="utf-8")
+        output_path = args.json_output.absolute()
+        try:
+            if output_path.is_symlink():
+                raise RuntimeError(
+                    f"JSON output must not be a symlink: {output_path}",
+                )
+            if output_path.exists() and os.path.samefile(output_path, artifact):
+                raise RuntimeError(
+                    "JSON output must not replace the verified artifact.",
+                )
+            if output_path.resolve(strict=False) == artifact:
+                raise RuntimeError(
+                    "JSON output must not replace the verified artifact.",
+                )
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=output_path.parent,
+                prefix=f".{output_path.name}.",
+                delete=False,
+            ) as temporary:
+                temporary.write(serialized)
+                temporary.flush()
+                os.fsync(temporary.fileno())
+                temporary_path = Path(temporary.name)
+            os.replace(temporary_path, output_path)
+        except (OSError, RuntimeError) as error:
+            print(f"Unable to write verifier JSON: {error}", file=sys.stderr)
+            return 1
         print(f"Verified {artifact}; wrote {output_path}")
     else:
         print(serialized, end="")

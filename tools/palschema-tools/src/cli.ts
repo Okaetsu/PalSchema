@@ -6,9 +6,12 @@ import {
   constants,
   copyFile,
   lstat,
+  mkdtemp,
   mkdir,
   readdir,
   realpath,
+  rename,
+  rm,
   writeFile,
 } from "node:fs/promises";
 import {
@@ -389,6 +392,7 @@ async function validateCommand(arguments_: string[]): Promise<number> {
           } else {
             console.error(error);
           }
+          exitCode = 2;
           process.exitCode = 2;
         }
       } while (validationRequested);
@@ -419,6 +423,10 @@ async function validateCommand(arguments_: string[]): Promise<number> {
     .on("add", (path) => rerun(path, "validate"))
     .on("change", (path) => rerun(path, "validate"))
     .on("unlink", (path) => rerun(path, "delete"));
+  await new Promise<void>((resolveReady, rejectReady) => {
+    watcher.once("ready", resolveReady);
+    watcher.once("error", rejectReady);
+  });
   if (options.format === "json") {
     console.log(JSON.stringify({ event: "watch-started", paths: options.paths }));
   } else {
@@ -579,6 +587,7 @@ async function initCommand(arguments_: string[]): Promise<number> {
     ".palschema",
     "schemas",
   );
+  const schemaParent = dirname(schemaDestination);
   const settingsPath = join(options.destination, ".vscode", "settings.json");
   const configPath = join(options.destination, "palschema.config.json");
   const managedTargets = [settingsPath, configPath];
@@ -614,7 +623,7 @@ async function initCommand(arguments_: string[]): Promise<number> {
 
   if (!options.force) {
     const conflicts = [];
-    for (const target of managedTargets) {
+    for (const target of [...managedTargets, schemaDestination]) {
       if (await pathExists(target)) {
         conflicts.push(target);
       }
@@ -627,41 +636,75 @@ async function initCommand(arguments_: string[]): Promise<number> {
     }
   }
 
-  await mkdir(schemaDestination, { recursive: true });
+  await mkdir(schemaParent, { recursive: true });
   await mkdir(join(options.destination, ".vscode"), { recursive: true });
 
-  const destinationIndex = join(schemaDestination, "schema-index.json");
-  await assertNoManagedSymlink(destinationIndex);
-  await copyFile(
-    join(registry.schemaDirectory, "schema-index.json"),
-    destinationIndex,
-  );
+  const assertRegularSchemaSource = async (
+    source: string,
+    label: string,
+  ): Promise<void> => {
+    const metadata = await lstat(source);
+    if (!metadata.isFile() || metadata.isSymbolicLink()) {
+      throw new Error(`${label} must be a regular non-symlink file: ${source}`);
+    }
+    const canonical = await realpath(source);
+    if (!isPathContained(registry.schemaDirectory, canonical)) {
+      throw new Error(`${label} escapes its schema pack: ${source}`);
+    }
+  };
+
+  const stagedSchemas = await mkdtemp(join(schemaParent, ".schemas-stage-"));
   const copiedSchemas: string[] = ["schema-index.json"];
   const missingGenerated: string[] = [];
-  for (const entry of registry.index.schemas) {
-    const source = registry.pathFor(entry);
-    const destination = containedDestination(schemaDestination, entry.file);
-    if (!(await pathExists(source))) {
-      if (entry.generated) {
-        missingGenerated.push(entry.file);
-        continue;
+  try {
+    const sourceIndex = join(registry.schemaDirectory, "schema-index.json");
+    await assertRegularSchemaSource(sourceIndex, "Schema index");
+    await copyFile(sourceIndex, join(stagedSchemas, "schema-index.json"));
+
+    for (const entry of registry.index.schemas) {
+      const source = registry.pathFor(entry);
+      const destination = containedDestination(stagedSchemas, entry.file);
+      if (!(await pathExists(source))) {
+        if (entry.generated) {
+          missingGenerated.push(entry.file);
+          continue;
+        }
+        throw new Error(`Required schema is missing: ${source}`);
       }
-      throw new Error(`Required schema is missing: ${source}`);
+      await assertRegularSchemaSource(source, `Schema ${entry.file}`);
+      await copyFile(source, destination);
+      copiedSchemas.push(entry.file);
+      for (const supportFile of await registry.supportFilesFor(entry)) {
+        const supportSource = registry.pathForRelative(supportFile);
+        const supportDestination = containedDestination(
+          stagedSchemas,
+          supportFile,
+        );
+        await mkdir(dirname(supportDestination), { recursive: true });
+        await copyFile(supportSource, supportDestination);
+        copiedSchemas.push(supportFile);
+      }
     }
-    await assertNoManagedSymlink(destination);
-    await copyFile(source, destination);
-    copiedSchemas.push(entry.file);
-    for (const supportFile of await registry.supportFilesFor(entry)) {
-      const supportSource = registry.pathForRelative(supportFile);
-      const supportDestination = containedDestination(
-        schemaDestination,
-        supportFile,
-      );
-      await assertNoManagedSymlink(supportDestination);
-      await mkdir(dirname(supportDestination), { recursive: true });
-      await copyFile(supportSource, supportDestination);
-      copiedSchemas.push(supportFile);
+
+    const backupSchemas = `${schemaDestination}.backup-${process.pid}-${Date.now()}`;
+    const hadExistingSchemas = await pathExists(schemaDestination);
+    if (hadExistingSchemas) {
+      await rename(schemaDestination, backupSchemas);
     }
+    try {
+      await rename(stagedSchemas, schemaDestination);
+    } catch (error) {
+      if (hadExistingSchemas && !(await pathExists(schemaDestination))) {
+        await rename(backupSchemas, schemaDestination);
+      }
+      throw error;
+    }
+    if (hadExistingSchemas) {
+      await rm(backupSchemas, { recursive: true, force: true });
+    }
+  } catch (error) {
+    await rm(stagedSchemas, { recursive: true, force: true });
+    throw error;
   }
 
   const settings = {

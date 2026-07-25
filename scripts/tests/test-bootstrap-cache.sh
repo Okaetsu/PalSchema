@@ -36,6 +36,10 @@ EOF
 cat > "$fake_bin/xwin" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
+if [[ "${1:-}" == "--version" ]]; then
+    printf '%s\n' "xwin 0.9.0"
+    exit 0
+fi
 output=""
 while (($# > 0)); do
     if [[ "$1" == "--output" ]]; then
@@ -118,6 +122,59 @@ fi
     --prepare-sdk --accept-microsoft-license >"$test_root/retry.out"
 if [[ ! -f "$XWIN_DIR/.palschema-sdk-complete" ]]; then
     printf '%s\n' "Bootstrap retry did not publish a completed cache." >&2
+    exit 1
+fi
+
+# A markerless legacy cache must be regenerated even when it contains every
+# former representative sentinel.
+export PALSCHEMA_CACHE_ROOT="$test_root/legacy-cache"
+export XWIN_DIR="$PALSCHEMA_CACHE_ROOT/xwin"
+export FAKE_XWIN_COUNTER="$test_root/legacy-xwin-count"
+mkdir -p \
+    "$XWIN_DIR/crt/include" \
+    "$XWIN_DIR/crt/lib/x86_64" \
+    "$XWIN_DIR/sdk/include/um" \
+    "$XWIN_DIR/sdk/lib/ucrt/x86_64" \
+    "$XWIN_DIR/sdk/lib/um/x86_64"
+touch \
+    "$XWIN_DIR/crt/include/vcruntime.h" \
+    "$XWIN_DIR/crt/lib/x86_64/msvcrt.lib" \
+    "$XWIN_DIR/sdk/include/um/Windows.h" \
+    "$XWIN_DIR/sdk/lib/ucrt/x86_64/ucrt.lib" \
+    "$XWIN_DIR/sdk/lib/um/x86_64/kernel32.Lib"
+"$project_root/scripts/bootstrap-linux.sh" \
+    --prepare-sdk --accept-microsoft-license >"$test_root/legacy.out"
+if [[ "$(cat "$FAKE_XWIN_COUNTER")" != "1" ||
+      ! -f "$XWIN_DIR/.palschema-sdk-complete" ]]; then
+    printf '%s\n' "Markerless legacy cache was incorrectly certified." >&2
+    exit 1
+fi
+
+# --install-rust-toolchain must select the PalSchema-local rustup even when
+# system cargo and rustc are already available.
+isolated_cargo="$test_root/isolated-cargo"
+isolated_rustup="$test_root/isolated-rustup"
+mkdir -p "$isolated_cargo/bin" "$isolated_rustup"
+cp -- "$fake_bin/cargo" "$isolated_cargo/bin/cargo"
+cp -- "$fake_bin/rustc" "$isolated_cargo/bin/rustc"
+cat > "$isolated_cargo/bin/rustup" <<'EOF'
+#!/usr/bin/env sh
+printf '%s\n' "$*" >> "$FAKE_ISOLATED_RUSTUP_LOG"
+exit 0
+EOF
+chmod +x \
+    "$isolated_cargo/bin/cargo" \
+    "$isolated_cargo/bin/rustc" \
+    "$isolated_cargo/bin/rustup"
+export PALSCHEMA_CARGO_HOME="$isolated_cargo"
+export PALSCHEMA_RUSTUP_HOME="$isolated_rustup"
+export FAKE_ISOLATED_RUSTUP_LOG="$test_root/isolated-rustup.log"
+export FAKE_RUST_LIBDIR="$test_root/missing-rust-target"
+"$project_root/scripts/bootstrap-linux.sh" \
+    --install-rust-toolchain >"$test_root/isolated-rust.out"
+if ! grep -Fxq "target add x86_64-pc-windows-msvc" \
+    "$FAKE_ISOLATED_RUSTUP_LOG"; then
+    printf '%s\n' "Bootstrap modified or used the wrong Rust toolchain." >&2
     exit 1
 fi
 

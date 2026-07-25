@@ -78,7 +78,8 @@ palschema validate --watch .
 palschema validate --strict-generated .
 ```
 
-JSONC comments and trailing commas are supported. Exit codes are:
+JSONC comments are supported. Trailing commas are rejected in JSON and JSONC so
+authoring validation matches the PalSchema runtime parser. Exit codes are:
 
 - `0`: no errors; warnings may be present;
 - `1`: at least one validation error;

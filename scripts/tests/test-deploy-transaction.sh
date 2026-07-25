@@ -35,13 +35,78 @@ Path(sys.argv[1]).write_bytes(
 PY
 
 cat > "$fake_bin/llvm-readobj" <<'EOF'
-#!/usr/bin/env sh
-cat <<'OUTPUT'
+#!/usr/bin/env python3
+import struct
+
+
+def align4(content):
+    return content + b"\0" * (-len(content) % 4)
+
+
+def node(key, value=b"", value_type=0, children=()):
+    encoded_key = f"{key}\0".encode("utf-16-le")
+    if isinstance(value, str):
+        encoded_value = f"{value}\0".encode("utf-16-le")
+        value_length = len(encoded_value) // 2
+    else:
+        encoded_value = value
+        value_length = len(encoded_value)
+    content = align4(b"\0" * 6 + encoded_key)
+    content += encoded_value
+    content = align4(content)
+    content += b"".join(align4(child) for child in children)
+    return struct.pack("<HHH", len(content), value_length, value_type) + content[6:]
+
+
+version_ms = 6
+version_ls = 1 << 16
+fixed = struct.pack(
+    "<13I",
+    0xFEEF04BD,
+    0x00010000,
+    version_ms,
+    version_ls,
+    version_ms,
+    version_ls,
+    0x3F,
+    0,
+    0x40004,
+    1,
+    0,
+    0,
+    0,
+)
+table = node(
+    "040904B0",
+    children=(
+        node("ProductName", "PalSchema", 1),
+        node("ProductVersion", "0.6.1.0", 1),
+    ),
+)
+resource = node(
+    "VS_VERSION_INFO",
+    fixed,
+    children=(node("StringFileInfo", children=(table,)),),
+)
+groups = [
+    resource[index:index + 4].hex().upper()
+    for index in range(0, len(resource), 4)
+]
+
+print("""\
 Format: COFF-x86-64
-IMAGE_FILE_DLL
-IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE
-IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA
-IMAGE_DLL_CHARACTERISTICS_NX_COMPAT
+ImageFileHeader {
+  Characteristics [ (0x2022)
+    IMAGE_FILE_DLL
+  ]
+}
+ImageOptionalHeader {
+  Characteristics [ (0x8160)
+    IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE
+    IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA
+    IMAGE_DLL_CHARACTERISTICS_NX_COMPAT
+  ]
+}
 Export {
   Name: start_mod
 }
@@ -52,15 +117,10 @@ Import {
   Name: UE4SS.dll
 }
 Type: VERSIONINFO
-Data (
-  0000: 50007200 6F006400 75006300 74004E00 |data|
-  0010: 61006D00 65000000 50006100 6C005300 |data|
-  0020: 63006800 65006D00 61000000 50007200 |data|
-  0030: 6F006400 75006300 74005600 65007200 |data|
-  0040: 73006900 6F006E00 00003000 2E003600 |data|
-  0050: 2E003100 2E003000 00000000 |data|
-)
-OUTPUT
+Data (""")
+for index in range(0, len(groups), 4):
+    print(f"  {index * 4:04X}: {' '.join(groups[index:index + 4])} |data|")
+print(")")
 EOF
 chmod +x "$fake_bin/llvm-readobj"
 
@@ -210,6 +270,71 @@ if ((rollback_status == 0)); then
 fi
 if [[ ! -f "$game_root/Pal/Binaries/Win64/ue4ss/Mods/PalSchema/dlls/main.dll" ]]; then
     printf '%s\n' "Rejected rollback modified the live installation." >&2
+    exit 1
+fi
+
+nested_link_backup="$backup_root/20000101T000000Z-5"
+external_mods="$test_root/external-mods"
+mkdir -p "$nested_link_backup/PalSchema/dlls" "$external_mods"
+printf '%s\n' "regular-backup" \
+    > "$nested_link_backup/PalSchema/dlls/main.dll"
+printf '%s\n' "external-mod-sentinel" > "$external_mods/sentinel.txt"
+ln -s "$external_mods" "$nested_link_backup/PalSchema/mods"
+set +e
+PATH="$fake_bin:$PATH" \
+    "$project_root/scripts/deploy-proton.sh" \
+        --rollback "$nested_link_backup" \
+        --target server \
+        --game-dir "$game_root" \
+        >"$test_root/nested-link.out" 2>"$test_root/nested-link.err"
+nested_link_status=$?
+set -e
+if ((nested_link_status == 0)) ||
+   ! grep -q "Backup tree contains a symlink" "$test_root/nested-link.err"; then
+    printf '%s\n' "Rollback accepted a nested backup symlink." >&2
+    exit 1
+fi
+if [[ "$(cat "$external_mods/sentinel.txt")" != "external-mod-sentinel" ]]; then
+    printf '%s\n' "Rejected nested symlink rollback modified external data." >&2
+    exit 1
+fi
+
+# Starting the server from a marker-rename wrapper reproduces the old
+# check-then-mv race. The atomic swap plus post-swap scan must restore the live
+# installation and fail closed.
+real_mv="$(command -v mv)"
+cat > "$fake_bin/mv" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "\$*" == *".active-transaction.tmp."* &&
+      ! -f "$test_root/race-started" ]]; then
+    touch "$test_root/race-started"
+    bash -c 'exec -a PalServer-Win64-Shipping-Cmd.exe sleep 30' &
+    printf '%s\n' "\$!" > "$test_root/race-process.pid"
+fi
+exec "$real_mv" "\$@"
+EOF
+chmod +x "$fake_bin/mv"
+pre_race_hash="$(sha256sum "$target_root/dlls/main.dll" | awk '{print $1}')"
+set +e
+PATH="$fake_bin:$PATH" \
+    "$project_root/scripts/deploy-proton.sh" shipping \
+        --target server \
+        --game-dir "$game_root" \
+        >"$test_root/race.out" 2>"$test_root/race.err"
+race_status=$?
+set -e
+if [[ -f "$test_root/race-process.pid" ]]; then
+    kill "$(cat "$test_root/race-process.pid")" >/dev/null 2>&1 || true
+fi
+if ((race_status == 0)) ||
+   ! grep -q "started during the atomic deployment" "$test_root/race.err"; then
+    printf '%s\n' "Process-start race was not detected after the atomic swap." >&2
+    exit 1
+fi
+if [[ "$(sha256sum "$target_root/dlls/main.dll" | awk '{print $1}')" \
+      != "$pre_race_hash" ]]; then
+    printf '%s\n' "Process-start race did not restore the previous live mod." >&2
     exit 1
 fi
 

@@ -326,6 +326,81 @@ test("serves diagnostics and schema features over LSP", async (context) => {
     false,
   );
 
+  const largeUri = pathToFileURL(
+    resolve(repositoryRoot, "fixture/items/large-invalid.json"),
+  ).toString();
+  const largeDocument = Object.fromEntries(
+    Array.from({ length: 700 }, (_, index) => [
+      `Broken${index}`,
+      { Rarity: 99 },
+    ]),
+  );
+  send({
+    jsonrpc: "2.0",
+    method: "textDocument/didOpen",
+    params: {
+      textDocument: {
+        uri: largeUri,
+        languageId: "json",
+        version: 1,
+        text: JSON.stringify(largeDocument),
+      },
+    },
+  });
+  const boundedDiagnostics = await waitFor(
+    (message) =>
+      message.method === "textDocument/publishDiagnostics" &&
+      message.params?.uri === largeUri,
+    "bounded diagnostics",
+  );
+  assert.equal(boundedDiagnostics.params.diagnostics.length, 500);
+
+  const rawUri = pathToFileURL(
+    resolve(repositoryRoot, "fixture/raw/stale.json"),
+  ).toString();
+  send({
+    jsonrpc: "2.0",
+    method: "textDocument/didOpen",
+    params: {
+      textDocument: {
+        uri: rawUri,
+        languageId: "json",
+        version: 1,
+        text: "{}\n",
+      },
+    },
+  });
+  const missingRaw = await waitFor(
+    (message) =>
+      message.method === "textDocument/publishDiagnostics" &&
+      message.params?.uri === rawUri &&
+      message.params?.diagnostics?.some(
+        (diagnostic) => diagnostic.code === "PS_SCHEMA_GENERATED_MISSING",
+      ),
+    "missing raw schema diagnostic",
+  );
+  const malformedStart = received.indexOf(missingRaw) + 1;
+  await writeFile(
+    resolve(temporarySchemaDirectory, "raw.schema.json"),
+    "{malformed\n",
+  );
+  send({
+    jsonrpc: "2.0",
+    method: "textDocument/didChange",
+    params: {
+      textDocument: { uri: rawUri, version: 2 },
+      contentChanges: [{ text: '{"changed":true}\n' }],
+    },
+  });
+  await waitFor(
+    (message) =>
+      received.indexOf(message) >= malformedStart &&
+      message.method === "textDocument/publishDiagnostics" &&
+      message.params?.uri === rawUri &&
+      message.params?.diagnostics?.length === 0,
+    "stale diagnostics clear after validator failure",
+  );
+
   send({ jsonrpc: "2.0", id: 4, method: "shutdown", params: null });
   await waitFor((message) => message.id === 4, "shutdown response");
   send({ jsonrpc: "2.0", method: "exit", params: null });

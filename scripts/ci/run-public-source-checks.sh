@@ -45,6 +45,7 @@ bash -n \
     scripts/tests/test-bootstrap-cache.sh \
     scripts/tests/test-distro-matrix-output.sh \
     scripts/tests/test-process-scan.sh \
+    scripts/tests/test-win64-server-process-guard.sh \
     scripts/ci/run-public-source-checks.sh \
     scripts/lib/build-env.sh \
     scripts/lib/process-scan.sh
@@ -56,6 +57,7 @@ scripts/tests/test-deploy-transaction.sh
 scripts/tests/test-bootstrap-cache.sh
 scripts/tests/test-distro-matrix-output.sh
 scripts/tests/test-process-scan.sh
+scripts/tests/test-win64-server-process-guard.sh
 python3 -m json.tool CMakePresets.json >/dev/null
 python3 -m json.tool assets/.vscode/settings.json >/dev/null
 python3 -m json.tool assets/schemas/schema-index.json >/dev/null

@@ -16,6 +16,7 @@ import {
 } from "vscode-languageclient/node";
 
 import { SerialOperationQueue } from "./serial-operation-queue.js";
+import { startClientsIndependently } from "./start-clients-independently.js";
 
 const PALSCHEMA_FOLDERS = [
   "appearance",
@@ -114,7 +115,7 @@ async function isPalSchemaWorkspace(folder: WorkspaceFolder): Promise<boolean> {
 async function startClient(
   context: ExtensionContext,
   folder: WorkspaceFolder,
-): Promise<void> {
+): Promise<Error | null> {
   const serverModule = context.asAbsolutePath("dist/server.mjs");
   const serverOptions: ServerOptions = {
     run: { module: serverModule, transport: TransportKind.ipc },
@@ -136,8 +137,18 @@ async function startClient(
     serverOptions,
     clientOptions,
   );
-  await client.start();
-  clients.set(folder.uri.toString(), client);
+  try {
+    await client.start();
+    clients.set(folder.uri.toString(), client);
+    return null;
+  } catch (error) {
+    try {
+      await client.stop();
+    } catch {
+      // The client may not have reached a stoppable state.
+    }
+    return error instanceof Error ? error : new Error(String(error));
+  }
 }
 
 async function stopClients(): Promise<void> {
@@ -148,15 +159,28 @@ async function stopClients(): Promise<void> {
 
 async function restartClients(context: ExtensionContext): Promise<void> {
   await stopClients();
-  try {
-    for (const folder of workspace.workspaceFolders ?? []) {
-      if (await isPalSchemaWorkspace(folder)) {
-        await startClient(context, folder);
-      }
+  const folders: WorkspaceFolder[] = [];
+  for (const folder of workspace.workspaceFolders ?? []) {
+    if (await isPalSchemaWorkspace(folder)) {
+      folders.push(folder);
     }
-  } catch (error) {
-    await stopClients();
-    throw error;
+  }
+  const failures = await startClientsIndependently(
+    folders,
+    (folder) => startClient(context, folder),
+  );
+  for (const { candidate: folder, error } of failures) {
+    console.error(`Unable to start PalSchema for ${folder.name}.`, error);
+  }
+  if (failures.length > 0 && clients.size === 0) {
+    throw new AggregateError(
+      failures.map(({ candidate: folder, error }) =>
+        new Error(`Unable to start PalSchema for ${folder.name}`, {
+          cause: error,
+        }),
+      ),
+      "No PalSchema language server started.",
+    );
   }
 }
 

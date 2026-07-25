@@ -105,6 +105,11 @@ test("JSON watch mode emits NDJSON and coalesces to the newest snapshot", async 
   assert.equal(newest.errors, 0);
   assert.equal(stderr, "");
 
+  await writeFile(resolve(workspace, "palschema.config.json"), "{broken\n");
+  await waitFor((event) => event.event === "error", "watch validation error");
   child.kill("SIGINT");
-  await new Promise((resolvePromise) => child.once("exit", resolvePromise));
+  const exitCode = await new Promise((resolvePromise) =>
+    child.once("exit", resolvePromise),
+  );
+  assert.equal(exitCode, 2);
 });

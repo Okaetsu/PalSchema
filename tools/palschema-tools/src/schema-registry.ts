@@ -47,9 +47,29 @@ function assertSchemaIndex(value: unknown): asserts value is SchemaIndex {
     !("formatVersion" in value) ||
     value.formatVersion !== 1 ||
     !("schemas" in value) ||
-    !Array.isArray(value.schemas)
+    !Array.isArray(value.schemas) ||
+    !("palSchemaVersion" in value) ||
+    typeof value.palSchemaVersion !== "string" ||
+    !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(value.palSchemaVersion) ||
+    !("baseId" in value) ||
+    typeof value.baseId !== "string"
   ) {
     throw new Error("Unsupported or malformed schema-index.json.");
+  }
+
+  let baseId: URL;
+  try {
+    baseId = new URL(value.baseId);
+  } catch {
+    throw new Error("schema-index.json contains an invalid baseId.");
+  }
+  if (
+    (baseId.protocol !== "https:" && baseId.protocol !== "http:") ||
+    !baseId.pathname.endsWith("/") ||
+    baseId.hash ||
+    baseId.search
+  ) {
+    throw new Error("schema-index.json contains a non-canonical baseId.");
   }
 
   const files = new Set<string>();
@@ -92,6 +112,19 @@ function assertSchemaIndex(value: unknown): asserts value is SchemaIndex {
       throw new Error("schema-index.json contains invalid supportPatterns.");
     }
     assertSingleFileName(candidate.file, "schema file");
+    let canonicalId: string;
+    try {
+      canonicalId = new URL(candidate.file, baseId).toString();
+    } catch {
+      throw new Error(
+        `schema-index.json contains an invalid schema ID: ${candidate.id}`,
+      );
+    }
+    if (candidate.id !== canonicalId) {
+      throw new Error(
+        `schema-index.json schema ID is not canonical for ${candidate.file}.`,
+      );
+    }
     for (const dependency of candidate.dependencies) {
       assertSingleFileName(dependency, "schema dependency");
     }

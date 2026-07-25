@@ -175,6 +175,113 @@ test("init copies generated raw schema support files", () => {
   }
 });
 
+test("init --force atomically removes generated schemas absent from the new pack", () => {
+  const temporaryRoot = mkdtempSync(resolve(tmpdir(), "palschema-init-refresh-"));
+  try {
+    const schemas = resolve(temporaryRoot, "schemas");
+    const workspace = resolve(temporaryRoot, "workspace");
+    cpSync(resolve(repositoryRoot, "assets/schemas"), schemas, {
+      recursive: true,
+    });
+    mkdirSync(resolve(schemas, "raw"));
+    mkdirSync(workspace);
+    writeFileSync(resolve(schemas, "enums.schema.json"), '{"definitions":{}}\n');
+    writeFileSync(resolve(schemas, "raw.schema.json"), '{"type":"object"}\n');
+    writeFileSync(
+      resolve(schemas, "raw", "Table.schema.json"),
+      '{"type":"object"}\n',
+    );
+
+    const first = runCli(
+      ["init", "--schema-dir", schemas, workspace],
+      packageRoot,
+    );
+    assert.equal(first.status, 0, first.stderr);
+    rmSync(resolve(schemas, "enums.schema.json"));
+    rmSync(resolve(schemas, "raw.schema.json"));
+    rmSync(resolve(schemas, "raw"), { recursive: true });
+
+    const refresh = runCli(
+      ["init", "--force", "--schema-dir", schemas, workspace],
+      packageRoot,
+    );
+    assert.equal(refresh.status, 0, refresh.stderr);
+    assert.equal(
+      existsSync(resolve(workspace, ".palschema/schemas/enums.schema.json")),
+      false,
+    );
+    assert.equal(
+      existsSync(resolve(workspace, ".palschema/schemas/raw.schema.json")),
+      false,
+    );
+    assert.equal(
+      existsSync(resolve(workspace, ".palschema/schemas/raw")),
+      false,
+    );
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test("init rejects a symlinked generated schema source without replacing the workspace", () => {
+  const temporaryRoot = mkdtempSync(resolve(tmpdir(), "palschema-init-source-link-"));
+  try {
+    const schemas = resolve(temporaryRoot, "schemas");
+    const workspace = resolve(temporaryRoot, "workspace");
+    const outside = resolve(temporaryRoot, "secret.json");
+    cpSync(resolve(repositoryRoot, "assets/schemas"), schemas, {
+      recursive: true,
+    });
+    mkdirSync(workspace);
+    writeFileSync(outside, '{"secret":"must-not-copy"}\n');
+    symlinkSync(outside, resolve(schemas, "enums.schema.json"), "file");
+
+    const initialization = runCli(
+      ["init", "--schema-dir", schemas, workspace],
+      packageRoot,
+    );
+    assert.equal(initialization.status, 2);
+    assert.match(initialization.stderr, /regular non-symlink file/);
+    assert.equal(
+      existsSync(resolve(workspace, ".palschema/schemas/enums.schema.json")),
+      false,
+    );
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test("schema index requires metadata and canonical IDs", () => {
+  for (const mutate of [
+    (index) => {
+      delete index.baseId;
+    },
+    (index) => {
+      index.schemas[0].id = "not-a-url";
+    },
+  ]) {
+    const temporaryRoot = mkdtempSync(resolve(tmpdir(), "palschema-index-metadata-"));
+    try {
+      const schemas = resolve(temporaryRoot, "schemas");
+      cpSync(resolve(repositoryRoot, "assets/schemas"), schemas, {
+        recursive: true,
+      });
+      const indexPath = resolve(schemas, "schema-index.json");
+      const index = JSON.parse(readFileSync(indexPath, "utf8"));
+      mutate(index);
+      writeFileSync(indexPath, `${JSON.stringify(index)}\n`);
+      const result = runCli(
+        ["schemas", "list", "--schema-dir", schemas],
+        packageRoot,
+      );
+      assert.equal(result.status, 2);
+      assert.match(result.stderr, /schema-index\.json/i);
+    } finally {
+      rmSync(temporaryRoot, { recursive: true, force: true });
+    }
+  }
+});
+
 test("init refuses a symlinked managed parent", () => {
   const temporaryRoot = mkdtempSync(resolve(tmpdir(), "palschema-init-link-"));
   try {

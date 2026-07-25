@@ -31,6 +31,7 @@ import { PalSchemaValidator } from "./validator.js";
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
 const validationTimers = new Map<string, NodeJS.Timeout>();
+const MAX_PUBLISHED_DIAGNOSTICS = 500;
 
 let registry: SchemaRegistry;
 let validator: PalSchemaValidator;
@@ -118,11 +119,15 @@ async function validateDocument(document: TextDocument): Promise<void> {
     }
     connection.sendDiagnostics({
       uri: document.uri,
-      diagnostics: result.diagnostics.map((diagnostic) =>
-        toLspDiagnostic(document, diagnostic),
-      ),
+      diagnostics: result.diagnostics
+        .slice(0, MAX_PUBLISHED_DIAGNOSTICS)
+        .map((diagnostic) => toLspDiagnostic(document, diagnostic)),
     });
   } catch (error) {
+    const current = documents.get(document.uri);
+    if (current && current.version === version) {
+      connection.sendDiagnostics({ uri: document.uri, diagnostics: [] });
+    }
     connection.console.error(
       error instanceof Error ? error.stack ?? error.message : String(error),
     );

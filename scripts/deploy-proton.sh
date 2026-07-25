@@ -103,6 +103,7 @@ required_commands=(
     realpath
     rm
     sha256sum
+    sync
 )
 if [[ "$build_flavor" == "dev" ]]; then
     required_commands+=(node)
@@ -140,6 +141,81 @@ backup_root="$ue4ss_root/.palschema-backups"
 transaction_marker="$backup_root/.active-transaction"
 stage_dir=""
 transaction_active=false
+
+fsync_file() {
+    python3 - "$1" <<'PY'
+import os
+import sys
+
+descriptor = os.open(sys.argv[1], os.O_RDONLY)
+try:
+    os.fsync(descriptor)
+finally:
+    os.close(descriptor)
+PY
+}
+
+fsync_directory() {
+    python3 - "$1" <<'PY'
+import os
+import sys
+
+descriptor = os.open(sys.argv[1], os.O_RDONLY | os.O_DIRECTORY)
+try:
+    os.fsync(descriptor)
+finally:
+    os.close(descriptor)
+PY
+}
+
+assert_tree_has_no_symlinks() {
+    python3 - "$1" <<'PY'
+import os
+import sys
+
+root = sys.argv[1]
+for directory, directories, files in os.walk(root, followlinks=False):
+    for name in [*directories, *files]:
+        path = os.path.join(directory, name)
+        if os.path.islink(path):
+            raise SystemExit(f"Backup tree contains a symlink: {path}")
+PY
+}
+
+rename_directory() {
+    python3 - "$1" "$2" <<'PY'
+import os
+import sys
+
+os.rename(sys.argv[1], sys.argv[2])
+PY
+}
+
+exchange_directories() {
+    python3 - "$1" "$2" <<'PY'
+import ctypes
+import os
+import sys
+
+libc = ctypes.CDLL(None, use_errno=True)
+renameat2 = libc.renameat2
+renameat2.argtypes = [
+    ctypes.c_int,
+    ctypes.c_char_p,
+    ctypes.c_int,
+    ctypes.c_char_p,
+    ctypes.c_uint,
+]
+renameat2.restype = ctypes.c_int
+at_fdcwd = -100
+rename_exchange = 2
+left = os.fsencode(sys.argv[1])
+right = os.fsencode(sys.argv[2])
+if renameat2(at_fdcwd, left, at_fdcwd, right, rename_exchange) != 0:
+    error = ctypes.get_errno()
+    raise OSError(error, os.strerror(error))
+PY
+}
 
 if [[ "$target_kind" == "auto" ]]; then
     if [[ -f "$win64_dir/Palworld-Win64-Shipping.exe" ]]; then
@@ -188,18 +264,31 @@ backup_root="$ue4ss_root_real/.palschema-backups"
 transaction_marker="$backup_root/.active-transaction"
 
 assert_target_stopped() {
-    if palschema_target_process_status "$target_kind" /proc; then
+    if target_is_stopped; then
+        return 0
+    else
+        process_status=$?
+    fi
+    if ((process_status == 1)); then
         printf 'Refusing to deploy while the Palworld Windows %s is active.\n' \
             "$target_kind" >&2
         exit 1
+    fi
+    printf '%s\n' \
+        "Refusing to deploy because one or more stable /proc process command lines are unreadable." \
+        "Run as an account with complete process visibility after stopping the selected Win64 target." >&2
+    exit 1
+}
+
+target_is_stopped() {
+    if palschema_target_process_status "$target_kind" /proc; then
+        return 1
     else
         process_status=$?
-        if ((process_status == 2)); then
-            printf '%s\n' \
-                "Refusing to deploy because one or more stable /proc process command lines are unreadable." \
-                "Run as an account with complete process visibility after stopping the selected Win64 target." >&2
-            exit 1
+        if ((process_status == 1)); then
+            return 0
         fi
+        return 2
     fi
 }
 
@@ -251,9 +340,19 @@ recover_incomplete_transaction() {
             return 1
             ;;
     esac
+    if [[ -d "$recovery_backup/PalSchema" ]]; then
+        assert_tree_has_no_symlinks "$recovery_backup/PalSchema"
+    fi
 
-    if [[ ! -e "$target_dir" && -d "$recovery_backup/PalSchema" ]]; then
-        mv -- "$recovery_backup/PalSchema" "$target_dir"
+    if [[ -d "$recovery_backup/PalSchema" ]]; then
+        if [[ -d "$target_dir" ]]; then
+            exchange_directories "$recovery_backup/PalSchema" "$target_dir"
+            rm -rf -- "$recovery_backup/PalSchema"
+        else
+            rename_directory "$recovery_backup/PalSchema" "$target_dir"
+        fi
+        fsync_directory "$mods_dir"
+        fsync_directory "$recovery_backup"
         printf 'Recovered interrupted PalSchema transaction from %s\n' \
             "$recovery_backup"
     elif [[ ! -e "$target_dir" &&
@@ -265,10 +364,17 @@ recover_incomplete_transaction() {
     if [[ -n "$stage_name" ]]; then
         stale_stage="$mods_dir/$stage_name"
         if [[ -d "$stale_stage" && ! -L "$stale_stage" ]]; then
+            assert_tree_has_no_symlinks "$stale_stage"
+            # The marker is durable before the atomic swap. If power is lost
+            # between the swap and moving the previous tree into its backup,
+            # either target is still a complete tree; never guess by swapping
+            # an ambiguous stage back over the live target.
             rm -rf -- "$stale_stage"
+            fsync_directory "$mods_dir"
         fi
     fi
     rm -f -- "$transaction_marker"
+    fsync_directory "$backup_root"
     transaction_active=false
 }
 
@@ -283,12 +389,17 @@ begin_transaction() {
         printf '%s\n' "$backup_id"
         printf '%s\n' "$stage_name"
     } > "$temporary_marker"
+    fsync_file "$temporary_marker"
     mv -- "$temporary_marker" "$transaction_marker"
+    fsync_directory "$backup_root"
     transaction_active=true
 }
 
 commit_transaction() {
+    fsync_directory "$mods_dir"
+    fsync_directory "$backup_root"
     rm -f -- "$transaction_marker"
+    fsync_directory "$backup_root"
     transaction_active=false
 }
 
@@ -368,31 +479,67 @@ if [[ -n "$rollback_dir" ]]; then
                 "$rollback_dir_real" >&2
             exit 1
         fi
+        assert_tree_has_no_symlinks "$rollback_dir_real/PalSchema"
         stage_dir="$(mktemp -d "$mods_dir/.PalSchema.stage.XXXXXX")"
         cp -a -- "$rollback_dir_real/PalSchema/." "$stage_dir/"
         if [[ ! -f "$stage_dir/dlls/main.dll" ]]; then
             printf '%s\n' "Rollback staging did not produce dlls/main.dll." >&2
             exit 1
         fi
+        assert_tree_has_no_symlinks "$stage_dir"
+        sync -f "$stage_dir"
     fi
 
     rollback_id="rollback-$(date -u +%Y%m%dT%H%M%SZ)-$$"
     rollback_safety="$backup_root/$rollback_id"
     assert_target_stopped
     mkdir -p "$rollback_safety"
-    if [[ -d "$target_dir" ]]; then
-        :
-    else
+    had_live_target=false
+    if [[ ! -d "$target_dir" ]]; then
         touch "$rollback_safety/no-previous-install"
+    else
+        had_live_target=true
     fi
     begin_transaction "$rollback_id" \
         "$([[ -n "$stage_dir" ]] && basename "$stage_dir" || true)"
-    if [[ -d "$target_dir" ]]; then
-        mv -- "$target_dir" "$rollback_safety/PalSchema"
-    fi
     if [[ -n "$stage_dir" ]]; then
-        mv -- "$stage_dir" "$target_dir"
+        if [[ "$had_live_target" == true ]]; then
+            exchange_directories "$stage_dir" "$target_dir"
+        else
+            rename_directory "$stage_dir" "$target_dir"
+        fi
+        fsync_directory "$mods_dir"
+
+        if ! target_is_stopped; then
+            if [[ "$had_live_target" == true ]]; then
+                exchange_directories "$stage_dir" "$target_dir"
+            else
+                rename_directory "$target_dir" "$stage_dir"
+            fi
+            fsync_directory "$mods_dir"
+            commit_transaction
+            printf '%s\n' \
+                "A Palworld process started during the atomic rollback; the previous live state was restored." >&2
+            exit 1
+        fi
+
+        if [[ "$had_live_target" == true ]]; then
+            rename_directory "$stage_dir" "$rollback_safety/PalSchema"
+            fsync_directory "$rollback_safety"
+        fi
         stage_dir=""
+    elif [[ "$had_live_target" == true ]]; then
+        rename_directory "$target_dir" "$rollback_safety/PalSchema"
+        fsync_directory "$mods_dir"
+        fsync_directory "$rollback_safety"
+        if ! target_is_stopped; then
+            rename_directory "$rollback_safety/PalSchema" "$target_dir"
+            fsync_directory "$mods_dir"
+            commit_transaction
+            printf '%s\n' \
+                "A Palworld process started during the atomic rollback; the previous live state was restored." >&2
+            exit 1
+        fi
     fi
     commit_transaction
 
@@ -448,20 +595,45 @@ if [[ ! -f "$stage_dir/dlls/main.dll" ]]; then
     printf '%s\n' "Deployment staging did not produce dlls/main.dll." >&2
     exit 1
 fi
+assert_tree_has_no_symlinks "$stage_dir"
+sync -f "$stage_dir"
 assert_target_stopped
 mkdir -p "$backup_dir"
+had_live_target=false
 if [[ ! -d "$target_dir" ]]; then
     touch "$backup_dir/no-previous-install"
+else
+    had_live_target=true
 fi
 begin_transaction "$deploy_id" "$(basename "$stage_dir")"
-if [[ -d "$target_dir" ]]; then
-    mv -- "$target_dir" "$backup_dir/PalSchema"
+if [[ "$had_live_target" == true ]]; then
+    exchange_directories "$stage_dir" "$target_dir"
+else
+    rename_directory "$stage_dir" "$target_dir"
 fi
+fsync_directory "$mods_dir"
+
+if ! target_is_stopped; then
+    if [[ "$had_live_target" == true ]]; then
+        exchange_directories "$stage_dir" "$target_dir"
+    else
+        rename_directory "$target_dir" "$stage_dir"
+    fi
+    fsync_directory "$mods_dir"
+    commit_transaction
+    printf '%s\n' \
+        "A Palworld process started during the atomic deployment; the previous live state was restored." >&2
+    exit 1
+fi
+
+if [[ "$had_live_target" == true ]]; then
+    rename_directory "$stage_dir" "$backup_dir/PalSchema"
+    fsync_directory "$backup_dir"
+fi
+stage_dir=""
 if [[ "${PALSCHEMA_TEST_INTERRUPT_AFTER_BACKUP:-0}" == "1" ]]; then
     kill -TERM "$$"
 fi
-mv -- "$stage_dir" "$target_dir"
-stage_dir=""
 commit_transaction
 
 {
