@@ -365,12 +365,23 @@ recover_incomplete_transaction() {
         stale_stage="$mods_dir/$stage_name"
         if [[ -d "$stale_stage" && ! -L "$stale_stage" ]]; then
             assert_tree_has_no_symlinks "$stale_stage"
-            # The marker is durable before the atomic swap. If power is lost
-            # between the swap and moving the previous tree into its backup,
-            # either target is still a complete tree; never guess by swapping
-            # an ambiguous stage back over the live target.
-            rm -rf -- "$stale_stage"
-            fsync_directory "$mods_dir"
+            if [[ -d "$target_dir" &&
+                  ! -e "$recovery_backup/PalSchema" &&
+                  ! -f "$recovery_backup/no-previous-install" ]]; then
+                # The stage is the new candidate before the exchange and the
+                # previous live tree after it. Preserve it in either case:
+                # recovery must not guess which side of the atomic exchange
+                # reached disk.
+                rename_directory "$stale_stage" \
+                    "$recovery_backup/PalSchema"
+                fsync_directory "$mods_dir"
+                fsync_directory "$recovery_backup"
+                printf 'Preserved interrupted PalSchema stage at %s\n' \
+                    "$recovery_backup/PalSchema"
+            else
+                rm -rf -- "$stale_stage"
+                fsync_directory "$mods_dir"
+            fi
         fi
     fi
     rm -f -- "$transaction_marker"

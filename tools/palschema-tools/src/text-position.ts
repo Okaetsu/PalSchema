@@ -32,11 +32,3 @@ export function createPositionMapper(text: string): PositionMapper {
     };
   };
 }
-
-export function positionAt(
-  text: string,
-  offset: number,
-  length = 1,
-): ReturnType<PositionMapper> {
-  return createPositionMapper(text)(offset, length);
-}

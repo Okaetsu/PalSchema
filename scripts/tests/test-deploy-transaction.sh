@@ -188,6 +188,30 @@ if ! grep -R -q "power-loss-old-install" "$backup_root"/*/PalSchema/dlls/main.dl
     exit 1
 fi
 
+# If power is lost after the atomic exchange but before the old tree reaches
+# its backup, recovery must preserve the ambiguous stage instead of deleting it.
+post_swap_id="20000101T000000Z-6"
+post_swap_stage=".PalSchema.stage.POSTSWAP"
+mkdir -p \
+    "$backup_root/$post_swap_id" \
+    "$mods_root/$post_swap_stage/dlls"
+printf '%s\n' "post-swap-previous-install" \
+    > "$mods_root/$post_swap_stage/dlls/main.dll"
+printf '%s\n%s\n' "$post_swap_id" "$post_swap_stage" \
+    > "$backup_root/.active-transaction"
+PATH="$fake_bin:$PATH" \
+    "$project_root/scripts/deploy-proton.sh" shipping \
+        --target server \
+        --game-dir "$game_root" \
+        >"$test_root/post-swap.out"
+if ! grep -q "Preserved interrupted PalSchema stage" \
+    "$test_root/post-swap.out" ||
+   ! grep -R -q "post-swap-previous-install" \
+        "$backup_root"/*/PalSchema/dlls/main.dll; then
+    printf '%s\n' "Post-exchange recovery discarded the previous installation." >&2
+    exit 1
+fi
+
 live_hash="$(sha256sum "$target_root/dlls/main.dll" | awk '{print $1}')"
 missing_id="20000101T000000Z-3"
 printf '%s\n\n' "$missing_id" > "$backup_root/.active-transaction"

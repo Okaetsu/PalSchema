@@ -9,8 +9,14 @@ palschema_target_process_status() {
     local cmdline_fd
     local argument
     local incomplete=false
+    local cmdlines=("$proc_root"/[0-9]*/cmdline)
 
-    for cmdline in "$proc_root"/[0-9]*/cmdline; do
+    if [[ ! -d "$proc_root" || ! -r "$proc_root" ||
+          "${cmdlines[0]}" == "$proc_root/[0-9]*/cmdline" ]]; then
+        return 2
+    fi
+
+    for cmdline in "${cmdlines[@]}"; do
         if ! { exec {cmdline_fd}<"$cmdline"; } 2>/dev/null; then
             # A process that vanished between glob expansion and open is benign.
             if [[ -e "$cmdline" ]]; then

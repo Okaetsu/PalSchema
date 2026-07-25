@@ -29,6 +29,18 @@ if ((negative_status != 1)); then
 fi
 
 rm -rf -- "$test_root/200"
+set +e
+palschema_target_process_status server "$test_root"
+empty_status=$?
+palschema_target_process_status server "$test_root/missing"
+missing_status=$?
+set -e
+if ((empty_status != 2 || missing_status != 2)); then
+    printf 'Expected empty and missing proc roots to fail closed, got %s and %s.\n' \
+        "$empty_status" "$missing_status" >&2
+    exit 1
+fi
+
 mkdir -p "$test_root/300"
 python3 - "$test_root/300/cmdline" <<'PY'
 import socket

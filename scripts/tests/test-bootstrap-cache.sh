@@ -150,6 +150,30 @@ if [[ "$(cat "$FAKE_XWIN_COUNTER")" != "1" ||
     exit 1
 fi
 
+# A custom XWIN_DIR outside the PalSchema cache must never replace an
+# unrelated existing directory.
+export PALSCHEMA_CACHE_ROOT="$test_root/owned-cache"
+export XWIN_DIR="$test_root/unowned-sdk"
+export FAKE_XWIN_COUNTER="$test_root/unowned-xwin-count"
+mkdir -p "$XWIN_DIR"
+printf '%s\n' "keep-me" > "$XWIN_DIR/sentinel"
+set +e
+"$project_root/scripts/bootstrap-linux.sh" \
+    --prepare-sdk --accept-microsoft-license \
+    >"$test_root/unowned.out" 2>"$test_root/unowned.err"
+unowned_status=$?
+set -e
+if ((unowned_status == 0)) ||
+   ! grep -q "Refusing to replace an unowned XWIN_DIR" \
+        "$test_root/unowned.err" ||
+   [[ "$(cat "$XWIN_DIR/sentinel")" != "keep-me" ]]; then
+    printf '%s\n' "Bootstrap did not preserve an unowned XWIN_DIR." >&2
+    exit 1
+fi
+export PALSCHEMA_CACHE_ROOT="$test_root/legacy-cache"
+export XWIN_DIR="$PALSCHEMA_CACHE_ROOT/xwin"
+export FAKE_XWIN_COUNTER="$test_root/legacy-xwin-count"
+
 # --install-rust-toolchain must select the PalSchema-local rustup even when
 # system cargo and rustc are already available.
 isolated_cargo="$test_root/isolated-cargo"

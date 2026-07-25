@@ -65,6 +65,7 @@ required_commands=(
     git
     ninja
     python3
+    realpath
     sha256sum
     sync
 )
@@ -179,6 +180,25 @@ if [[ -n "${XWIN_DIR:-}" ]]; then
 else
     palschema_xwin_dir="$PALSCHEMA_CACHE_ROOT/xwin"
 fi
+palschema_xwin_dir="$(realpath -m -- "$palschema_xwin_dir")"
+palschema_cache_root_real="$(realpath -m -- "$PALSCHEMA_CACHE_ROOT")"
+project_root="$(cd -- "$script_dir/.." && pwd)"
+user_home_real="$(realpath -m -- "${HOME:?HOME must be set}")"
+
+path_is_within() {
+    local candidate="$1"
+    local root="$2"
+    [[ "$candidate" == "$root" || "$candidate" == "$root/"* ]]
+}
+
+if [[ "$palschema_xwin_dir" == "/" ]] ||
+    path_is_within "$user_home_real" "$palschema_xwin_dir" ||
+    path_is_within "$project_root" "$palschema_xwin_dir" ||
+    path_is_within "$palschema_xwin_dir" "$project_root"; then
+    printf 'Unsafe XWIN_DIR overlaps a protected path: %s\n' \
+        "$palschema_xwin_dir" >&2
+    exit 1
+fi
 
 xwin_cache_payload_is_valid() {
     local cache_dir="$1"
@@ -211,8 +231,23 @@ PY
 xwin_parent="$(dirname -- "$palschema_xwin_dir")"
 xwin_name="$(basename -- "$palschema_xwin_dir")"
 xwin_previous="$xwin_parent/.${xwin_name}.previous"
+
+if [[ -e "$palschema_xwin_dir" ]] &&
+    ! xwin_cache_is_ready "$palschema_xwin_dir" &&
+    ! path_is_within "$palschema_xwin_dir" "$palschema_cache_root_real"; then
+    printf 'Refusing to replace an unowned XWIN_DIR outside %s: %s\n' \
+        "$palschema_cache_root_real" "$palschema_xwin_dir" >&2
+    exit 1
+fi
+if [[ -e "$xwin_previous" ]] &&
+    ! xwin_cache_is_ready "$xwin_previous"; then
+    printf 'Refusing to replace an unowned SDK recovery directory: %s\n' \
+        "$xwin_previous" >&2
+    exit 1
+fi
+
 mkdir -p "$xwin_parent"
-exec {xwin_lock_fd}> "$xwin_parent/.${xwin_name}.lock"
+exec {xwin_lock_fd}>> "$xwin_parent/.${xwin_name}.lock"
 flock "$xwin_lock_fd"
 
 # Recover the last complete cache if a previous refresh was interrupted between
