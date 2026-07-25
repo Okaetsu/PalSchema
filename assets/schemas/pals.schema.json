@@ -1,5 +1,6 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://okaetsu.github.io/PalSchema/schemas/0.6.1/pals.schema.json",
     "title": "Pal Schema",
     "type": "object",
     "additionalProperties": {
@@ -82,49 +83,42 @@
             "type": "number",
             "description": "Health multiplier for wild pals, will not apply on player owned pals.\nMust be a float value e.g. 1.0",
             "minimum": 0.0,
-            "default": 1.0,
-            "not": { "type": "integer" }
+            "default": 1.0
         },
         "EnemyReceiveDamageRate": {
             "type": "number",
             "description": "Must be a float value e.g. 1.0",
             "minimum": 0.0,
-            "default": 1.0,
-            "not": { "type": "integer" }
+            "default": 1.0
         },
         "EnemyInflictDamageRate": {
             "type": "number",
             "description": "Must be a float value e.g. 1.0",
             "minimum": 0.0,
-            "default": 1.0,
-            "not": { "type": "integer" }
+            "default": 1.0
         },
         "CaptureRateCorrect": {
             "type": "number",
             "description": "Must be a float value e.g. 1.0",
             "minimum": 0.0,
-            "default": 1.0,
-            "not": { "type": "integer" }
+            "default": 1.0
         },
         "ExpRatio": {
             "type": "number",
             "description": "Must be a float value e.g. 1.0",
             "minimum": 0.0,
-            "default": 1.0,
-            "not": { "type": "integer" }
+            "default": 1.0
         },
         "Price": {
             "type": "number",
             "description": "Must be a float value e.g. 0.0",
             "minimum": 0.0,
-            "default": 0.0,
-            "not": { "type": "integer" }
+            "default": 0.0
         },
         "StatusResistUpRate": {
             "type": "number",
             "description": "Must be a float value e.g. 1.0",
-            "default": 1.0,
-            "not": { "type": "integer" }
+            "default": 1.0
         },
         "AIResponse": {
             "type": "string",
@@ -182,8 +176,7 @@
             "type": "number",
             "description": "Must be a float value e.g. 1.0",
             "minimum": 0.0,
-            "default": 1.0,
-            "not": { "type": "integer" }
+            "default": 1.0
         },
         "FoodAmount": {
             "type": "integer"
@@ -198,8 +191,7 @@
             "type": "number",
             "description": "Must be a float value e.g. 0.0",
             "minimum": 0.0,
-            "default": 1.0,
-            "not": { "type": "integer" }
+            "default": 1.0
         },
         "NooseTrap": {
             "type": "boolean",
@@ -362,8 +354,7 @@
                         "minimum": 0.0,
                         "default": 0.00,
                         "multipleOf": 0.1,
-                        "examples": [0.00, 1.5, 2.3],
-                        "not": { "type": "integer" }
+                        "examples": [0.00, 1.5, 2.3]
                     },
                     "Min": {
                         "type": "integer"
@@ -377,4 +368,4 @@
         }
         }
     }
-}  
+}

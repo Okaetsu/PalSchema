@@ -1,5 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://okaetsu.github.io/PalSchema/schemas/0.6.1/items.schema.json",
   "title": "Items Schema",
   "type": "object",
   "additionalProperties": {
@@ -64,10 +65,7 @@
       "Weight": {
         "type": "number",
         "description": "Must be a float value e.g. 0.0",
-        "minimum": 0.0,
-        "not": {
-          "type": "integer"
-        }
+        "minimum": 0.0
       },
       "VisualBlueprintClassSoft": {
         "type": "string",
@@ -78,10 +76,7 @@
         "type": "number",
         "minimum": 0.0,
         "default": 0.0,
-        "description": "Determines if the item should expire after a certain amount of time. The higher the value, the longer it takes for one item in the stack to expire.\n0.0 means it will never spoil.\nMust be a float value e.g. 0.0",
-        "not": {
-          "type": "integer"
-        }
+        "description": "Determines if the item should expire after a certain amount of time. The higher the value, the longer it takes for one item in the stack to expire.\n0.0 means it will never spoil.\nMust be a float value e.g. 0.0"
       },
       "OverrideNameMsgID": {
         "type": "string",
@@ -104,10 +99,7 @@
             "type": "number",
             "minimum": 0.0,
             "default": 0.0,
-            "description": "Determines how long it should take to craft this recipe.\nMust be a float value e.g. 0.0",
-            "not": {
-              "type": "integer"
-            }
+            "description": "Determines how long it should take to craft this recipe.\nMust be a float value e.g. 0.0"
           },
           "WorkableAttribute": {
             "type": "integer",
@@ -174,8 +166,8 @@
         "properties": {
           "Type": { "const": "Weapon" },
           "AttackPower": { "type": "integer" },
-          "SneakAttackRate": { "type": "number", "description": "Must be a float value e.g. 0.0", "default": 1.0, "not": { "type": "integer" } },
-          "Durability": { "type": "number", "description": "Must be a float value e.g. 0.0", "minimum": 0.0, "default": 100.0, "not": { "type": "integer" } },
+          "SneakAttackRate": { "type": "number", "description": "Must be a float value e.g. 0.0", "default": 1.0 },
+          "Durability": { "type": "number", "description": "Must be a float value e.g. 0.0", "minimum": 0.0, "default": 100.0 },
           "actorClass": {
             "type": "string",
             "description": "This should be path to the Weapon blueprint that defines your weapon's logic.\nExample of a correct path format: /Game/Pal/Blueprint/Weapon/BP_MyWeapon.BP_MyWeapon_C\nIn FModel or Unreal Editor, the path would look like Pal/Content/Pal/Blueprint/Weapon/BP_MyWeapon"
@@ -193,7 +185,7 @@
           "DefenseValue": { "type": "integer", "minimum": 0 },
           "HPValue": { "type": "integer", "minimum": 0 },
           "ShieldValue": { "type": "integer", "minimum": 0 },
-          "Durability": { "type": "number", "description": "Must be a float value e.g. 0.0", "minimum": 0.0, "default": 100.0, "not": { "type": "integer" } },
+          "Durability": { "type": "number", "description": "Must be a float value e.g. 0.0", "minimum": 0.0, "default": 100.0 },
           "PassiveSkill": { "type": "string" },
           "PassiveSkill2": { "type": "string" },
           "PassiveSkill3": { "type": "string" },

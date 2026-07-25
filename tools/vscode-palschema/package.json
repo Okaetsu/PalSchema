@@ -1,0 +1,71 @@
+{
+  "name": "palschema-vscode",
+  "displayName": "PalSchema",
+  "description": "PalSchema JSON/JSONC validation, completion, hover help, and formatting.",
+  "version": "0.6.1",
+  "publisher": "okaetsu",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Okaetsu/PalSchema.git"
+  },
+  "private": true,
+  "engines": {
+    "vscode": "^1.91.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters",
+    "Formatters"
+  ],
+  "keywords": [
+    "Palworld",
+    "PalSchema",
+    "JSONC",
+    "modding"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onLanguage:json",
+    "onLanguage:jsonc"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "palschema.restartLanguageServer",
+        "title": "PalSchema: Restart Language Server"
+      }
+    ],
+    "configuration": {
+      "title": "PalSchema",
+      "properties": {
+        "palschema.schemaDirectory": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Optional schema directory. Relative paths are resolved from the first workspace folder; empty uses the schemas bundled with the extension."
+        },
+        "palschema.allowMissingGenerated": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Report missing runtime-generated raw/enums schemas as warnings instead of errors."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "package:vsix": "node scripts/package-extension.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "vscode-languageclient": "10.1.0"
+  },
+  "devDependencies": {
+    "@types/vscode": "1.91.0",
+    "@vscode/vsce": "3.9.2",
+    "esbuild": "0.28.1",
+    "typescript": "5.8.3"
+  }
+}

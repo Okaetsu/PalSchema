@@ -1,0 +1,14 @@
+{
+  "name": "palschema-workspace",
+  "private": true,
+  "workspaces": [
+    "tools/*"
+  ],
+  "scripts": {
+    "tools:build": "npm run build --workspace @palschema/tools",
+    "tools:test": "npm run test --workspace @palschema/tools",
+    "tools:typecheck": "npm run typecheck --workspace @palschema/tools",
+    "editor:build": "npm run build --workspace palschema-vscode",
+    "editor:package": "npm run package:vsix --workspace palschema-vscode"
+  }
+}

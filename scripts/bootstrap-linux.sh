@@ -58,25 +58,45 @@ if [[ "$(uname -s)" != "Linux" ]]; then
 fi
 
 required_commands=(
-    clang-cl
     cmake
     curl
     flock
     git
-    lld-link
-    llvm-lib
-    llvm-mt
-    llvm-rc
     ninja
     sha256sum
 )
 missing_commands=()
+llvm_version_suffixes=(22 20 19 18 17 16 15)
 
 for required_command in "${required_commands[@]}"; do
     if ! command -v "$required_command" >/dev/null 2>&1; then
         missing_commands+=("$required_command")
     fi
 done
+
+llvm_tool_available() {
+    local tool_name="$1"
+    local version
+
+    if command -v "$tool_name" >/dev/null 2>&1; then
+        return 0
+    fi
+    for version in "${llvm_version_suffixes[@]}"; do
+        if command -v "$tool_name-$version" >/dev/null 2>&1; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+for llvm_tool in clang-cl lld-link llvm-mt llvm-rc llvm-ranlib; do
+    if ! llvm_tool_available "$llvm_tool"; then
+        missing_commands+=("$llvm_tool")
+    fi
+done
+if ! llvm_tool_available llvm-lib && ! llvm_tool_available llvm-ar; then
+    missing_commands+=("llvm-lib/llvm-ar")
+fi
 
 if ((${#missing_commands[@]} > 0)); then
     printf 'Missing required commands: %s\n' "${missing_commands[*]}" >&2

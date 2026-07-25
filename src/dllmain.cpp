@@ -43,6 +43,7 @@ public:
         PS::Log<LogLevel::Verbose>(STR("Preparing to pre-initialize PalSchema...\n"));
         MainLoader.PreInitialize();
 
+        m_isReady = true;
         PS::Log<RC::LogLevel::Normal>(STR("{} v{} by {} loaded.\n"), ModName, ModVersion, ModAuthors);
     }
 
@@ -80,6 +81,11 @@ public:
 
     auto on_ui_init() -> void override
     {
+        if (!m_isReady)
+        {
+            return;
+        }
+
         register_tab(STR("Pal Schema"), [](CppUserModBase* instance) {
             UE4SS_ENABLE_IMGUI()
 
@@ -106,10 +112,14 @@ public:
 
     auto on_unreal_init() -> void override
     {
-        MainLoader.Initialize();
+        if (m_isReady)
+        {
+            MainLoader.Initialize();
+        }
     }
 private:
     Palworld::PalMainLoader MainLoader;
+    bool m_isReady = false;
 };
 
 

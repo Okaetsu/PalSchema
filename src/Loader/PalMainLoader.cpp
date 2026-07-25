@@ -42,6 +42,8 @@ namespace Palworld {
 
     PalMainLoader::~PalMainLoader()
     {
+        m_fileWatcher.reset();
+
         auto expected1 = DatatableSerialize_Hook.disable();
         DatatableSerialize_Hook = {};
 

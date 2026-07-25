@@ -1,5 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://okaetsu.github.io/PalSchema/schemas/0.6.1/buildings.schema.json",
   "title": "Buildings Schema",
   "type": "object",
   "additionalProperties": {

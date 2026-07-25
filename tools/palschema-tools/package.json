@@ -1,0 +1,39 @@
+{
+  "name": "@palschema/tools",
+  "version": "0.6.1",
+  "description": "Cross-platform PalSchema JSON/JSONC validation and editor core",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "palschema": "./dist/cli.js",
+    "palschema-lsp": "./dist/lsp-server.js"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/copy-schemas.mjs",
+    "schemas:index": "node scripts/update-schema-index.mjs",
+    "test": "tsx --test test/*.test.ts && node --test test/*.test.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "ajv": "8.20.0",
+    "chokidar": "4.0.3",
+    "jsonc-parser": "3.3.1",
+    "vscode-json-languageservice": "5.7.2",
+    "vscode-languageserver": "10.1.0",
+    "vscode-languageserver-textdocument": "1.0.12"
+  },
+  "devDependencies": {
+    "@types/node": "24.1.0",
+    "tsx": "4.20.3",
+    "typescript": "5.8.3"
+  }
+}

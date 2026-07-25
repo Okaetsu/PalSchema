@@ -39,7 +39,11 @@ the repository-pinned RE-UE4SS toolchain.
 
 See [Building the Win64 PalSchema DLL on Linux](docs/linux/building-win64.md).
 For an atomic install with a recorded rollback path, see
-[Safe deployment to the Palworld client under Proton](docs/linux/proton-deployment.md).
+[Safe deployment to Palworld under Proton or Wine](docs/linux/proton-deployment.md).
+For a separately managed Win64 dedicated server on a Linux host, see
+[Dedicated server development on Linux](docs/linux/dedicated-server.md).
+For the cross-platform JSON/JSONC validator, language server, and VS Code
+extension, see [PalSchema authoring tools](docs/linux/authoring-tools.md).
 
 UE4SS remains a separate runtime installation and is not bundled with
 PalSchema.

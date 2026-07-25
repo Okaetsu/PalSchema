@@ -27,3 +27,10 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
+
+# Node authoring tools
+node_modules/
+
+# Python verification cache
+__pycache__/
+*.pyc

@@ -1,4 +1,6 @@
 {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://okaetsu.github.io/PalSchema/schemas/0.6.1/utility.schema.json",
     "definitions": {
         "ObjectPathRegex": {
             "description": "Object Path must start with /Game/ and end with AssetName.AssetName\nExample: /Game/Others/InventoryItemIcon/Texture/T_itemicon_Armor_Head015.T_itemicon_Armor_Head015",

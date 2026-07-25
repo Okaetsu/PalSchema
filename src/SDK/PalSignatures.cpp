@@ -1,3 +1,10 @@
+#if defined(_WIN32)
+#define NOMINMAX
+#include <Windows.h>
+#endif
+
+#include <limits>
+
 #include "SDK/PalSignatures.h"
 #include "Signatures.hpp"
 #include "SigScanner/SinglePassSigScanner.hpp"
@@ -7,6 +14,19 @@
 
 using namespace RC;
 using namespace RC::Unreal;
+
+namespace
+{
+    bool IsRunningUnderWine()
+    {
+#if defined(_WIN32)
+        auto Ntdll = GetModuleHandleW(L"ntdll.dll");
+        return Ntdll && GetProcAddress(Ntdll, "wine_get_version");
+#else
+        return false;
+#endif
+    }
+}
 
 namespace Palworld {
     void SignatureManager::Initialize()
@@ -68,7 +88,26 @@ namespace Palworld {
         }
 
         SigContainerMap.emplace(ScanTarget::MainExe, SigContainerBox);
-        SinglePassScanner::start_scan(SigContainerMap);
+        const auto PreviousModuleSizeThreshold = SinglePassScanner::m_multithreading_module_size_threshold;
+        if (IsRunningUnderWine())
+        {
+            // SinglePassScanner uses std::async whenever the executable is
+            // larger than this threshold. Wine can block while creating that
+            // worker during UE4SS mod startup, before Unreal can initialize.
+            // Force the scanner's existing synchronous path under Wine while
+            // preserving parallel scanning on native Windows.
+            SinglePassScanner::m_multithreading_module_size_threshold = std::numeric_limits<uint32_t>::max();
+        }
+        try
+        {
+            SinglePassScanner::start_scan(SigContainerMap);
+        }
+        catch (...)
+        {
+            SinglePassScanner::m_multithreading_module_size_threshold = PreviousModuleSizeThreshold;
+            throw;
+        }
+        SinglePassScanner::m_multithreading_module_size_threshold = PreviousModuleSizeThreshold;
     }
 
     void* SignatureManager::GetSignature(const std::string& ClassAndFunction)

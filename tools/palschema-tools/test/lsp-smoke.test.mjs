@@ -1,0 +1,221 @@
+import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import test from "node:test";
+
+const testDirectory = dirname(fileURLToPath(import.meta.url));
+const packageRoot = resolve(testDirectory, "..");
+const repositoryRoot = resolve(packageRoot, "../..");
+
+function encodeMessage(message) {
+  const payload = JSON.stringify(message);
+  return `Content-Length: ${Buffer.byteLength(payload)}\r\n\r\n${payload}`;
+}
+
+test("serves diagnostics and schema features over LSP", async (context) => {
+  const child = spawn(
+    process.execPath,
+    ["--import", "tsx", "src/lsp-server.ts", "--stdio"],
+    {
+      cwd: packageRoot,
+      stdio: ["pipe", "pipe", "pipe"],
+    },
+  );
+  context.after(() => {
+    if (!child.killed) {
+      child.kill();
+    }
+  });
+
+  let buffer = Buffer.alloc(0);
+  let stderr = "";
+  const received = [];
+  const waiters = [];
+
+  function dispatch(message) {
+    received.push(message);
+    for (const waiter of [...waiters]) {
+      if (waiter.predicate(message)) {
+        clearTimeout(waiter.timeout);
+        waiters.splice(waiters.indexOf(waiter), 1);
+        waiter.resolve(message);
+      }
+    }
+  }
+
+  function consume() {
+    for (;;) {
+      const separator = buffer.indexOf("\r\n\r\n");
+      if (separator < 0) {
+        return;
+      }
+      const header = buffer.subarray(0, separator).toString("ascii");
+      const lengthMatch = /^Content-Length: (\d+)$/im.exec(header);
+      assert.ok(lengthMatch, `Missing Content-Length header in ${header}`);
+      const length = Number(lengthMatch[1]);
+      const bodyStart = separator + 4;
+      if (buffer.length < bodyStart + length) {
+        return;
+      }
+      const body = buffer
+        .subarray(bodyStart, bodyStart + length)
+        .toString("utf8");
+      buffer = buffer.subarray(bodyStart + length);
+      dispatch(JSON.parse(body));
+    }
+  }
+
+  child.stdout.on("data", (chunk) => {
+    buffer = Buffer.concat([buffer, chunk]);
+    consume();
+  });
+  child.stderr.on("data", (chunk) => {
+    stderr += chunk.toString("utf8");
+  });
+
+  function send(message) {
+    child.stdin.write(encodeMessage(message));
+  }
+
+  function waitFor(predicate, label) {
+    const existing = received.find(predicate);
+    if (existing) {
+      return Promise.resolve(existing);
+    }
+    return new Promise((resolvePromise, rejectPromise) => {
+      const timeout = setTimeout(() => {
+        rejectPromise(
+          new Error(`Timed out waiting for ${label}. Server stderr:\n${stderr}`),
+        );
+      }, 10_000);
+      waiters.push({ predicate, resolve: resolvePromise, timeout });
+    });
+  }
+
+  send({
+    jsonrpc: "2.0",
+    id: 1,
+    method: "initialize",
+    params: {
+      processId: process.pid,
+      rootUri: pathToFileURL(repositoryRoot).toString(),
+      capabilities: {},
+      initializationOptions: {
+        schemaDirectory: resolve(repositoryRoot, "assets/schemas"),
+        allowMissingGenerated: true,
+      },
+    },
+  });
+  const initialize = await waitFor(
+    (message) => message.id === 1,
+    "initialize response",
+  );
+  assert.equal(initialize.result.serverInfo.name, "PalSchema Language Server");
+  assert.equal(initialize.result.capabilities.hoverProvider, true);
+  send({ jsonrpc: "2.0", method: "initialized", params: {} });
+
+  const documentUri = pathToFileURL(
+    resolve(repositoryRoot, "fixture/items/invalid.jsonc"),
+  ).toString();
+  send({
+    jsonrpc: "2.0",
+    method: "textDocument/didOpen",
+    params: {
+      textDocument: {
+        uri: documentUri,
+        languageId: "jsonc",
+        version: 1,
+        text: '{\n  "Broken": { "Rarity": 99 }\n}\n',
+      },
+    },
+  });
+  const diagnostics = await waitFor(
+    (message) =>
+      message.method === "textDocument/publishDiagnostics" &&
+      message.params?.uri === documentUri,
+    "published diagnostics",
+  );
+  assert.equal(
+    diagnostics.params.diagnostics.some(
+      (diagnostic) => diagnostic.code === "PS_SCHEMA_MAXIMUM",
+    ),
+    true,
+  );
+
+  const completionUri = pathToFileURL(
+    resolve(repositoryRoot, "fixture/items/completion.jsonc"),
+  ).toString();
+  send({
+    jsonrpc: "2.0",
+    method: "textDocument/didOpen",
+    params: {
+      textDocument: {
+        uri: completionUri,
+        languageId: "jsonc",
+        version: 1,
+        text: '{\n  "Example": {\n    \n  }\n}\n',
+      },
+    },
+  });
+  await waitFor(
+    (message) =>
+      message.method === "textDocument/publishDiagnostics" &&
+      message.params?.uri === completionUri,
+    "completion document diagnostics",
+  );
+  send({
+    jsonrpc: "2.0",
+    id: 2,
+    method: "textDocument/completion",
+    params: {
+      textDocument: { uri: completionUri },
+      position: { line: 2, character: 4 },
+    },
+  });
+  const completion = await waitFor(
+    (message) => message.id === 2,
+    "completion response",
+  );
+  const completionItems = Array.isArray(completion.result)
+    ? completion.result
+    : completion.result?.items ?? [];
+  assert.equal(
+    completionItems.some((item) => item.label === "Type"),
+    true,
+  );
+
+  const hoverText = '{\n  "Example": {\n    "Rarity": 1\n  }\n}\n';
+  send({
+    jsonrpc: "2.0",
+    method: "textDocument/didChange",
+    params: {
+      textDocument: { uri: completionUri, version: 2 },
+      contentChanges: [{ text: hoverText }],
+    },
+  });
+  await waitFor(
+    (message) =>
+      message.method === "textDocument/publishDiagnostics" &&
+      message.params?.uri === completionUri,
+    "hover document diagnostics",
+  );
+  send({
+    jsonrpc: "2.0",
+    id: 3,
+    method: "textDocument/hover",
+    params: {
+      textDocument: { uri: completionUri },
+      position: { line: 2, character: 7 },
+    },
+  });
+  const hover = await waitFor(
+    (message) => message.id === 3,
+    "hover response",
+  );
+  assert.match(JSON.stringify(hover.result), /background color/i);
+
+  send({ jsonrpc: "2.0", id: 4, method: "shutdown", params: null });
+  await waitFor((message) => message.id === 4, "shutdown response");
+  send({ jsonrpc: "2.0", method: "exit", params: null });
+});

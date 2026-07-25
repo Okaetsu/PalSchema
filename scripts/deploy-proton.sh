@@ -5,17 +5,20 @@ set -euo pipefail
 show_usage() {
     printf '%s\n' \
         "Usage:" \
-        "  scripts/deploy-proton.sh [dev|shipping] [--game-dir PATH] [--dry-run]" \
-        "  scripts/deploy-proton.sh --rollback BACKUP_DIR [--game-dir PATH] [--dry-run]" \
+        "  scripts/deploy-proton.sh [dev|shipping] [--target auto|client|server]" \
+        "      [--game-dir PATH] [--dry-run]" \
+        "  scripts/deploy-proton.sh --rollback BACKUP_DIR [--target auto|client|server]" \
+        "      [--game-dir PATH] [--dry-run]" \
         "" \
         "Deploys only PalSchema into an existing, separately installed UE4SS." \
-        "Refuses to run while the Windows Palworld client is active."
+        "Refuses to run while the selected Windows Palworld target is active."
 }
 
 build_flavor="shipping"
 game_dir=""
 rollback_dir=""
 dry_run=false
+target_kind="auto"
 
 if (($# > 0)) && [[ "$1" != --* ]]; then
     build_flavor="$1"
@@ -38,6 +41,14 @@ while (($# > 0)); do
                 exit 2
             fi
             rollback_dir="$2"
+            shift
+            ;;
+        --target)
+            if (($# < 2)); then
+                printf '%s\n' "--target requires auto, client, or server." >&2
+                exit 2
+            fi
+            target_kind="$2"
             shift
             ;;
         --dry-run)
@@ -70,6 +81,16 @@ case "$build_flavor" in
         ;;
 esac
 
+case "$target_kind" in
+    auto|client|server)
+        ;;
+    *)
+        printf 'Unknown target: %s\n\n' "$target_kind" >&2
+        show_usage >&2
+        exit 2
+        ;;
+esac
+
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 project_root="$(cd -- "$script_dir/.." && pwd)"
 
@@ -92,33 +113,70 @@ mods_dir="$ue4ss_root/Mods"
 target_dir="$mods_dir/PalSchema"
 backup_root="$ue4ss_root/.palschema-backups"
 
-palworld_client_is_running() {
+if [[ "$target_kind" == "auto" ]]; then
+    if [[ -f "$win64_dir/Palworld-Win64-Shipping.exe" ]]; then
+        target_kind="client"
+    elif [[ -f "$win64_dir/PalServer-Win64-Shipping.exe" ||
+            -f "$win64_dir/PalServer-Win64-Shipping-Cmd.exe" ]]; then
+        target_kind="server"
+    else
+        printf 'Not a Palworld Win64 client or server installation: %s\n' "$game_dir" >&2
+        exit 1
+    fi
+fi
+
+palworld_target_is_running() {
     local cmdline
+    local cmdline_fd
     local argument
 
     for cmdline in /proc/[0-9]*/cmdline; do
-        while IFS= read -r -d '' argument; do
-            case "$argument" in
-                Palworld-Win64-Shipping.exe|*/Palworld-Win64-Shipping.exe|*\\Palworld-Win64-Shipping.exe)
-                    return 0
-                    ;;
-            esac
-        done < "$cmdline" 2>/dev/null || true
+        if ! { exec {cmdline_fd}<"$cmdline"; } 2>/dev/null; then
+            continue
+        fi
+
+        while IFS= read -r -d '' argument <&"$cmdline_fd"; do
+            if [[ "$target_kind" == "client" ]]; then
+                case "$argument" in
+                    Palworld-Win64-Shipping.exe|*/Palworld-Win64-Shipping.exe|*\\Palworld-Win64-Shipping.exe)
+                        exec {cmdline_fd}<&-
+                        return 0
+                        ;;
+                esac
+            else
+                case "$argument" in
+                    PalServer.exe|*/PalServer.exe|*\\PalServer.exe|\
+                    PalServer-Win64-Shipping.exe|*/PalServer-Win64-Shipping.exe|*\\PalServer-Win64-Shipping.exe|\
+                    PalServer-Win64-Shipping-Cmd.exe|*/PalServer-Win64-Shipping-Cmd.exe|*\\PalServer-Win64-Shipping-Cmd.exe)
+                        exec {cmdline_fd}<&-
+                        return 0
+                        ;;
+                esac
+            fi
+        done
+        exec {cmdline_fd}<&-
     done
 
     return 1
 }
 
-if [[ ! -f "$win64_dir/Palworld-Win64-Shipping.exe" ]]; then
-    printf 'Not a Palworld client installation: %s\n' "$game_dir" >&2
+if [[ "$target_kind" == "client" &&
+      ! -f "$win64_dir/Palworld-Win64-Shipping.exe" ]]; then
+    printf 'Not a Palworld Win64 client installation: %s\n' "$game_dir" >&2
+    exit 1
+elif [[ "$target_kind" == "server" &&
+        ! -f "$win64_dir/PalServer-Win64-Shipping.exe" &&
+        ! -f "$win64_dir/PalServer-Win64-Shipping-Cmd.exe" ]]; then
+    printf 'Not a Palworld Win64 dedicated-server installation: %s\n' "$game_dir" >&2
     exit 1
 fi
 if [[ ! -f "$ue4ss_root/UE4SS.dll" || ! -d "$mods_dir" ]]; then
     printf 'A separate UE4SS installation was not found under: %s\n' "$win64_dir" >&2
     exit 1
 fi
-if palworld_client_is_running; then
-    printf '%s\n' "Refusing to deploy while the Palworld Windows client is active." >&2
+if palworld_target_is_running; then
+    printf 'Refusing to deploy while the Palworld Windows %s is active.\n' \
+        "$target_kind" >&2
     exit 1
 fi
 
@@ -226,11 +284,12 @@ stage_dir=""
 
 {
     printf 'flavor=%s\n' "$build_flavor"
+    printf 'target=%s\n' "$target_kind"
     printf 'artifact=%s\n' "$artifact"
     printf 'sha256=%s\n' "$(sha256sum "$artifact" | awk '{print $1}')"
     printf 'deployed_at_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 } > "$backup_dir/deployment.txt"
 
 printf 'Deployed PalSchema to %s\n' "$target_dir"
-printf 'Rollback with: scripts/deploy-proton.sh --rollback %s --game-dir %s\n' \
-    "$backup_dir" "$game_dir"
+printf 'Rollback with: scripts/deploy-proton.sh --rollback %s --target %s --game-dir %s\n' \
+    "$backup_dir" "$target_kind" "$game_dir"

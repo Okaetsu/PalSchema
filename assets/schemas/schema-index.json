@@ -1,0 +1,98 @@
+{
+  "formatVersion": 1,
+  "palSchemaVersion": "0.6.1",
+  "baseId": "https://okaetsu.github.io/PalSchema/schemas/0.6.1/",
+  "schemas": [
+    {
+      "id": "https://okaetsu.github.io/PalSchema/schemas/0.6.1/buildings.schema.json",
+      "file": "buildings.schema.json",
+      "folder": "buildings",
+      "patterns": [
+        "**/buildings/**/*.json",
+        "**/buildings/**/*.jsonc"
+      ],
+      "generated": false,
+      "dependencies": [
+        "enums.schema.json"
+      ],
+      "sha256": "26368e4f00ecf3503da4226dc1b25c014fe19d952e3161504f016c80343bfa52"
+    },
+    {
+      "id": "https://okaetsu.github.io/PalSchema/schemas/0.6.1/items.schema.json",
+      "file": "items.schema.json",
+      "folder": "items",
+      "patterns": [
+        "**/items/**/*.json",
+        "**/items/**/*.jsonc"
+      ],
+      "generated": false,
+      "dependencies": [
+        "enums.schema.json"
+      ],
+      "sha256": "1d07f4983a270f43f20fe618b1cfca0dfba3be698998e19129e3fa3957ab1e74"
+    },
+    {
+      "id": "https://okaetsu.github.io/PalSchema/schemas/0.6.1/pals.schema.json",
+      "file": "pals.schema.json",
+      "folder": "pals",
+      "patterns": [
+        "**/pals/**/*.json",
+        "**/pals/**/*.jsonc"
+      ],
+      "generated": false,
+      "dependencies": [
+        "enums.schema.json"
+      ],
+      "sha256": "f510386ac1a4a50242de45bb90f921ab381cbca40a0d52ef730578bd255e340e"
+    },
+    {
+      "id": "https://okaetsu.github.io/PalSchema/schemas/0.6.1/skins.schema.json",
+      "file": "skins.schema.json",
+      "folder": "skins",
+      "patterns": [
+        "**/skins/**/*.json",
+        "**/skins/**/*.jsonc"
+      ],
+      "generated": false,
+      "dependencies": [
+        "enums.schema.json"
+      ],
+      "sha256": "361c6c625c914a8880a11e03015dd9180ee772f71848d104fea0fff14bcfb43b"
+    },
+    {
+      "id": "https://okaetsu.github.io/PalSchema/schemas/0.6.1/utility.schema.json",
+      "file": "utility.schema.json",
+      "folder": null,
+      "patterns": [],
+      "generated": false,
+      "dependencies": [],
+      "sha256": "e754d5c2f060871e130d8b65c88f74ff6916319bdf48074e43b53c9a70254390"
+    },
+    {
+      "id": "https://okaetsu.github.io/PalSchema/schemas/0.6.1/enums.schema.json",
+      "file": "enums.schema.json",
+      "folder": "enums",
+      "patterns": [
+        "**/enums/**/*.json",
+        "**/enums/**/*.jsonc"
+      ],
+      "generated": true,
+      "dependencies": [],
+      "sha256": null
+    },
+    {
+      "id": "https://okaetsu.github.io/PalSchema/schemas/0.6.1/raw.schema.json",
+      "file": "raw.schema.json",
+      "folder": "raw",
+      "patterns": [
+        "**/raw/**/*.json",
+        "**/raw/**/*.jsonc"
+      ],
+      "generated": true,
+      "dependencies": [
+        "enums.schema.json"
+      ],
+      "sha256": null
+    }
+  ]
+}

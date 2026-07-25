@@ -23,6 +23,29 @@ The generated DLL is portable across Linux distributions because it targets
 the Windows ABI. The build host may use Arch/CachyOS, Debian/Ubuntu, Fedora,
 openSUSE, or another distribution that provides the listed tools.
 
+Typical host packages are:
+
+| Distribution family | Packages |
+| --- | --- |
+| Arch / CachyOS | `clang cmake curl git lld llvm ninja` |
+| Debian | `clang clang-tools cmake curl git lld llvm ninja-build util-linux` |
+| Ubuntu | `clang clang-tools cmake curl git lld llvm ninja-build util-linux` |
+| Fedora / RHEL family | `clang clang-tools-extra cmake curl git lld llvm ninja-build util-linux` |
+| openSUSE | `clang cmake curl git lld llvm ninja util-linux` |
+
+Package names can change between distribution releases. Run
+`scripts/bootstrap-linux.sh` after installation; it checks the exact commands
+the build uses, including `clang-cl`, `lld-link`, `llvm-lib`, `llvm-mt`,
+`llvm-rc`, `llvm-ranlib`, `flock`, and Ninja. The check accepts the
+distribution's version-suffixed LLVM tools, such as Ubuntu's `clang-cl-18`,
+without creating system symlinks. Rust can remain project-isolated as
+described below.
+
+On 2026-07-25 the host-tool gate and shell scripts were exercised in clean
+Ubuntu 24.04, Debian 13, Fedora 42, Arch Linux, and openSUSE Tumbleweed
+containers. The complete SDK preparation, Dev/Shipping cross-build, PE
+verification, packaging, and Proton/Wine runtime tests were run on CachyOS.
+
 ## Epic and UEPseudo access
 
 The recursive RE-UE4SS dependency includes the private UEPseudo repository.
@@ -136,7 +159,10 @@ the secret-bearing job.
 
 ## What this does not provide
 
-This target is for the Windows Palworld client running under Proton. It is not
-a native ELF plugin for the Linux Palworld Dedicated Server. Native server
-support requires a suitable native UE4SS C++ mod ABI plus Linux-specific
-signatures, layouts, hooks, and integration testing.
+This target produces a Win64 DLL for the Windows Palworld client under Proton
+and the Win64 Dedicated Server under Wine or Proton. It is not a native ELF
+plugin for `PalServer-Linux-Shipping`. Native server support requires a stable
+native UE4SS C++ mod ABI plus Linux-specific signatures, layouts, hooks, and
+integration testing. See
+[Dedicated server development on Linux](dedicated-server.md) for the currently
+verified server path and native-runtime status.

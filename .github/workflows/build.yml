@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout public source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: false
 
@@ -35,7 +35,54 @@ jobs:
         run: python -m py_compile scripts/verify-win64-artifact.py
 
       - name: Check JSON
-        run: python -m json.tool CMakePresets.json > /dev/null
+        run: |
+          python -m json.tool CMakePresets.json > /dev/null
+          python -m json.tool assets/.vscode/settings.json > /dev/null
+          python -m json.tool assets/schemas/schema-index.json > /dev/null
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install authoring-tool dependencies
+        run: npm ci
+
+      - name: Audit authoring-tool dependencies
+        run: npm audit --audit-level=moderate
+
+      - name: Type-check authoring tools and VS Code extension
+        run: |
+          npm run tools:typecheck
+          npm run typecheck --workspace palschema-vscode
+
+      - name: Test CLI, schemas, and language server
+        run: |
+          npm run tools:test
+          npm run tools:build
+          node tools/palschema-tools/dist/cli.js schemas verify
+          node tools/palschema-tools/dist/cli.js validate \
+            --allow-missing-generated \
+            assets/examples
+
+      - name: Build distributable authoring tools
+        run: |
+          npm run editor:build
+          npm run editor:package
+          npm pack \
+            --workspace @palschema/tools \
+            --pack-destination dist
+
+      - name: Upload authoring-tool packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: PalSchema-authoring-tools
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            dist/palschema-vscode-*.vsix
+            dist/palschema-tools-*.tgz
 
   windows-msvc-shipping:
     name: Windows MSVC Shipping baseline
@@ -49,7 +96,7 @@ jobs:
         shell: pwsh
     steps:
       - name: Checkout authorized recursive dependencies
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           submodules: recursive
@@ -84,7 +131,7 @@ jobs:
           --json-output build/win64-msvc-ci-shipping/pe-contract.json
 
       - name: Upload public build outputs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: PalSchema-Win64-MSVC-Shipping
           if-no-files-found: error
