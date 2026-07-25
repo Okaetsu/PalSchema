@@ -2,7 +2,7 @@
 
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 import {
   getLanguageService,
@@ -20,16 +20,17 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { TextDocuments } from "vscode-languageserver/node";
 
 import { SchemaRegistry } from "./schema-registry.js";
+import {
+  parseInitializationOptions,
+  type PalSchemaInitializationOptions,
+} from "./lsp-options.js";
+import { isPathContained } from "./path-security.js";
 import type { PalSchemaDiagnostic } from "./types.js";
 import { PalSchemaValidator } from "./validator.js";
 
-interface PalSchemaInitializationOptions {
-  schemaDirectory?: string;
-  allowMissingGenerated?: boolean;
-}
-
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
+const validationTimers = new Map<string, NodeJS.Timeout>();
 
 let registry: SchemaRegistry;
 let validator: PalSchemaValidator;
@@ -74,11 +75,23 @@ async function configureServices(): Promise<void> {
     },
   );
   jsonLanguageService = getLanguageService({
+    workspaceContext: {
+      resolveRelativePath: (relativePath, resource) =>
+        new URL(relativePath, resource).toString(),
+    },
     schemaRequestService: async (uri) => {
-      if (!uri.startsWith("file:")) {
-        throw new Error(`Unsupported schema URI: ${uri}`);
+      if (uri.startsWith("file:")) {
+        const path = fileURLToPath(uri);
+        if (!isPathContained(registry.schemaDirectory, path)) {
+          throw new Error(`Schema URI escapes the configured pack: ${uri}`);
+        }
+        return readFile(path, "utf8");
       }
-      return readFile(fileURLToPath(uri), "utf8");
+      const localPath = await registry.pathForId(uri);
+      if (!localPath) {
+        throw new Error(`Schema URI is not in the configured pack: ${uri}`);
+      }
+      return readFile(localPath, "utf8");
     },
   });
   jsonLanguageService.configure({
@@ -86,18 +99,23 @@ async function configureServices(): Promise<void> {
     schemas: registry.index.schemas
       .filter((entry) => existsSync(registry.pathFor(entry)))
       .map((entry) => ({
-        uri: pathToFileURL(registry.pathFor(entry)).toString(),
+        uri: entry.id,
         fileMatch: entry.patterns,
       })),
   });
 }
 
 async function validateDocument(document: TextDocument): Promise<void> {
+  const version = document.version;
   try {
     const result = await validator.validateText(
       document.getText(),
       fileForUri(document.uri),
     );
+    const current = documents.get(document.uri);
+    if (!current || current.version !== version) {
+      return;
+    }
     connection.sendDiagnostics({
       uri: document.uri,
       diagnostics: result.diagnostics.map((diagnostic) =>
@@ -111,9 +129,24 @@ async function validateDocument(document: TextDocument): Promise<void> {
   }
 }
 
+function scheduleValidation(document: TextDocument): void {
+  const existing = validationTimers.get(document.uri);
+  if (existing) {
+    clearTimeout(existing);
+  }
+  validationTimers.set(
+    document.uri,
+    setTimeout(() => {
+      validationTimers.delete(document.uri);
+      void validateDocument(document);
+    }, 100),
+  );
+}
+
 connection.onInitialize(async (params: InitializeParams): Promise<InitializeResult> => {
-  initializationOptions =
-    (params.initializationOptions as PalSchemaInitializationOptions | null) ?? {};
+  initializationOptions = parseInitializationOptions(
+    params.initializationOptions,
+  );
   await configureServices();
   return {
     capabilities: {
@@ -194,8 +227,13 @@ connection.onDocumentRangeFormatting((params) => {
 });
 
 documents.onDidOpen(({ document }) => void validateDocument(document));
-documents.onDidChangeContent(({ document }) => void validateDocument(document));
+documents.onDidChangeContent(({ document }) => scheduleValidation(document));
 documents.onDidClose(({ document }) => {
+  const pending = validationTimers.get(document.uri);
+  if (pending) {
+    clearTimeout(pending);
+    validationTimers.delete(document.uri);
+  }
   connection.sendDiagnostics({ uri: document.uri, diagnostics: [] });
 });
 

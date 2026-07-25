@@ -26,6 +26,7 @@ export interface SchemaIndexEntry {
   patterns: string[];
   generated: boolean;
   dependencies: string[];
+  supportPatterns: string[];
   sha256: string | null;
 }
 
@@ -61,7 +62,6 @@ export interface ValidationResult {
 
 export interface AjvDiagnosticContext {
   error: ErrorObject;
-  text: string;
   root: import("jsonc-parser").Node | undefined;
   file: string;
 }

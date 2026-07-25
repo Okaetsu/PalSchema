@@ -66,7 +66,6 @@ required_commands=(
     sha256sum
 )
 missing_commands=()
-llvm_version_suffixes=(22 20 19 18 17 16 15)
 
 for required_command in "${required_commands[@]}"; do
     if ! command -v "$required_command" >/dev/null 2>&1; then
@@ -74,27 +73,13 @@ for required_command in "${required_commands[@]}"; do
     fi
 done
 
-llvm_tool_available() {
-    local tool_name="$1"
-    local version
-
-    if command -v "$tool_name" >/dev/null 2>&1; then
-        return 0
-    fi
-    for version in "${llvm_version_suffixes[@]}"; do
-        if command -v "$tool_name-$version" >/dev/null 2>&1; then
-            return 0
-        fi
-    done
-    return 1
-}
-
 for llvm_tool in clang-cl lld-link llvm-mt llvm-rc llvm-ranlib; do
-    if ! llvm_tool_available "$llvm_tool"; then
+    if ! palschema_llvm_tool_available "$llvm_tool"; then
         missing_commands+=("$llvm_tool")
     fi
 done
-if ! llvm_tool_available llvm-lib && ! llvm_tool_available llvm-ar; then
+if ! palschema_llvm_tool_available llvm-lib &&
+    ! palschema_llvm_tool_available llvm-ar; then
     missing_commands+=("llvm-lib/llvm-ar")
 fi
 
@@ -184,21 +169,73 @@ if [[ ! -d "$rust_target_libdir" ]]; then
     fi
 fi
 
-if ! command -v xwin >/dev/null 2>&1; then
-    if [[ "$install_xwin" == true ]]; then
-        cargo install --locked xwin
-    else
-        printf '%s\n' \
-            "xwin is missing. Rerun with --install-xwin or install it with:" \
-            "  cargo install --locked xwin" >&2
-        exit 1
-    fi
-fi
-
 if [[ -n "${XWIN_DIR:-}" ]]; then
     palschema_xwin_dir="$XWIN_DIR"
 else
     palschema_xwin_dir="$PALSCHEMA_CACHE_ROOT/xwin"
+fi
+
+xwin_cache_payload_is_valid() {
+    local cache_dir="$1"
+    [[ -f "$cache_dir/crt/include/vcruntime.h" &&
+       -f "$cache_dir/crt/lib/x86_64/msvcrt.lib" &&
+       -f "$cache_dir/sdk/include/um/Windows.h" &&
+       -f "$cache_dir/sdk/lib/ucrt/x86_64/ucrt.lib" &&
+       -f "$cache_dir/sdk/lib/um/x86_64/kernel32.Lib" ]]
+}
+
+xwin_cache_is_ready() {
+    local cache_dir="$1"
+    xwin_cache_payload_is_valid "$cache_dir" &&
+        [[ -f "$cache_dir/.palschema-sdk-complete" ]]
+}
+
+xwin_parent="$(dirname -- "$palschema_xwin_dir")"
+xwin_name="$(basename -- "$palschema_xwin_dir")"
+xwin_previous="$xwin_parent/.${xwin_name}.previous"
+mkdir -p "$xwin_parent"
+exec {xwin_lock_fd}> "$xwin_parent/.${xwin_name}.lock"
+flock "$xwin_lock_fd"
+
+# Adopt a legacy cache only after checking representative CRT, UCRT, SDK header,
+# and Win32 import-library files. New splats always publish a completion marker.
+if xwin_cache_payload_is_valid "$palschema_xwin_dir" &&
+    [[ ! -f "$palschema_xwin_dir/.palschema-sdk-complete" ]]; then
+    printf '%s\n' "validated-existing-xwin-cache" \
+        > "$palschema_xwin_dir/.palschema-sdk-complete"
+fi
+
+# Recover the last complete cache if a previous refresh was interrupted between
+# the two directory renames.
+if ! xwin_cache_is_ready "$palschema_xwin_dir" &&
+    xwin_cache_is_ready "$xwin_previous"; then
+    if [[ -e "$palschema_xwin_dir" ]]; then
+        xwin_incomplete="$xwin_parent/.${xwin_name}.incomplete.$$"
+        mv -- "$palschema_xwin_dir" "$xwin_incomplete"
+    else
+        xwin_incomplete=""
+    fi
+    mv -- "$xwin_previous" "$palschema_xwin_dir"
+    if [[ -n "$xwin_incomplete" ]]; then
+        rm -rf -- "$xwin_incomplete"
+    fi
+fi
+
+# xwin is needed to create the SDK cache, but not to consume a complete cache
+# during an offline or clean-container build.
+if ! command -v xwin >/dev/null 2>&1 &&
+    { [[ "$install_xwin" == true ]] ||
+      { [[ "$prepare_sdk" == true ]] &&
+        ! xwin_cache_is_ready "$palschema_xwin_dir"; }; }; then
+    if [[ "$install_xwin" == true ]]; then
+        cargo install --locked xwin
+    else
+        printf '%s\n' \
+            "xwin is required to prepare the Microsoft CRT/SDK cache." \
+            "Rerun with --install-xwin or install it with:" \
+            "  cargo install --locked xwin" >&2
+        exit 1
+    fi
 fi
 
 if [[ "$accept_microsoft_license" == true && "$prepare_sdk" != true ]]; then
@@ -216,11 +253,41 @@ if [[ "$prepare_sdk" == true ]]; then
         exit 2
     fi
 
-    mkdir -p "$palschema_xwin_dir"
-    xwin --accept-license splat --output "$palschema_xwin_dir"
+    if xwin_cache_is_ready "$palschema_xwin_dir"; then
+        printf 'Reusing complete xwin SDK cache at %s.\n' "$palschema_xwin_dir"
+    else
+        xwin_stage="$(mktemp -d "$xwin_parent/.${xwin_name}.stage.XXXXXX")"
+        if ! xwin --accept-license splat --output "$xwin_stage"; then
+            rm -rf -- "$xwin_stage"
+            exit 1
+        fi
+        if ! xwin_cache_payload_is_valid "$xwin_stage"; then
+            rm -rf -- "$xwin_stage"
+            printf '%s\n' "xwin produced an incomplete CRT/SDK cache." >&2
+            exit 1
+        fi
+        printf '%s\n' "xwin-splat-complete" \
+            > "$xwin_stage/.palschema-sdk-complete"
+
+        if [[ -e "$xwin_previous" ]]; then
+            rm -rf -- "$xwin_previous"
+        fi
+        if [[ -e "$palschema_xwin_dir" ]]; then
+            mv -- "$palschema_xwin_dir" "$xwin_previous"
+        fi
+        if ! mv -- "$xwin_stage" "$palschema_xwin_dir"; then
+            if [[ ! -e "$palschema_xwin_dir" && -e "$xwin_previous" ]]; then
+                mv -- "$xwin_previous" "$palschema_xwin_dir"
+            fi
+            exit 1
+        fi
+        if [[ -e "$xwin_previous" ]]; then
+            rm -rf -- "$xwin_previous"
+        fi
+    fi
 fi
 
-if [[ ! -d "$palschema_xwin_dir/crt" || ! -d "$palschema_xwin_dir/sdk" ]]; then
+if ! xwin_cache_is_ready "$palschema_xwin_dir"; then
     printf 'The xwin SDK is not prepared at %s.\n' "$palschema_xwin_dir" >&2
     printf '%s\n' \
         "After reviewing the Microsoft terms, prepare it explicitly with:" \

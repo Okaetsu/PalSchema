@@ -60,3 +60,14 @@ target_include_directories(${TARGET} PRIVATE
 )
 target_compile_definitions(${TARGET} PRIVATE PALSCHEMA_BUILDING_DLL=1)
 target_link_libraries(${TARGET} PRIVATE Zydis Zycore safetyhook nlohmann_json::nlohmann_json glaze::glaze UE4SS efsw)
+
+if(MSVC)
+    # Keep Shipping DLLs reproducible across build times and checkout paths.
+    # /Brepro replaces the wall-clock PE/PDB identity with a content-derived
+    # value, while the alternate PDB path prevents the absolute build root
+    # from leaking into the CodeView record embedded in the DLL.
+    target_link_options(${TARGET} PRIVATE
+        "/Brepro"
+        "/PDBALTPATH:PalSchema.pdb"
+    )
+endif()

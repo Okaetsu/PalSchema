@@ -41,10 +41,26 @@ distribution's version-suffixed LLVM tools, such as Ubuntu's `clang-cl-18`,
 without creating system symlinks. Rust can remain project-isolated as
 described below.
 
-On 2026-07-25 the host-tool gate and shell scripts were exercised in clean
-Ubuntu 24.04, Debian 13, Fedora 42, Arch Linux, and openSUSE Tumbleweed
-containers. The complete SDK preparation, Dev/Shipping cross-build, PE
-verification, packaging, and Proton/Wine runtime tests were run on CachyOS.
+The repository contains a clean-container matrix for Debian stable, Ubuntu
+24.04, Fedora latest, Arch Linux, and openSUSE Tumbleweed:
+
+```bash
+scripts/test-distro-matrix.sh
+```
+
+That default gate installs Node.js from its verified upstream SHA-256,
+then runs the same shell, Python, JSON, schema, CLI/LSP, VS Code extension,
+test, audit, and package checks as public CI. To also install each
+distribution's build toolchain, cross-build the Win64 Shipping DLL, and verify
+its PE contract using an already prepared local cache:
+
+```bash
+scripts/test-distro-matrix.sh --build-shipping
+```
+
+The build mode mounts the existing PalSchema cache into each disposable
+container. It never downloads the Microsoft SDK or accepts its license.
+Prepare the SDK once through the explicit bootstrap gate below.
 
 ## Epic and UEPseudo access
 
@@ -143,6 +159,10 @@ that restores the exact pre-build lock file after every invocation, including
 failed or interrupted builds. Build products remain under `build/<preset>/`;
 the development DLL is written to `build/win64-xwin-dev/PalSchema.dll` and the
 shipping DLL to `build/win64-xwin-shipping/PalSchema.dll`.
+
+Shipping links use the MSVC-compatible reproducible-build flag and a
+checkout-independent CodeView PDB name. Rebuilding identical inputs therefore
+does not embed the build time or an absolute checkout path in the DLL.
 
 ## Windows CI baseline
 

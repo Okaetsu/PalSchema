@@ -1,10 +1,6 @@
-#if defined(_WIN32)
-#define NOMINMAX
-#include <Windows.h>
-#endif
-
 #include <limits>
 
+#include "Platform/RuntimeEnvironment.h"
 #include "SDK/PalSignatures.h"
 #include "Signatures.hpp"
 #include "SigScanner/SinglePassSigScanner.hpp"
@@ -14,19 +10,6 @@
 
 using namespace RC;
 using namespace RC::Unreal;
-
-namespace
-{
-    bool IsRunningUnderWine()
-    {
-#if defined(_WIN32)
-        auto Ntdll = GetModuleHandleW(L"ntdll.dll");
-        return Ntdll && GetProcAddress(Ntdll, "wine_get_version");
-#else
-        return false;
-#endif
-    }
-}
 
 namespace Palworld {
     void SignatureManager::Initialize()
@@ -89,7 +72,7 @@ namespace Palworld {
 
         SigContainerMap.emplace(ScanTarget::MainExe, SigContainerBox);
         const auto PreviousModuleSizeThreshold = SinglePassScanner::m_multithreading_module_size_threshold;
-        if (IsRunningUnderWine())
+        if (PS::Platform::IsRunningUnderWine())
         {
             // SinglePassScanner uses std::async whenever the executable is
             // larger than this threshold. Wine can block while creating that

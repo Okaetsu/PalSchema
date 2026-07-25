@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { dirname, parse as parsePath, resolve } from "node:path";
+import { parse as parsePath, resolve } from "node:path";
 
 import { parse, type ParseError, printParseErrorCode } from "jsonc-parser";
 

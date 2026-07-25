@@ -60,6 +60,7 @@ esac
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 project_root="$(cd -- "$script_dir/.." && pwd)"
+source "$script_dir/lib/build-env.sh"
 artifact="$project_root/build/$preset/PalSchema.dll"
 pdb="$project_root/build/$preset/PalSchema.pdb"
 
@@ -69,12 +70,20 @@ if [[ ! -f "$artifact" ]]; then
     exit 1
 fi
 
-for required_command in install mktemp zip; do
+required_commands=(install mktemp python3 zip)
+if [[ "$build_flavor" == "dev" ]]; then
+    required_commands+=(node)
+fi
+for required_command in "${required_commands[@]}"; do
     if ! command -v "$required_command" >/dev/null 2>&1; then
         printf 'Missing required packaging command: %s\n' "$required_command" >&2
         exit 1
     fi
 done
+
+llvm_readobj="$(palschema_find_llvm_tool llvm-readobj)"
+python3 "$script_dir/verify-win64-artifact.py" "$artifact" \
+    --llvm-readobj "$llvm_readobj" >/dev/null
 
 version="$(
     awk '
@@ -108,8 +117,12 @@ if [[ "$build_flavor" == dev ]]; then
     install -m 0644 "$pdb" "$mod_root/dlls/main.pdb"
     cp -a "$project_root/assets/.vscode" "$mod_root/.vscode"
     cp -a "$project_root/assets/examples" "$mod_root/examples"
-    cp -a "$project_root/assets/schemas" "$mod_root/schemas"
+    node "$script_dir/copy-public-schemas.mjs" \
+        "$project_root/assets/schemas" "$mod_root/schemas"
 fi
+
+python3 "$script_dir/verify-win64-artifact.py" \
+    "$mod_root/dlls/main.dll" --llvm-readobj "$llvm_readobj" >/dev/null
 
 archive_name="PalSchema_${version}_Win64${archive_suffix}.zip"
 temporary_archive="$package_dir/$archive_name"

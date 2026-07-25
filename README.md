@@ -38,7 +38,7 @@ running under Proton. The supported path uses xwin, clang-cl, LLD, Ninja, and
 the repository-pinned RE-UE4SS toolchain.
 
 See [Building the Win64 PalSchema DLL on Linux](docs/linux/building-win64.md).
-For an atomic install with a recorded rollback path, see
+For a locked, interruption-recoverable install with a recorded rollback path, see
 [Safe deployment to Palworld under Proton or Wine](docs/linux/proton-deployment.md).
 For a separately managed Win64 dedicated server on a Linux host, see
 [Dedicated server development on Linux](docs/linux/dedicated-server.md).

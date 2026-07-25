@@ -10,7 +10,10 @@ import { findNodeAtLocation, type Node as JsonNode } from "jsonc-parser";
 
 import { parseJsoncDocument } from "./jsonc-document.js";
 import { SchemaRegistry } from "./schema-registry.js";
-import { positionAt } from "./text-position.js";
+import {
+  createPositionMapper,
+  type PositionMapper,
+} from "./text-position.js";
 import type {
   AjvDiagnosticContext,
   PalSchemaDiagnostic,
@@ -44,10 +47,13 @@ function nodeForError(
   return node ?? root;
 }
 
-function ajvDiagnostic(context: AjvDiagnosticContext): PalSchemaDiagnostic {
-  const { error, text, root, file } = context;
+function ajvDiagnostic(
+  context: AjvDiagnosticContext,
+  positionAt: PositionMapper,
+): PalSchemaDiagnostic {
+  const { error, root, file } = context;
   const node = nodeForError(root, error);
-  const location = positionAt(text, node?.offset ?? 0, node?.length ?? 1);
+  const location = positionAt(node?.offset ?? 0, node?.length ?? 1);
   let message = error.message ?? "Schema validation failed.";
   if (error.keyword === "required") {
     const missingProperty = String(error.params.missingProperty);
@@ -82,6 +88,7 @@ function referencedEnumDefinitions(schema: unknown): string[] {
 export class PalSchemaValidator {
   readonly registry: SchemaRegistry;
   private readonly validators = new Map<string, ValidateFunction>();
+  private readonly compilations = new Map<string, Promise<ValidateFunction>>();
   private readonly fallbackEnumEntries = new Set<string>();
   private readonly allowMissingGenerated: boolean;
 
@@ -105,24 +112,48 @@ export class PalSchemaValidator {
     if (existing) {
       return existing;
     }
+    const pending = this.compilations.get(entry.id);
+    if (pending) {
+      return pending;
+    }
+    const compilation = this.compileSchema(entry);
+    this.compilations.set(entry.id, compilation);
+    try {
+      return await compilation;
+    } finally {
+      if (this.compilations.get(entry.id) === compilation) {
+        this.compilations.delete(entry.id);
+      }
+    }
+  }
 
+  private async compileSchema(
+    entry: SchemaIndexEntry,
+  ): Promise<ValidateFunction> {
     const schema = await this.registry.readSchema(entry);
+    schema.$id ??= entry.id;
     const ajv = new Ajv({
       allErrors: true,
       strict: false,
       validateFormats: false,
     });
 
-    if (entry.dependencies.includes("enums.schema.json")) {
-      const enumsEntry = this.registry.entryForFile("enums.schema.json");
-      if (!enumsEntry) {
-        throw new Error("schema-index.json does not declare enums.schema.json.");
+    for (const dependencyFile of entry.dependencies) {
+      const dependency = this.registry.entryForFile(dependencyFile);
+      if (!dependency) {
+        throw new Error(
+          `schema-index.json does not declare ${dependencyFile}.`,
+        );
       }
-
       try {
-        ajv.addSchema(await this.registry.readSchema(enumsEntry), enumsEntry.id);
+        const dependencySchema = await this.registry.readSchema(dependency);
+        dependencySchema.$id ??= dependency.id;
+        ajv.addSchema(dependencySchema, dependency.id);
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        if (
+          (error as NodeJS.ErrnoException).code !== "ENOENT" ||
+          dependencyFile !== "enums.schema.json"
+        ) {
           throw error;
         }
         this.fallbackEnumEntries.add(entry.id);
@@ -132,12 +163,24 @@ export class PalSchemaValidator {
         ajv.addSchema(
           {
             $schema: "http://json-schema.org/draft-07/schema#",
-            $id: enumsEntry.id,
+            $id: dependency.id,
             definitions,
           },
-          enumsEntry.id,
+          dependency.id,
         );
       }
+    }
+
+    for (const supportFile of await this.registry.supportFilesFor(entry)) {
+      const supportSchema = JSON.parse(
+        await readFile(this.registry.pathForRelative(supportFile), "utf8"),
+      ) as Record<string, unknown>;
+      const canonicalId = this.registry.canonicalIdForSupport(
+        entry,
+        supportFile,
+      );
+      supportSchema.$id ??= canonicalId;
+      ajv.addSchema(supportSchema, canonicalId);
     }
 
     const validate = ajv.compile(schema);
@@ -147,6 +190,7 @@ export class PalSchemaValidator {
 
   async validateText(text: string, file: string): Promise<ValidationResult> {
     const parsed = parseJsoncDocument(text, file);
+    const positionAt = createPositionMapper(text);
     const entry = this.registry.findForDocument(file);
     if (parsed.diagnostics.length > 0) {
       return { file, schema: entry, diagnostics: parsed.diagnostics };
@@ -157,7 +201,7 @@ export class PalSchemaValidator {
         schema: null,
         diagnostics: [
           {
-            ...positionAt(text, 0),
+            ...positionAt(0),
             code: "PS_SCHEMA_UNASSOCIATED",
             severity: "warning",
             message:
@@ -179,7 +223,7 @@ export class PalSchemaValidator {
             schema: entry,
             diagnostics: [
               {
-                ...positionAt(text, 0),
+                ...positionAt(0),
                 code: "PS_SCHEMA_GENERATED_MISSING",
                 severity: this.allowMissingGenerated ? "warning" : "error",
                 message:
@@ -198,11 +242,11 @@ export class PalSchemaValidator {
     const validate = await this.compile(entry);
     const valid = validate(parsed.data);
     const diagnostics = (validate.errors ?? []).map((error) =>
-      ajvDiagnostic({ error, text, root: parsed.root, file }),
+      ajvDiagnostic({ error, root: parsed.root, file }, positionAt),
     );
     if (this.fallbackEnumEntries.has(entry.id)) {
       diagnostics.push({
-        ...positionAt(text, 0),
+        ...positionAt(0),
         code: "PS_SCHEMA_ENUMS_MISSING",
         severity: this.allowMissingGenerated ? "warning" : "error",
         message:
@@ -213,7 +257,7 @@ export class PalSchemaValidator {
     }
     if (!valid && diagnostics.length === 0) {
       diagnostics.push({
-        ...positionAt(text, 0),
+        ...positionAt(0),
         code: "PS_SCHEMA_INVALID",
         severity: "error",
         message: "Schema validation failed without a detailed Ajv error.",

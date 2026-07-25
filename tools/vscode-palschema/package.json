@@ -43,7 +43,7 @@
           "type": "string",
           "default": "",
           "scope": "resource",
-          "description": "Optional schema directory. Relative paths are resolved from the first workspace folder; empty uses the schemas bundled with the extension."
+          "description": "Optional schema directory. Relative paths are resolved from the document's workspace folder; empty uses the schemas bundled with the extension."
         },
         "palschema.allowMissingGenerated": {
           "type": "boolean",
@@ -57,6 +57,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "package:vsix": "node scripts/package-extension.mjs",
+    "test": "tsx --test test/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -66,6 +67,7 @@
     "@types/vscode": "1.91.0",
     "@vscode/vsce": "3.9.2",
     "esbuild": "0.28.1",
+    "tsx": "4.20.3",
     "typescript": "5.8.3"
   }
 }

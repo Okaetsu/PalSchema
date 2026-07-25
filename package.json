@@ -9,6 +9,7 @@
     "tools:test": "npm run test --workspace @palschema/tools",
     "tools:typecheck": "npm run typecheck --workspace @palschema/tools",
     "editor:build": "npm run build --workspace palschema-vscode",
+    "editor:test": "npm run test --workspace palschema-vscode",
     "editor:package": "npm run package:vsix --workspace palschema-vscode"
   }
 }

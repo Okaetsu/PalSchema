@@ -1,5 +1,6 @@
 src/**
 scripts/**
+test/**
 tsconfig.json
 node_modules/**
 *.vsix

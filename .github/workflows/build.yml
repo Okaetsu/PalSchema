@@ -20,25 +20,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           submodules: false
-
-      - name: Check shell syntax
-        run: |
-          bash -n \
-            scripts/bootstrap-linux.sh \
-            scripts/build-linux.sh \
-            scripts/cargo-preserve-lock.sh \
-            scripts/deploy-proton.sh \
-            scripts/package-linux.sh \
-            scripts/lib/build-env.sh
-
-      - name: Check Python syntax
-        run: python -m py_compile scripts/verify-win64-artifact.py
-
-      - name: Check JSON
-        run: |
-          python -m json.tool CMakePresets.json > /dev/null
-          python -m json.tool assets/.vscode/settings.json > /dev/null
-          python -m json.tool assets/schemas/schema-index.json > /dev/null
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
@@ -46,33 +28,8 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install authoring-tool dependencies
-        run: npm ci
-
-      - name: Audit authoring-tool dependencies
-        run: npm audit --audit-level=moderate
-
-      - name: Type-check authoring tools and VS Code extension
-        run: |
-          npm run tools:typecheck
-          npm run typecheck --workspace palschema-vscode
-
-      - name: Test CLI, schemas, and language server
-        run: |
-          npm run tools:test
-          npm run tools:build
-          node tools/palschema-tools/dist/cli.js schemas verify
-          node tools/palschema-tools/dist/cli.js validate \
-            --allow-missing-generated \
-            assets/examples
-
-      - name: Build distributable authoring tools
-        run: |
-          npm run editor:build
-          npm run editor:package
-          npm pack \
-            --workspace @palschema/tools \
-            --pack-destination dist
+      - name: Run public source checks
+        run: scripts/ci/run-public-source-checks.sh
 
       - name: Upload authoring-tool packages
         uses: actions/upload-artifact@v7
@@ -88,8 +45,8 @@ jobs:
     name: Windows MSVC Shipping baseline
     if: >-
       vars.PRIVATE_SUBMODULES_AVAILABLE == 'true' &&
-      (github.event_name != 'pull_request' ||
-       github.event.pull_request.head.repo.full_name == github.repository)
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
     runs-on: windows-latest
     defaults:
       run:
@@ -101,6 +58,7 @@ jobs:
           fetch-depth: 0
           submodules: recursive
           token: ${{ secrets.UEPSEUDO_TOKEN }}
+          persist-credentials: false
 
       - name: Set up MSVC
         uses: ilammy/msvc-dev-cmd@v1
@@ -139,3 +97,62 @@ jobs:
           path: |
             build/win64-msvc-ci-shipping/PalSchema.dll
             build/win64-msvc-ci-shipping/pe-contract.json
+
+  linux-xwin:
+    name: Linux-hosted Win64 Dev and Shipping
+    if: >-
+      vars.PRIVATE_SUBMODULES_AVAILABLE == 'true' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout authorized recursive dependencies
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.UEPSEUDO_TOKEN }}
+          persist-credentials: false
+
+      - name: Install Linux cross-build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang clang-tools cmake lld llvm ninja-build \
+            python3 util-linux zip
+
+      - name: Prepare isolated Rust and Microsoft SDK caches
+        run: >-
+          scripts/bootstrap-linux.sh
+          --install-rust-toolchain
+          --install-xwin
+          --prepare-sdk
+          --accept-microsoft-license
+
+      - name: Build and verify Linux-hosted Win64 artifact
+        run: |
+          scripts/build-linux.sh dev
+          python3 scripts/verify-win64-artifact.py \
+            build/win64-xwin-dev/PalSchema.dll \
+            --json-output build/win64-xwin-dev/pe-contract.json
+          scripts/package-linux.sh dev --output-dir dist
+          scripts/build-linux.sh shipping
+          python3 scripts/verify-win64-artifact.py \
+            build/win64-xwin-shipping/PalSchema.dll \
+            --json-output build/win64-xwin-shipping/pe-contract.json
+          scripts/package-linux.sh shipping --output-dir dist
+          unzip -l dist/PalSchema_*_Win64*.zip
+
+      - name: Upload Linux-hosted Win64 outputs
+        uses: actions/upload-artifact@v7
+        with:
+          name: PalSchema-Win64-Linux-xwin
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            build/win64-xwin-dev/PalSchema.dll
+            build/win64-xwin-dev/PalSchema.pdb
+            build/win64-xwin-dev/pe-contract.json
+            build/win64-xwin-shipping/PalSchema.dll
+            build/win64-xwin-shipping/pe-contract.json
+            dist/PalSchema_*_Win64*.zip

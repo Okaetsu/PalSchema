@@ -15,6 +15,7 @@
       "dependencies": [
         "enums.schema.json"
       ],
+      "supportPatterns": [],
       "sha256": "26368e4f00ecf3503da4226dc1b25c014fe19d952e3161504f016c80343bfa52"
     },
     {
@@ -29,6 +30,7 @@
       "dependencies": [
         "enums.schema.json"
       ],
+      "supportPatterns": [],
       "sha256": "1d07f4983a270f43f20fe618b1cfca0dfba3be698998e19129e3fa3957ab1e74"
     },
     {
@@ -43,6 +45,7 @@
       "dependencies": [
         "enums.schema.json"
       ],
+      "supportPatterns": [],
       "sha256": "f510386ac1a4a50242de45bb90f921ab381cbca40a0d52ef730578bd255e340e"
     },
     {
@@ -57,6 +60,7 @@
       "dependencies": [
         "enums.schema.json"
       ],
+      "supportPatterns": [],
       "sha256": "361c6c625c914a8880a11e03015dd9180ee772f71848d104fea0fff14bcfb43b"
     },
     {
@@ -66,6 +70,7 @@
       "patterns": [],
       "generated": false,
       "dependencies": [],
+      "supportPatterns": [],
       "sha256": "e754d5c2f060871e130d8b65c88f74ff6916319bdf48074e43b53c9a70254390"
     },
     {
@@ -78,6 +83,7 @@
       ],
       "generated": true,
       "dependencies": [],
+      "supportPatterns": [],
       "sha256": null
     },
     {
@@ -91,6 +97,9 @@
       "generated": true,
       "dependencies": [
         "enums.schema.json"
+      ],
+      "supportPatterns": [
+        "raw/*.schema.json"
       ],
       "sha256": null
     }

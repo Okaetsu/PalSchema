@@ -1,5 +1,12 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  cp,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
@@ -108,12 +115,75 @@ test("accepts an unpinned local runtime-generated schema", async () => {
       '{"$schema":"http://json-schema.org/draft-07/schema#","type":"object"}\n',
     );
 
-    const registry = await SchemaRegistry.load(temporaryRoot);
+    const registry = await SchemaRegistry.load(temporaryRoot, {
+      verifyStatic: false,
+    });
     const verification = await registry.verify();
     assert.equal(
       verification.find((result) => result.entry.file === "raw.schema.json")
         ?.status,
       "present-generated",
+    );
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test("rejects a modified static schema before validation", async () => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "palschema-integrity-"));
+  try {
+    await cp(schemaDirectory, temporaryRoot, { recursive: true });
+    await writeFile(
+      join(temporaryRoot, "items.schema.json"),
+      '{"type":"object"}\n',
+    );
+    await assert.rejects(
+      PalSchemaValidator.create(temporaryRoot),
+      /Static schema integrity check failed.*items\.schema\.json/,
+    );
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test("loads generated raw table support schemas by canonical ID", async () => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "palschema-raw-pack-"));
+  try {
+    await cp(schemaDirectory, temporaryRoot, { recursive: true });
+    await mkdir(join(temporaryRoot, "raw"));
+    await writeFile(
+      join(temporaryRoot, "raw.schema.json"),
+      JSON.stringify({
+        $schema: "http://json-schema.org/draft-07/schema#",
+        type: "object",
+        properties: {
+          ExampleTable: { $ref: "raw/ExampleTable.schema.json" },
+        },
+        additionalProperties: false,
+      }),
+    );
+    await writeFile(
+      join(temporaryRoot, "raw", "ExampleTable.schema.json"),
+      JSON.stringify({
+        type: "object",
+        additionalProperties: {
+          type: "object",
+          required: ["Value"],
+          properties: { Value: { type: "string" } },
+        },
+      }),
+    );
+
+    const validator = await PalSchemaValidator.create(temporaryRoot, {
+      allowMissingGenerated: true,
+    });
+    const result = await validator.validateText(
+      '{"ExampleTable":{"Row":{"Value":"ok"}}}',
+      resolve(repositoryRoot, "fixture/raw/example.json"),
+    );
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.severity === "error"),
+      false,
     );
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });

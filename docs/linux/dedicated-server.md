@@ -4,13 +4,16 @@ PalSchema's supported dedicated-server path on a Linux host is the **Win64
 Palworld Dedicated Server running through Wine or Proton**. It uses the same
 PalSchema DLL and UE4SS C++ mod ABI as the Windows client.
 
-The native `PalServer-Linux-Shipping` binary is not currently a 1:1 PalSchema
-target. PalSchema is a Win64 UE4SS C++ mod, while the upstream native UE4SS
-port remains under development. The upstream headless Linux draft explicitly
-leaves C++ mods outside its initial scope:
+The native `PalServer-Linux-Shipping` binary is not currently a verified 1:1
+PalSchema target. PalSchema is presently built as a Win64 UE4SS C++ mod, while
+the upstream native UE4SS port remains under development. The upstream
+headless Linux draft explicitly leaves C++ mods outside its initial scope:
 [UE4SS pull request 1347](https://github.com/UE4SS-RE/RE-UE4SS/pull/1347).
-An experimental downstream Linux release exists, but it does not provide the
-full stable `CppUserModBase` ABI used by PalSchema. Do not treat it as a
+Downstream Linux experiments may accept a native `CppUserModBase`/`main.so`
+mod at the loader boundary; that is narrower than proving PalSchema's
+signatures, layouts, hooks, threading, teardown, and generated schemas against
+the native Palworld server. No such downstream and PalSchema combination is
+pinned or verified by this repository yet, so it must not be treated as a
 drop-in replacement for this workflow.
 
 ## Ownership boundary
@@ -83,8 +86,11 @@ scripts/deploy-proton.sh shipping \
 ```
 
 Review the paths, remove `--dry-run`, and keep the printed rollback command.
-Deployment is atomic, creates a timestamped backup, and refuses to proceed
-while the selected Win64 server is active.
+Deployment uses a locked, journaled replacement transaction, creates a
+timestamped backup, and refuses to proceed while the selected Win64 server is
+active or process visibility is incomplete. A signal restores the previous
+installation; after host or power interruption, the next deploy/rollback
+recovers the recorded transaction before making another change.
 
 ## Start under Wine
 
@@ -115,6 +121,11 @@ scanner path during startup. Native Windows keeps the normal parallel scanner.
 This avoids a Wine `std::async` startup deadlock without changing signatures,
 loader behavior, or the produced Win64 DLL ABI.
 
+When PalSchema auto-reload is enabled, Wine uses efsw's polling backend because
+Wine does not reliably deliver the Win32 directory-change notifications used
+by efsw's native Windows backend. Native Windows keeps the event-driven
+backend. The selected fallback is reported in `UE4SS.log`.
+
 ## Verification
 
 Check `Pal/Binaries/Win64/ue4ss/UE4SS.log` for:
@@ -129,12 +140,40 @@ Check `Pal/Binaries/Win64/ue4ss/UE4SS.log` for:
 Also verify that the configured game and query ports are open. A process that
 exists but never opens its ports is not a successful smoke test.
 
+The repeatable smoke harness performs those checks, stops only the selected
+Wine process group and prefix between cycles, and writes one evidence directory
+per run:
+
+```bash
+scripts/test-win64-server.sh \
+  --game-dir /srv/palworld-win64 \
+  --cycles 3
+```
+
+Auto-reload can be included by pointing at a harmless fixture that already
+exists inside one PalSchema mod. The harness only updates that file's
+modification time:
+
+```bash
+scripts/test-win64-server.sh \
+  --game-dir /srv/palworld-win64 \
+  --cycles 3 \
+  --hot-reload-file \
+    /srv/palworld-win64/Pal/Binaries/Win64/ue4ss/Mods/PalSchema/mods/Smoke/translations/en/smoke.json
+```
+
+Automatic discovery is intentionally disabled: the server root must be
+explicit so the harness cannot select another Palworld installation.
+
 The Linux-hosted workflow was exercised on 2026-07-25 against Win64 Dedicated
-Server Steam build `24181105`: all 22 PalSchema signatures were found, all 13
-loaders initialized, UE4SS reached its event loop, and isolated UDP game/query
-ports opened. The same DLL was then verified against the installed Palworld
-client under Proton. This is a reproducibility record, not a promise that
-future Palworld or UE4SS updates cannot change signatures or compatibility.
+Server Steam build `24181105` under Wine 11.13. Five consecutive startup and
+shutdown cycles found all 22 PalSchema signatures, initialized all 13 loaders,
+reached UE4SS's event loop, opened both isolated UDP ports, and released both
+ports after shutdown. Three additional cycles triggered and observed
+PalSchema auto-reload through the Wine polling fallback. The same DLL was then
+verified against the installed Palworld client under Proton. This is a
+reproducibility record, not a promise that future Palworld or UE4SS updates
+cannot change signatures or compatibility.
 
 ## Updating and rollback
 

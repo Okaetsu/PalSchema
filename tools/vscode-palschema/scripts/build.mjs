@@ -1,8 +1,9 @@
-import { cp, mkdir, rm } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { build } from "esbuild";
+import { copyPublicSchemas } from "../../../scripts/copy-public-schemas.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const extensionRoot = resolve(scriptDirectory, "..");
@@ -33,8 +34,7 @@ await Promise.all([
   }),
 ]);
 
-await cp(
+await copyPublicSchemas(
   resolve(repositoryRoot, "assets/schemas"),
   resolve(outputDirectory, "schemas"),
-  { recursive: true, force: true },
 );

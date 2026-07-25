@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -14,6 +15,7 @@ from pathlib import Path
 
 
 EXPECTED_EXPORTS = {"start_mod", "uninstall_mod"}
+EXPECTED_PRODUCT_NAME = "PalSchema"
 REQUIRED_DLL_CHARACTERISTICS = {
     "IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE",
     "IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA",
@@ -34,10 +36,76 @@ def parse_args() -> argparse.Namespace:
         default="llvm-readobj",
         help="llvm-readobj executable name or path.",
     )
+    parser.add_argument(
+        "--expected-version",
+        help="Expected four-component PalSchema product version (defaults to version.h).",
+    )
     return parser.parse_args()
 
 
-def inspect_artifact(artifact: Path, llvm_readobj: str) -> dict[str, object]:
+def version_from_header() -> str:
+    header = Path(__file__).resolve().parent.parent / "version.h"
+    text = header.read_text(encoding="utf-8")
+    components = []
+    for name in ("MAJOR", "MINOR", "REVISION", "BUILD"):
+        match = re.search(
+            rf"^\s*#define\s+VERSION_{name}\s+([0-9]+)\s*$",
+            text,
+            re.MULTILINE,
+        )
+        if match is None:
+            raise RuntimeError(f"Unable to resolve VERSION_{name} from {header}.")
+        components.append(match.group(1))
+    return ".".join(components)
+
+
+def version_resource_bytes(output: str) -> bytes:
+    in_version_resource = False
+    in_data = False
+    chunks: list[bytes] = []
+    for raw_line in output.splitlines():
+        line = raw_line.strip()
+        if line.startswith("Type: VERSIONINFO"):
+            in_version_resource = True
+            continue
+        if in_version_resource and line == "Data (":
+            in_data = True
+            continue
+        if in_data and line == ")":
+            break
+        if not in_data:
+            continue
+        match = re.match(
+            r"^[0-9A-Fa-f]+:\s+((?:[0-9A-Fa-f]{8}\s+)+)\|",
+            line,
+        )
+        if match is not None:
+            chunks.extend(
+                bytes.fromhex(group)
+                for group in match.group(1).split()
+            )
+    return b"".join(chunks)
+
+
+def has_version_string(resource: bytes, key: str, value: str) -> bool:
+    key_marker = f"{key}\0".encode("utf-16-le")
+    value_marker = f"{value}\0".encode("utf-16-le")
+    key_offset = resource.find(key_marker)
+    if key_offset < 0:
+        return False
+    value_offset = resource.find(
+        value_marker,
+        key_offset + len(key_marker),
+        key_offset + len(key_marker) + 512,
+    )
+    return value_offset >= 0
+
+
+def inspect_artifact(
+    artifact: Path,
+    llvm_readobj: str,
+    expected_version: str,
+) -> dict[str, object]:
     executable = shutil.which(llvm_readobj)
     if executable is None:
         raise RuntimeError(f"Unable to find {llvm_readobj!r} on PATH.")
@@ -48,6 +116,7 @@ def inspect_artifact(artifact: Path, llvm_readobj: str) -> dict[str, object]:
             "--file-headers",
             "--coff-exports",
             "--coff-imports",
+            "--coff-resources",
             str(artifact),
         ],
         check=True,
@@ -96,6 +165,27 @@ def inspect_artifact(artifact: Path, llvm_readobj: str) -> dict[str, object]:
         )
     if "UE4SS.dll" not in imports:
         errors.append("dynamic UE4SS.dll import is missing")
+    resource_bytes = version_resource_bytes(output)
+    if "Type: VERSIONINFO" not in output:
+        errors.append("VERSIONINFO resource is missing")
+    elif not resource_bytes:
+        errors.append("VERSIONINFO resource data is missing")
+    if not has_version_string(
+        resource_bytes,
+        "ProductName",
+        EXPECTED_PRODUCT_NAME,
+    ):
+        errors.append(
+            f"VERSIONINFO product identity {EXPECTED_PRODUCT_NAME!r} is missing"
+        )
+    if not has_version_string(
+        resource_bytes,
+        "ProductVersion",
+        expected_version,
+    ):
+        errors.append(
+            f"VERSIONINFO product version {expected_version!r} is missing"
+        )
     if missing_characteristics:
         errors.append(
             "missing DLL security characteristics: "
@@ -110,6 +200,8 @@ def inspect_artifact(artifact: Path, llvm_readobj: str) -> dict[str, object]:
         "artifact": artifact.name,
         "sha256": digest,
         "format": "COFF-x86-64",
+        "product_name": EXPECTED_PRODUCT_NAME,
+        "product_version": expected_version,
         "exports": sorted(exports),
         "imported_dlls": sorted(imports, key=str.casefold),
         "dll_characteristics": sorted(REQUIRED_DLL_CHARACTERISTICS),
@@ -124,7 +216,16 @@ def main() -> int:
         return 1
 
     try:
-        contract = inspect_artifact(artifact, args.llvm_readobj)
+        expected_version = args.expected_version or version_from_header()
+        if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+", expected_version):
+            raise RuntimeError(
+                f"Expected version must have four numeric components: {expected_version}"
+            )
+        contract = inspect_artifact(
+            artifact,
+            args.llvm_readobj,
+            expected_version,
+        )
     except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
         print(f"Win64 artifact verification failed: {error}", file=sys.stderr)
         return 1

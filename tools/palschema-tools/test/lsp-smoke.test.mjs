@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { cp, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import test from "node:test";
@@ -14,6 +16,28 @@ function encodeMessage(message) {
 }
 
 test("serves diagnostics and schema features over LSP", async (context) => {
+  const temporarySchemaDirectory = await mkdtemp(
+    resolve(tmpdir(), "palschema-lsp-schemas-"),
+  );
+  await cp(
+    resolve(repositoryRoot, "assets/schemas"),
+    temporarySchemaDirectory,
+    { recursive: true },
+  );
+  await writeFile(
+    resolve(temporarySchemaDirectory, "enums.schema.json"),
+    JSON.stringify({
+      $schema: "http://json-schema.org/draft-07/schema#",
+      $id: "https://okaetsu.github.io/PalSchema/schemas/0.6.1/enums.schema.json",
+      definitions: {
+        EPalItemTypeA: { type: "string", enum: ["CanaryTypeA"] },
+        EPalItemTypeB: { type: "string", enum: ["CanaryTypeB"] },
+      },
+    }),
+  );
+  context.after(async () => {
+    await rm(temporarySchemaDirectory, { recursive: true, force: true });
+  });
   const child = spawn(
     process.execPath,
     ["--import", "tsx", "src/lsp-server.ts", "--stdio"],
@@ -102,7 +126,7 @@ test("serves diagnostics and schema features over LSP", async (context) => {
       rootUri: pathToFileURL(repositoryRoot).toString(),
       capabilities: {},
       initializationOptions: {
-        schemaDirectory: resolve(repositoryRoot, "assets/schemas"),
+        schemaDirectory: temporarySchemaDirectory,
         allowMissingGenerated: true,
       },
     },
@@ -185,6 +209,52 @@ test("serves diagnostics and schema features over LSP", async (context) => {
     true,
   );
 
+  const enumUri = pathToFileURL(
+    resolve(repositoryRoot, "fixture/items/enum-completion.jsonc"),
+  ).toString();
+  send({
+    jsonrpc: "2.0",
+    method: "textDocument/didOpen",
+    params: {
+      textDocument: {
+        uri: enumUri,
+        languageId: "jsonc",
+        version: 1,
+        text: '{\n  "Example": {\n    "TypeA": ""\n  }\n}\n',
+      },
+    },
+  });
+  await waitFor(
+    (message) =>
+      message.method === "textDocument/publishDiagnostics" &&
+      message.params?.uri === enumUri,
+    "enum completion document diagnostics",
+  );
+  send({
+    jsonrpc: "2.0",
+    id: 20,
+    method: "textDocument/completion",
+    params: {
+      textDocument: { uri: enumUri },
+      position: { line: 2, character: 14 },
+    },
+  });
+  const enumCompletion = await waitFor(
+    (message) => message.id === 20,
+    "offline enum completion response",
+  );
+  const enumItems = Array.isArray(enumCompletion.result)
+    ? enumCompletion.result
+    : enumCompletion.result?.items ?? [];
+  assert.equal(
+    enumItems.some(
+      (item) =>
+        item.label === '"CanaryTypeA"' &&
+        item.textEdit?.newText === '"CanaryTypeA"',
+    ),
+    true,
+  );
+
   const hoverText = '{\n  "Example": {\n    "Rarity": 1\n  }\n}\n';
   send({
     jsonrpc: "2.0",
@@ -214,6 +284,47 @@ test("serves diagnostics and schema features over LSP", async (context) => {
     "hover response",
   );
   assert.match(JSON.stringify(hover.result), /background color/i);
+
+  const closedUri = pathToFileURL(
+    resolve(repositoryRoot, "fixture/items/closed.jsonc"),
+  ).toString();
+  send({
+    jsonrpc: "2.0",
+    method: "textDocument/didOpen",
+    params: {
+      textDocument: {
+        uri: closedUri,
+        languageId: "jsonc",
+        version: 1,
+        text: '{\n  "Broken": { "Rarity": 99 }\n}\n',
+      },
+    },
+  });
+  send({
+    jsonrpc: "2.0",
+    method: "textDocument/didClose",
+    params: { textDocument: { uri: closedUri } },
+  });
+  const cleared = await waitFor(
+    (message) =>
+      message.method === "textDocument/publishDiagnostics" &&
+      message.params?.uri === closedUri &&
+      message.params?.diagnostics?.length === 0,
+    "closed document diagnostics clear",
+  );
+  const clearIndex = received.indexOf(cleared);
+  await new Promise((resolvePromise) => setTimeout(resolvePromise, 200));
+  assert.equal(
+    received
+      .slice(clearIndex + 1)
+      .some(
+        (message) =>
+          message.method === "textDocument/publishDiagnostics" &&
+          message.params?.uri === closedUri &&
+          message.params?.diagnostics?.length > 0,
+      ),
+    false,
+  );
 
   send({ jsonrpc: "2.0", id: 4, method: "shutdown", params: null });
   await waitFor((message) => message.id === 4, "shutdown response");

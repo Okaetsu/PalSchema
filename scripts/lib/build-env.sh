@@ -3,6 +3,8 @@
 # Shared environment setup for PalSchema's Linux-hosted cross-build scripts.
 # This file is sourced; it intentionally does not enable shell options.
 
+PALSCHEMA_LLVM_VERSION_SUFFIXES=(22 21 20 19 18 17 16 15)
+
 palschema_configure_build_environment() {
     if [[ -n "${XDG_CACHE_HOME:-}" ]]; then
         palschema_cache_root="$XDG_CACHE_HOME/palschema"
@@ -20,4 +22,30 @@ palschema_configure_build_environment() {
         export CARGO_HOME="$PALSCHEMA_CARGO_HOME"
         export PATH="$CARGO_HOME/bin:$PATH"
     fi
+}
+
+palschema_find_llvm_tool() {
+    local tool_name="$1"
+    local candidate
+    local suffix
+
+    if command -v "$tool_name" >/dev/null 2>&1; then
+        command -v "$tool_name"
+        return 0
+    fi
+    for suffix in "${PALSCHEMA_LLVM_VERSION_SUFFIXES[@]}"; do
+        candidate="$tool_name-$suffix"
+        if command -v "$candidate" >/dev/null 2>&1; then
+            command -v "$candidate"
+            return 0
+        fi
+    done
+
+    printf 'Unable to find %s (including supported version-suffixed names).\n' \
+        "$tool_name" >&2
+    return 1
+}
+
+palschema_llvm_tool_available() {
+    palschema_find_llvm_tool "$1" >/dev/null 2>&1
 }

@@ -5,16 +5,28 @@ import {
   access,
   constants,
   copyFile,
+  lstat,
   mkdir,
   readdir,
-  stat,
+  realpath,
   writeFile,
 } from "node:fs/promises";
-import { dirname, resolve, extname, join, relative } from "node:path";
+import {
+  dirname,
+  resolve,
+  extname,
+  join,
+  relative,
+  sep,
+} from "node:path";
 
 import chokidar from "chokidar";
 
 import { findProjectConfig } from "./configuration.js";
+import {
+  isPathContained,
+  resolveContainedPath,
+} from "./path-security.js";
 import { SchemaRegistry } from "./schema-registry.js";
 import type { PalSchemaDiagnostic, ValidationResult } from "./types.js";
 import { PalSchemaValidator } from "./validator.js";
@@ -74,6 +86,14 @@ async function pathExists(path: string): Promise<boolean> {
     }
     throw error;
   }
+}
+
+function containedDestination(root: string, file: string): string {
+  return resolveContainedPath(
+    root,
+    file,
+    "Schema destination escapes its workspace",
+  );
 }
 
 function parseCommonOptions(arguments_: string[]): {
@@ -157,10 +177,14 @@ function isJsonDocument(path: string): boolean {
 
 async function discoverFiles(paths: string[]): Promise<string[]> {
   const discovered = new Set<string>();
+  const visitedDirectories = new Set<string>();
 
   async function visit(path: string): Promise<void> {
     const absolutePath = resolve(path);
-    const metadata = await stat(absolutePath);
+    const metadata = await lstat(absolutePath);
+    if (metadata.isSymbolicLink()) {
+      return;
+    }
     if (metadata.isFile()) {
       if (
         !IGNORED_FILES.has(absolutePath.split(/[\\/]/).at(-1) ?? "") &&
@@ -174,10 +198,16 @@ async function discoverFiles(paths: string[]): Promise<string[]> {
       return;
     }
 
+    const canonicalDirectory = await realpath(absolutePath);
+    if (visitedDirectories.has(canonicalDirectory)) {
+      return;
+    }
+    visitedDirectories.add(canonicalDirectory);
+
     const entries = await readdir(absolutePath, { withFileTypes: true });
     await Promise.all(
       entries.map(async (entry) => {
-        if (entry.isDirectory() && IGNORED_DIRECTORIES.has(entry.name)) {
+        if (IGNORED_DIRECTORIES.has(entry.name)) {
           return;
         }
         await visit(join(absolutePath, entry.name));
@@ -204,22 +234,19 @@ function printDiagnostic(diagnostic: PalSchemaDiagnostic): void {
 function printValidationResults(
   results: ValidationResult[],
   format: CommonOptions["format"],
+  ndjson = false,
 ): number {
   const diagnostics = results.flatMap((result) => result.diagnostics);
   if (format === "json") {
-    console.log(
-      JSON.stringify(
-        {
-          files: results.length,
-          errors: diagnostics.filter((item) => item.severity === "error").length,
-          warnings: diagnostics.filter((item) => item.severity === "warning")
-            .length,
-          diagnostics,
-        },
-        null,
-        2,
-      ),
-    );
+    const report = {
+      ...(ndjson ? { event: "validation" } : {}),
+      files: results.length,
+      errors: diagnostics.filter((item) => item.severity === "error").length,
+      warnings: diagnostics.filter((item) => item.severity === "warning")
+        .length,
+      diagnostics,
+    };
+    console.log(JSON.stringify(report, null, ndjson ? undefined : 2));
   } else {
     diagnostics.forEach(printDiagnostic);
     const errors = diagnostics.filter((item) => item.severity === "error").length;
@@ -231,76 +258,182 @@ function printValidationResults(
   return diagnostics.some((item) => item.severity === "error") ? 1 : 0;
 }
 
-async function validateOnce(
-  validator: PalSchemaValidator,
-  paths: string[],
-  format: CommonOptions["format"],
-): Promise<number> {
-  const files = await discoverFiles(paths);
-  const results = await Promise.all(files.map((file) => validator.validateFile(file)));
-  return printValidationResults(results, format);
+async function validateFiles(
+  options: ValidateOptions,
+  files: string[],
+  validators: Map<string, Promise<PalSchemaValidator>>,
+): Promise<ValidationResult[]> {
+  return Promise.all(
+    files.map(async (file) => {
+      const projectConfig = await findProjectConfig(dirname(file));
+      const schemaDirectory =
+        options.schemaDirectory ??
+        process.env.PALSCHEMA_SCHEMA_DIR ??
+        projectConfig?.schemaDirectory;
+      const allowMissingGenerated =
+        options.allowMissingGenerated ??
+        projectConfig?.allowMissingGenerated ??
+        false;
+      const key = JSON.stringify([
+        schemaDirectory ? resolve(schemaDirectory) : null,
+        allowMissingGenerated,
+      ]);
+      let validator = validators.get(key);
+      if (!validator) {
+        validator = PalSchemaValidator.create(schemaDirectory, {
+          allowMissingGenerated,
+        });
+        validators.set(key, validator);
+      }
+      return (await validator).validateFile(file);
+    }),
+  );
 }
 
-async function validationProjectConfig(paths: string[]) {
-  const currentProjectConfig = await findProjectConfig();
-  if (currentProjectConfig || paths.length !== 1) {
-    return currentProjectConfig;
-  }
-
-  const target = resolve(paths[0] ?? ".");
-  const metadata = await stat(target);
-  return findProjectConfig(metadata.isDirectory() ? target : dirname(target));
+async function validateOnce(
+  options: ValidateOptions,
+  validators: Map<string, Promise<PalSchemaValidator>>,
+): Promise<ValidationResult[]> {
+  return validateFiles(
+    options,
+    await discoverFiles(options.paths),
+    validators,
+  );
 }
 
 async function validateCommand(arguments_: string[]): Promise<number> {
   const options = parseValidateOptions(arguments_);
-  const projectConfig = await validationProjectConfig(options.paths);
-  const schemaDirectory =
-    options.schemaDirectory ??
-    process.env.PALSCHEMA_SCHEMA_DIR ??
-    projectConfig?.schemaDirectory;
-  const validator = await PalSchemaValidator.create(schemaDirectory, {
-    allowMissingGenerated:
-      options.allowMissingGenerated ??
-      projectConfig?.allowMissingGenerated ??
-      false,
-  });
-  let exitCode = await validateOnce(validator, options.paths, options.format);
+  const validators = new Map<string, Promise<PalSchemaValidator>>();
+  const resultCache = new Map(
+    (await validateOnce(options, validators)).map((result) => [
+      result.file,
+      result,
+    ]),
+  );
+  const ndjson = options.watch && options.format === "json";
+  let exitCode = printValidationResults(
+    [...resultCache.values()],
+    options.format,
+    ndjson,
+  );
   if (!options.watch) {
     return exitCode;
   }
 
   const watcher = chokidar.watch(options.paths, {
+    followSymlinks: false,
     ignored: (path, metadata) =>
       metadata?.isDirectory() === true &&
       IGNORED_DIRECTORIES.has(path.split(/[\\/]/).at(-1) ?? ""),
     ignoreInitial: true,
   });
   let pending: NodeJS.Timeout | undefined;
-  const rerun = (): void => {
+  let validationActive = false;
+  let validationRequested = false;
+  let activeValidation: Promise<void> | undefined;
+  let fullValidationRequested = false;
+  const pendingFiles = new Map<string, "validate" | "delete">();
+
+  const runQueuedValidations = async (): Promise<void> => {
+    if (validationActive) {
+      validationRequested = true;
+      return;
+    }
+    validationActive = true;
+    try {
+      do {
+        validationRequested = false;
+        const validateEverything = fullValidationRequested;
+        fullValidationRequested = false;
+        const changes = new Map(pendingFiles);
+        pendingFiles.clear();
+        try {
+          if (validateEverything) {
+            resultCache.clear();
+            for (const result of await validateOnce(options, validators)) {
+              resultCache.set(result.file, result);
+            }
+          } else {
+            const filesToValidate = [...changes]
+              .filter(([, action]) => action === "validate")
+              .map(([file]) => file);
+            for (const [file, action] of changes) {
+              if (action === "delete") {
+                resultCache.delete(file);
+              }
+            }
+            for (const result of await validateFiles(
+              options,
+              filesToValidate,
+              validators,
+            )) {
+              resultCache.set(result.file, result);
+            }
+          }
+          exitCode = printValidationResults(
+            [...resultCache.values()].sort((left, right) =>
+              left.file.localeCompare(right.file),
+            ),
+            options.format,
+            options.format === "json",
+          );
+          process.exitCode = exitCode;
+        } catch (error) {
+          if (options.format === "json") {
+            console.log(
+              JSON.stringify({
+                event: "error",
+                message: error instanceof Error ? error.message : String(error),
+              }),
+            );
+          } else {
+            console.error(error);
+          }
+          process.exitCode = 2;
+        }
+      } while (validationRequested);
+    } finally {
+      validationActive = false;
+    }
+  };
+
+  const rerun = (path: string, action: "validate" | "delete"): void => {
+    const absolutePath = resolve(path);
+    const name = absolutePath.split(/[\\/]/).at(-1) ?? "";
+    if (name === "palschema.config.json" || !isJsonDocument(absolutePath)) {
+      fullValidationRequested = true;
+    } else if (!IGNORED_FILES.has(name)) {
+      pendingFiles.set(absolutePath, action);
+    }
     if (pending) {
       clearTimeout(pending);
     }
-    pending = setTimeout(async () => {
-      try {
-        exitCode = await validateOnce(
-          validator,
-          options.paths,
-          options.format,
-        );
-        process.exitCode = exitCode;
-      } catch (error) {
-        console.error(error);
-        process.exitCode = 2;
+    pending = setTimeout(() => {
+      validationRequested = true;
+      if (!validationActive) {
+        activeValidation = runQueuedValidations();
       }
     }, 100);
   };
-  watcher.on("add", rerun).on("change", rerun).on("unlink", rerun);
-  console.log("Watching for PalSchema JSON/JSONC changes. Press Ctrl+C to stop.");
+  watcher
+    .on("add", (path) => rerun(path, "validate"))
+    .on("change", (path) => rerun(path, "validate"))
+    .on("unlink", (path) => rerun(path, "delete"));
+  if (options.format === "json") {
+    console.log(JSON.stringify({ event: "watch-started", paths: options.paths }));
+  } else {
+    console.log("Watching for PalSchema JSON/JSONC changes. Press Ctrl+C to stop.");
+  }
   await new Promise<void>((resolvePromise) => {
     process.once("SIGINT", () => resolvePromise());
     process.once("SIGTERM", () => resolvePromise());
   });
+  if (pending) {
+    clearTimeout(pending);
+  }
+  if (activeValidation) {
+    await activeValidation;
+  }
   await watcher.close();
   return exitCode;
 }
@@ -316,6 +449,7 @@ async function schemasCommand(arguments_: string[]): Promise<number> {
     options.schemaDirectory ??
       process.env.PALSCHEMA_SCHEMA_DIR ??
       projectConfig?.schemaDirectory,
+    { verifyStatic: action !== "verify" },
   );
 
   if (action === "list") {
@@ -362,6 +496,7 @@ async function doctorCommand(arguments_: string[]): Promise<number> {
     options.schemaDirectory ??
       process.env.PALSCHEMA_SCHEMA_DIR ??
       projectConfig?.schemaDirectory,
+    { verifyStatic: false },
   );
   const verification = await registry.verify();
   const report = {
@@ -437,6 +572,8 @@ function editorSchemaMappings(registry: SchemaRegistry): Array<{
 async function initCommand(arguments_: string[]): Promise<number> {
   const options = parseInitOptions(arguments_);
   const registry = await SchemaRegistry.load(options.schemaDirectory);
+  await mkdir(options.destination, { recursive: true });
+  options.destination = await realpath(options.destination);
   const schemaDestination = join(
     options.destination,
     ".palschema",
@@ -445,6 +582,35 @@ async function initCommand(arguments_: string[]): Promise<number> {
   const settingsPath = join(options.destination, ".vscode", "settings.json");
   const configPath = join(options.destination, "palschema.config.json");
   const managedTargets = [settingsPath, configPath];
+
+  const assertNoManagedSymlink = async (path: string): Promise<void> => {
+    if (!isPathContained(options.destination, path)) {
+      throw new Error(`Managed init path escapes its workspace: ${path}`);
+    }
+    const relativePath = relative(options.destination, path);
+    let candidate = options.destination;
+    for (const segment of relativePath.split(sep).filter(Boolean)) {
+      candidate = join(candidate, segment);
+      try {
+        if ((await lstat(candidate)).isSymbolicLink()) {
+          throw new Error(
+            `Refusing to initialize through a symlink: ${candidate}`,
+          );
+        }
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+          return;
+        }
+        throw error;
+      }
+    }
+  };
+  await assertNoManagedSymlink(join(options.destination, ".palschema"));
+  await assertNoManagedSymlink(schemaDestination);
+  await assertNoManagedSymlink(join(options.destination, ".vscode"));
+  for (const target of managedTargets) {
+    await assertNoManagedSymlink(target);
+  }
 
   if (!options.force) {
     const conflicts = [];
@@ -464,15 +630,17 @@ async function initCommand(arguments_: string[]): Promise<number> {
   await mkdir(schemaDestination, { recursive: true });
   await mkdir(join(options.destination, ".vscode"), { recursive: true });
 
+  const destinationIndex = join(schemaDestination, "schema-index.json");
+  await assertNoManagedSymlink(destinationIndex);
   await copyFile(
     join(registry.schemaDirectory, "schema-index.json"),
-    join(schemaDestination, "schema-index.json"),
+    destinationIndex,
   );
   const copiedSchemas: string[] = ["schema-index.json"];
   const missingGenerated: string[] = [];
   for (const entry of registry.index.schemas) {
     const source = registry.pathFor(entry);
-    const destination = join(schemaDestination, entry.file);
+    const destination = containedDestination(schemaDestination, entry.file);
     if (!(await pathExists(source))) {
       if (entry.generated) {
         missingGenerated.push(entry.file);
@@ -480,8 +648,20 @@ async function initCommand(arguments_: string[]): Promise<number> {
       }
       throw new Error(`Required schema is missing: ${source}`);
     }
+    await assertNoManagedSymlink(destination);
     await copyFile(source, destination);
     copiedSchemas.push(entry.file);
+    for (const supportFile of await registry.supportFilesFor(entry)) {
+      const supportSource = registry.pathForRelative(supportFile);
+      const supportDestination = containedDestination(
+        schemaDestination,
+        supportFile,
+      );
+      await assertNoManagedSymlink(supportDestination);
+      await mkdir(dirname(supportDestination), { recursive: true });
+      await copyFile(supportSource, supportDestination);
+      copiedSchemas.push(supportFile);
+    }
   }
 
   const settings = {
