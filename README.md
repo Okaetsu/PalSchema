@@ -31,6 +31,19 @@ or with Ninja (single-configuration, faster)
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Win64
 ```
 
+## Building the Win64 DLL from Linux
+
+PalSchema can be cross-compiled on Linux for the Windows Palworld client
+running under Proton. The supported path uses xwin, clang-cl, LLD, Ninja, and
+the repository-pinned RE-UE4SS toolchain.
+
+See [Building the Win64 PalSchema DLL on Linux](docs/linux/building-win64.md).
+For an atomic install with a recorded rollback path, see
+[Safe deployment to the Palworld client under Proton](docs/linux/proton-deployment.md).
+
+UE4SS remains a separate runtime installation and is not bundled with
+PalSchema.
+
 # Mods using PalSchema
 
 I'll only include one mod per author to avoid cluttering the list too much.

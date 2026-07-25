@@ -1,0 +1,94 @@
+name: Build and verify
+
+on:
+  push:
+    branches:
+      - main
+      - "codex/**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-checks:
+    name: Public source checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout public source
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Check shell syntax
+        run: |
+          bash -n \
+            scripts/bootstrap-linux.sh \
+            scripts/build-linux.sh \
+            scripts/cargo-preserve-lock.sh \
+            scripts/deploy-proton.sh \
+            scripts/package-linux.sh \
+            scripts/lib/build-env.sh
+
+      - name: Check Python syntax
+        run: python -m py_compile scripts/verify-win64-artifact.py
+
+      - name: Check JSON
+        run: python -m json.tool CMakePresets.json > /dev/null
+
+  windows-msvc-shipping:
+    name: Windows MSVC Shipping baseline
+    if: >-
+      vars.PRIVATE_SUBMODULES_AVAILABLE == 'true' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout authorized recursive dependencies
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.UEPSEUDO_TOKEN }}
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Add LLVM tools to PATH
+        run: |
+          $llvmPath = "C:\Program Files\LLVM\bin"
+          if (-not (Test-Path $llvmPath)) {
+            throw "LLVM was not found at $llvmPath"
+          }
+          $llvmPath | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Install Rust target
+        run: rustup target add x86_64-pc-windows-msvc
+
+      - name: Configure
+        run: cmake --preset win64-msvc-ci-shipping
+
+      - name: Build PalSchema
+        run: cmake --build --preset win64-msvc-ci-shipping --target PalSchema
+
+      - name: Verify PE contract
+        run: >-
+          python scripts/verify-win64-artifact.py
+          build/win64-msvc-ci-shipping/PalSchema.dll
+          --json-output build/win64-msvc-ci-shipping/pe-contract.json
+
+      - name: Upload public build outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: PalSchema-Win64-MSVC-Shipping
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            build/win64-msvc-ci-shipping/PalSchema.dll
+            build/win64-msvc-ci-shipping/pe-contract.json

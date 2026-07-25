@@ -1,11 +1,14 @@
 cmake_minimum_required(VERSION 3.22)
 
+project(PalSchema LANGUAGES C CXX)
+
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_subdirectory(deps)
 
 set(TARGET PalSchema)
-project(${TARGET})
 
 file(GLOB SRC_FILES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/dllmain.cpp"
@@ -34,7 +37,26 @@ file(GLOB SRC_FILES CONFIGURE_DEPENDS
 )
 
 add_library(${TARGET} SHARED ${SRC_FILES})
-target_include_directories(${TARGET} PRIVATE 
+if(WIN32)
+    target_sources(${TARGET} PRIVATE version.rc)
+
+    # The RE-UE4SS xwin toolchain configures SDK headers for clang-cl, but
+    # CMake's llvm-rc preprocessing step needs the include paths separately.
+    if(CMAKE_CROSSCOMPILING AND DEFINED XWIN_CACHE_DIR)
+        set_property(
+            SOURCE version.rc
+            APPEND PROPERTY INCLUDE_DIRECTORIES
+                "${XWIN_CACHE_DIR}/crt/include"
+                "${XWIN_CACHE_DIR}/sdk/include/ucrt"
+                "${XWIN_CACHE_DIR}/sdk/include/shared"
+                "${XWIN_CACHE_DIR}/sdk/include/um"
+                "${XWIN_CACHE_DIR}/sdk/include/winrt"
+        )
+    endif()
+endif()
+
+target_include_directories(${TARGET} PRIVATE
     include/
 )
+target_compile_definitions(${TARGET} PRIVATE PALSCHEMA_BUILDING_DLL=1)
 target_link_libraries(${TARGET} PRIVATE Zydis Zycore safetyhook nlohmann_json::nlohmann_json glaze::glaze UE4SS efsw)

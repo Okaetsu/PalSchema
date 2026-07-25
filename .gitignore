@@ -13,6 +13,8 @@ RC*
 
 # CMake
 build/
+dist/
+.xwin-cache/
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles

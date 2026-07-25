@@ -1,0 +1,73 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 22,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "win64-xwin-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/xwin-clang-cl.cmake",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "win64-xwin-dev",
+      "displayName": "Win64 Dev (Linux host, xwin + clang-cl)",
+      "description": "Cross-compile the PalSchema development DLL for Palworld under Proton.",
+      "inherits": "win64-xwin-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Game__Debug__Win64"
+      }
+    },
+    {
+      "name": "win64-xwin-shipping",
+      "displayName": "Win64 Shipping (Linux host, xwin + clang-cl)",
+      "description": "Cross-compile the PalSchema shipping DLL for Palworld under Proton.",
+      "inherits": "win64-xwin-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Game__Shipping__Win64"
+      }
+    },
+    {
+      "name": "win64-msvc-ci-shipping",
+      "displayName": "Win64 Shipping (Windows CI, MSVC)",
+      "description": "Build the Windows baseline used to compare the Linux-hosted cross-build.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Game__Shipping__Win64",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "win64-xwin-dev",
+      "configurePreset": "win64-xwin-dev"
+    },
+    {
+      "name": "win64-xwin-shipping",
+      "configurePreset": "win64-xwin-shipping"
+    },
+    {
+      "name": "win64-msvc-ci-shipping",
+      "configurePreset": "win64-msvc-ci-shipping"
+    }
+  ]
+}

@@ -7,6 +7,7 @@
 #include "SDK/PalSignatures.h"
 #include "SDK/Classes/Async.h"
 #include "SDK/UnrealOffsets.h"
+#include "Platform/Export.h"
 #include "../version.h"
 
 using namespace RC;
@@ -112,7 +113,6 @@ private:
 };
 
 
-#define PALSCHEMA_API __declspec(dllexport)
 extern "C"
 {
     PALSCHEMA_API RC::CppUserModBase* start_mod()

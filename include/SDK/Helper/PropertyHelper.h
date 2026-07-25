@@ -28,6 +28,9 @@ namespace Palworld {
 }
 
 namespace Palworld::PropertyHelper {
+    template <RC::Unreal::FFieldDerivative FFieldDerivedType>
+    FFieldDerivedType* CastProperty(RC::Unreal::FField* Field);
+
     void CopyJsonValueToContainer(void* Container, RC::Unreal::FProperty* Property, const nlohmann::json& Value);
 
     RC::Unreal::int64 ParseEnumFromJsonValue(RC::Unreal::FEnumProperty* Property, const nlohmann::json& Value);
