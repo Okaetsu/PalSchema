@@ -409,6 +409,12 @@ namespace Palworld {
 
         FManagedStruct rowData{ rowStruct };
 
+        auto sortIdProp = rowStruct->GetPropertyByName(TEXT("SortID"));
+        if (sortIdProp && data.contains("SortID"))
+        {
+            PropertyHelper::CopyJsonValueToContainer(rowData.GetData(), sortIdProp, data.at("SortID"));
+        }
+
         if (data.contains("bLegalInGame"))
         {
             PropertyHelper::CopyJsonValueToContainer(rowData.GetData(), legalProp, data.at("bLegalInGame"));
