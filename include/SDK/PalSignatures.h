@@ -38,6 +38,7 @@ namespace Palworld {
             { "UPalDynamicItemWorldSubsystem::ApplyWorldSaveData", "48 8B D8 48 8B 4C 24 50 48 85 C9 74 06 E8 ?? ?? ?? ?? 90 48 85 DB" },
             { "ValidateWorldSaveDynamicItemStaticIds", "48 89 5C 24 10 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 60 FF FF FF 48 81 EC A0 01 00 00 48 8B ?? ?? ?? ?? ?? 48 33 C4 48 89 85 90 00 00 00 4D 8B E9" },
             { "ValidateDynamicItemSaveData", "40 55 53 56 57 41 54 41 56 41 57 48 8D AC 24 80 FE FF FF 48 81 EC 80 02 00 00 48 8B ?? ?? ?? ?? ?? 48 33 C4 48 89 85 70 01 00 00" },
+            { "CraftItemCount_ApplyDataMapReturn", "48 8B CB E8 ?? ?? ?? ?? 48 8B C8 48 89 45 77" },
         };
         static inline std::unordered_map<std::string, std::string> SignaturesCallResolve {
             // Don't ask, I know it's long..
@@ -53,6 +54,7 @@ namespace Palworld {
             { "UPalDynamicItemWorldSubsystem::Create_ServerInternal", "E8 ?? ?? ?? ?? 48 8B D8 48 8B 4C 24 50 48 85 C9 74 06 E8 ?? ?? ?? ?? 90 48 85 DB" },
             { "UPalItemSlot::UpdateItem_ServerInternal", "E8 ?? ?? ?? ?? 48 8B CB E8 ?? ?? ?? ?? 48 8B CB E8 ?? ?? ?? ?? 48 89 5C 24 48" },
             { "UWorld::CleanupWorld", "E8 ?? ?? ?? ?? 8B 55 A7 FF C2 49 83 C5 08 89 55 A7" },
+            { "FPalPlayerRecordDataRepInfoArrayThreadSafe_IntVal::ApplyDataMap", "E8 ?? ?? ?? ?? 49 8D 95 F0 01 00 00 48 8D 8B 78 0B 00 00" },
         };
     };
 }

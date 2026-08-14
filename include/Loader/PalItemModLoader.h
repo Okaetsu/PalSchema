@@ -44,23 +44,28 @@ namespace Palworld {
 
         void SetupHooks();
 
-		UPalStaticItemDataAsset* m_itemDataAsset{};
 		RC::Unreal::UDataTable* m_itemDataTable{};
 		RC::Unreal::UDataTable* m_itemRecipeTable{};
 		RC::Unreal::UDataTable* m_nameTranslationTable{};
 		RC::Unreal::UDataTable* m_descriptionTranslationTable{};
     private:
+        // DA_StaticItemDataAsset doesn't seem to ever unload, so it should be safe to store it in a static global.
+        static inline UPalStaticItemDataAsset* GItemDataAsset{};
+
         static inline void* ApplyItemSaveDataAddress = nullptr;
         static inline void* ApplyDynamicItemSaveDataAddress = nullptr;
+        static inline void* CraftItemCount_ApplyDataMapReturnAddress = nullptr;
         static inline SafetyHookInline UpdateItem_ServerInternalHook;
         static inline SafetyHookInline DynamicItemHook;
         static inline SafetyHookInline ValidateWorldSaveDynamicItemStaticIdsHook;
         static inline SafetyHookInline ValidateDynamicItemSaveDataHook;
+        static inline SafetyHookInline ApplyDataMapHook;
 
         static bool IsValidItem(RC::Unreal::UObject* worldContextObject, const RC::Unreal::FName& staticId);
         static void UpdateItem_Detour(RC::Unreal::UObject* self, FPalItemId* itemId, int amount, bool param4, bool param5);
         static UPalDynamicItemDataBase* CreateDynamicItemDatabase_Detour(RC::Unreal::UObject* self, FPalDynamicItemId* dynamicItemId, RC::Unreal::FName staticId, void* itemCreateParam);
         static bool ValidateWorldSaveDynamicItemStaticIds(RC::Unreal::UObject* idk, RC::Unreal::UObject* SaveGame, RC::Unreal::FString& idk3, RC::Unreal::FString& idk4);
         static bool ValidateDynamicItemSaveData(void* idk, RC::Unreal::UObject* DynamicItemDataBase, RC::Unreal::UObject* ItemIDManager, const RC::StringType& idk2);
+        static void FPalPlayerRecordDataRepInfoArrayThreadSafe_IntVal_ApplyDataMap(void* self, const RC::Unreal::TMap<RC::Unreal::FName, RC::Unreal::int32>& MapToApply);
 	};
 }

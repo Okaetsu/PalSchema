@@ -62,7 +62,7 @@ namespace Palworld {
     {
         try
         {
-            m_itemDataAsset = UECustom::UObjectGlobals::StaticFindObject<UPalStaticItemDataAsset*>(nullptr, nullptr,
+            GItemDataAsset = UECustom::UObjectGlobals::StaticFindObject<UPalStaticItemDataAsset*>(nullptr, nullptr,
                 TEXT("/Game/Pal/DataAsset/Item/DA_StaticItemDataAsset.DA_StaticItemDataAsset"));
 
             m_itemDataTable = GetDatatableByName("DT_ItemDataTable");
@@ -86,11 +86,11 @@ namespace Palworld {
         for (auto& [key, value] : data.items())
         {
             auto itemId = FName(RC::to_generic_string(key), FNAME_Add);
-            auto row = m_itemDataAsset->StaticItemDataMap.Find(itemId);
+            auto row = GItemDataAsset->StaticItemDataMap.Find(itemId);
             if (value.is_null())
             {
                 if (!row) return;
-                m_itemDataAsset->StaticItemDataMap.Remove(itemId);
+                GItemDataAsset->StaticItemDataMap.Remove(itemId);
                 PS::Log<RC::LogLevel::Normal>(TEXT("Deleted Item '{}'\n"), itemId.ToString());
             }
             else
@@ -163,7 +163,7 @@ namespace Palworld {
 			throw std::runtime_error("Property 'DynamicItemDataClass' has changed in DA_StaticItemDataAsset. Update to Pal Schema is needed.");
 		}
 
-		FStaticConstructObjectParameters constructParams(databaseClass, m_itemDataAsset);
+		FStaticConstructObjectParameters constructParams(databaseClass, GItemDataAsset);
 		constructParams.Name = NAME_None;
 
 		auto item = UObjectGlobals::StaticConstructObject<UPalStaticItemDataBase*>(constructParams);
@@ -203,7 +203,7 @@ namespace Palworld {
 
 		AddTranslations(itemId, data);
 
-		m_itemDataAsset->StaticItemDataMap.Add(itemId, item);
+		GItemDataAsset->StaticItemDataMap.Add(itemId, item);
 	}
 
 	void PalItemModLoader::Edit(const RC::Unreal::FName& itemId, UPalStaticItemDataBase* item, const nlohmann::json& data)
@@ -462,6 +462,18 @@ namespace Palworld {
                 throw std::runtime_error("Signature for ValidateDynamicItemSaveData could not be found");
             }
 
+            auto address5 = Palworld::SignatureManager::GetSignature("FPalPlayerRecordDataRepInfoArrayThreadSafe_IntVal::ApplyDataMap");
+            if (!address5)
+            {
+                throw std::runtime_error("Signature for FPalPlayerRecordDataRepInfoArrayThreadSafe_IntVal::ApplyDataMap could not be found");
+            }
+
+            CraftItemCount_ApplyDataMapReturnAddress = Palworld::SignatureManager::GetSignature("CraftItemCount_ApplyDataMapReturn");
+            if (!CraftItemCount_ApplyDataMapReturnAddress)
+            {
+                throw std::runtime_error("Signature for CraftItemCount_ApplyDataMapReturn could not be found");
+            }
+
             UpdateItem_ServerInternalHook = safetyhook::create_inline(reinterpret_cast<void*>(address),
                 UpdateItem_Detour);
 
@@ -476,6 +488,9 @@ namespace Palworld {
 
             ValidateDynamicItemSaveDataHook = safetyhook::create_inline(reinterpret_cast<void*>(address4),
                 ValidateDynamicItemSaveData);
+
+            ApplyDataMapHook = safetyhook::create_inline(reinterpret_cast<void*>(address5),
+                FPalPlayerRecordDataRepInfoArrayThreadSafe_IntVal_ApplyDataMap);
         }
         catch (const std::exception& e)
         {
@@ -536,5 +551,31 @@ namespace Palworld {
     bool PalItemModLoader::ValidateDynamicItemSaveData(void* idk, UObject* DynamicItemDataBase, UObject* ItemIDManager, const RC::StringType& idk2)
     {
         return true;
+    }
+
+    void PalItemModLoader::FPalPlayerRecordDataRepInfoArrayThreadSafe_IntVal_ApplyDataMap(void* self, const RC::Unreal::TMap<RC::Unreal::FName, RC::Unreal::int32>& MapToApply)
+    {
+        /*
+        * This fixes crashing related to craft item counts in UPalUserAchievementChecker::CheckCraftCount for custom items that were uninstalled-
+        * but still exist in the save.
+        */
+
+        RC::Unreal::TMap<RC::Unreal::FName, RC::Unreal::int32> NewMap;
+        if (_ReturnAddress() == CraftItemCount_ApplyDataMapReturnAddress)
+        {
+            for (auto& [StaticItemId, Count] : MapToApply)
+            {
+                if (GItemDataAsset->StaticItemDataMap.Contains(StaticItemId))
+                {
+                    NewMap.Add(StaticItemId, Count);
+                }
+                else
+                {
+                    PS::Log<LogLevel::Warning>(TEXT("Item '{}' is invalid. Craft Item Count for this item will be deleted on next save.\n"), StaticItemId.ToString());
+                }
+            }
+        }
+
+        ApplyDataMapHook.call(self, NewMap);
     }
 }
