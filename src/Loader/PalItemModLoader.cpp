@@ -109,101 +109,103 @@ namespace Palworld {
         }
     }
 
-	void PalItemModLoader::Add(const RC::Unreal::FName& itemId, const nlohmann::json& data)
-	{
-		if (itemId == NAME_None)
-		{
-			throw std::runtime_error("ID was set to None");
-		}
-
-		if (!data.contains("Type"))
-		{
-			throw std::runtime_error(std::format("You must supply a Type field in {} when adding new items", RC::to_string(itemId.ToString())));
-		}
-
-		if (!data.at("Type").is_string())
-		{
-			throw std::runtime_error(std::format("Type must be a string in {}", RC::to_string(itemId.ToString())));
-		}
-
-		auto type = data.at("Type").get<std::string>();
-
-		UClass* databaseClass = nullptr;
-		UClass* dynamicDatabaseClass = nullptr;
-		if (type == "Armor" || type == "PalStaticArmorItemData")
-		{
-			databaseClass = UPalStaticArmorItemData::StaticClass();
-			dynamicDatabaseClass = UPalDynamicArmorItemDataBase::StaticClass();
-		}
-		else if (type == "Weapon" || type == "PalStaticWeaponItemData")
-		{
-			databaseClass = UPalStaticWeaponItemData::StaticClass();
-			dynamicDatabaseClass = UPalDynamicWeaponItemDataBase::StaticClass();
-		}
-		else if (type == "Consumable" || type == "PalStaticConsumeItemData")
-		{
-			databaseClass = UPalStaticConsumeItemData::StaticClass();
-		}
-		else if (type == "Generic" || type == "PalStaticItemDataBase")
-		{
-			databaseClass = UPalStaticItemDataBase::StaticClass();
-		}
-		else
-		{
-			throw std::runtime_error(std::format("Type {} in {} isn't supported, must be Armor, Weapon, Consumable or Generic", type, RC::to_string(itemId.ToString())));
-		}
-
-		if (!databaseClass->GetPropertyByNameInChain(TEXT("ID")))
-		{
-			throw std::runtime_error("Property 'ID' has changed in DA_StaticItemDataAsset. Update to Pal Schema is needed.");
-		}
-
-		if (!databaseClass->GetPropertyByNameInChain(TEXT("DynamicItemDataClass")))
-		{
-			throw std::runtime_error("Property 'DynamicItemDataClass' has changed in DA_StaticItemDataAsset. Update to Pal Schema is needed.");
-		}
-
-		FStaticConstructObjectParameters constructParams(databaseClass, GItemDataAsset);
-		constructParams.Name = NAME_None;
-
-		auto item = UObjectGlobals::StaticConstructObject<UPalStaticItemDataBase*>(constructParams);
-
-		auto idProperty = item->GetValuePtrByPropertyNameInChain<FName>(TEXT("ID"));
-		if (idProperty)
-		{
-			*idProperty = itemId;
-		}
-
-		auto dynamicItemDataClassProperty = item->GetValuePtrByPropertyNameInChain<UClass*>(TEXT("DynamicItemDataClass"));
-		if (dynamicItemDataClassProperty)
-		{
-			*dynamicItemDataClassProperty = dynamicDatabaseClass;
-		}
-
-        for (FProperty* property : TFieldRange<FProperty>(databaseClass, EFieldIterationFlags::IncludeSuper))
+    void PalItemModLoader::Add(const RC::Unreal::FName& ItemId, const nlohmann::json& Data)
+    {
+        if (ItemId == NAME_None)
         {
-            auto propertyName = RC::to_string(property->GetName());
-            if (propertyName == "DynamicItemDataClass")
+            throw std::runtime_error("ID was set to None");
+        }
+
+        FString Type;
+        if (!PS::JsonHelpers::GetString(Data, "Type", Type))
+        {
+            throw std::runtime_error(std::format("You must supply a Type field in '{}' and it must be a string when adding new items",
+                RC::to_string(ItemId.ToString())));
+        }
+
+        UClass* DatabaseClass = nullptr;
+        UClass* DynamicDatabaseClass = nullptr;
+        if (Type == TEXT("Armor") || Type == TEXT("PalStaticArmorItemData"))
+        {
+            DatabaseClass = UPalStaticArmorItemData::StaticClass();
+            DynamicDatabaseClass = UPalDynamicArmorItemDataBase::StaticClass();
+        }
+        else if (Type == TEXT("Weapon") || Type == TEXT("PalStaticWeaponItemData"))
+        {
+            DatabaseClass = UPalStaticWeaponItemData::StaticClass();
+            DynamicDatabaseClass = UPalDynamicWeaponItemDataBase::StaticClass();
+        }
+        else if (Type == TEXT("Consumable") || Type == TEXT("PalStaticConsumeItemData"))
+        {
+            DatabaseClass = UPalStaticConsumeItemData::StaticClass();
+        }
+        else if (Type == TEXT("Generic") || Type == TEXT("PalStaticItemDataBase"))
+        {
+            DatabaseClass = UPalStaticItemDataBase::StaticClass();
+        }
+        else
+        {
+            throw std::runtime_error(RC::fmt("Type %S in %S isn't supported, must be Armor, Weapon, Consumable or Generic", *Type, ItemId.ToString().c_str()));
+        }
+
+        if (!DatabaseClass->GetPropertyByNameInChain(TEXT("ID")))
+        {
+            throw std::runtime_error("Property 'ID' has changed in DA_StaticItemDataAsset. Update to Pal Schema is needed.");
+        }
+
+        if (!DatabaseClass->GetPropertyByNameInChain(TEXT("DynamicItemDataClass")))
+        {
+            throw std::runtime_error("Property 'DynamicItemDataClass' has changed in DA_StaticItemDataAsset. Update to Pal Schema is needed.");
+        }
+
+        FString TypeB;
+        if (PS::JsonHelpers::GetString(Data, "TypeB", TypeB) &&
+            (TypeB == TEXT("EPalItemTypeB::WeaponThrowObject") || TypeB == TEXT("WeaponThrowObject")))
+        {
+            DynamicDatabaseClass = nullptr;
+        }
+
+        FStaticConstructObjectParameters ConstructParams(DatabaseClass, GItemDataAsset);
+        ConstructParams.Name = NAME_None;
+
+        auto Item = UObjectGlobals::StaticConstructObject<UPalStaticItemDataBase*>(ConstructParams);
+
+        auto IdProperty = Item->GetValuePtrByPropertyNameInChain<FName>(TEXT("ID"));
+        if (IdProperty)
+        {
+            *IdProperty = ItemId;
+        }
+
+        auto DynamicItemDataClassProperty = Item->GetValuePtrByPropertyNameInChain<UClass*>(TEXT("DynamicItemDataClass"));
+        if (DynamicItemDataClassProperty)
+        {
+            *DynamicItemDataClassProperty = DynamicDatabaseClass;
+        }
+
+        for (FProperty* Property : TFieldRange<FProperty>(DatabaseClass, EFieldIterationFlags::IncludeSuper))
+        {
+            auto PropertyName = RC::to_string(Property->GetName());
+            if (PropertyName == "DynamicItemDataClass")
             {
                 // We've already set this earlier so we skip it.
                 continue;
             }
-            if (data.contains(propertyName))
+            if (Data.contains(PropertyName))
             {
-                PropertyHelper::CopyJsonValueToContainer(reinterpret_cast<uint8_t*>(item), property, data.at(propertyName));
+                PropertyHelper::CopyJsonValueToContainer(reinterpret_cast<uint8_t*>(Item), Property, Data.at(PropertyName));
             }
         }
-		
-		if (data.contains("Recipe"))
-		{
-			AddRecipe(itemId, data.at("Recipe"));
-		}
 
-        AddItemData(itemId, data);
+        if (Data.contains("Recipe"))
+        {
+            AddRecipe(ItemId, Data.at("Recipe"));
+        }
 
-		AddTranslations(itemId, data);
+        AddItemData(ItemId, Data);
 
-		GItemDataAsset->StaticItemDataMap.Add(itemId, item);
+        AddTranslations(ItemId, Data);
+
+        GItemDataAsset->StaticItemDataMap.Add(ItemId, Item);
 	}
 
 	void PalItemModLoader::Edit(const RC::Unreal::FName& itemId, UPalStaticItemDataBase* item, const nlohmann::json& data)
