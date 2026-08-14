@@ -25,6 +25,26 @@ namespace PS::JsonHelpers {
         }
     }
 
+    bool GetString(const nlohmann::json& Data, const std::string& FieldName, FString& OutValue)
+    {
+        if (!Data.contains(FieldName))
+        {
+            return false;
+        }
+
+        auto& Field = Data.at(FieldName);
+        if (!Field.is_string())
+        {
+            return false;
+        }
+
+        std::string ParsedValue = Field.get<std::string>();
+        RC::StringType WideString = RC::to_generic_string(ParsedValue);
+        OutValue = FString(WideString);
+
+        return true;
+    }
+
     void ParseRotator(const nlohmann::json& value, const std::string& fieldName, FRotator& outValue)
     {
         auto& field = value.at(fieldName);
