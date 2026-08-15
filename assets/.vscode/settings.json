@@ -1,23 +1,23 @@
 {
     "json.schemas": [
         {
-            "fileMatch": ["items/*.json"],
+            "fileMatch": ["items/*.json", "items/*.jsonc"],
             "url": "./schemas/items.schema.json"
         },
         {
-            "fileMatch": ["pals/*.json"],
+            "fileMatch": ["pals/*.json", "pals/*.jsonc"],
             "url": "./schemas/pals.schema.json"
         },
         {
-            "fileMatch": ["skins/*.json"],
+            "fileMatch": ["skins/*.json", "skins/*.jsonc"],
             "url": "./schemas/skins.schema.json"
         },
         {
-            "fileMatch": ["buildings/*.json"],
+            "fileMatch": ["buildings/*.json", "buildings/*.jsonc"],
             "url": "./schemas/buildings.schema.json"
         },
         {
-            "fileMatch": ["raw/*.json"],
+            "fileMatch": ["raw/*.json", "raw/*.jsonc"],
             "url": "./schemas/raw.schema.json"
         },
     ]
