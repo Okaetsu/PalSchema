@@ -585,10 +585,9 @@ namespace Palworld {
         * This fixes crashing related to craft item counts in UPalUserAchievementChecker::CheckCraftCount for custom items that were uninstalled-
         * but still exist in the save.
         */
-
-        RC::Unreal::TMap<RC::Unreal::FName, RC::Unreal::int32> NewMap;
         if (_ReturnAddress() == CraftItemCount_ApplyDataMapReturnAddress)
         {
+            RC::Unreal::TMap<RC::Unreal::FName, RC::Unreal::int32> NewMap;
             for (auto& [StaticItemId, Count] : MapToApply)
             {
                 if (GItemDataAsset->StaticItemDataMap.Contains(StaticItemId))
@@ -600,8 +599,12 @@ namespace Palworld {
                     PS::Log<LogLevel::Warning>(TEXT("Item '{}' is invalid. Craft Item Count for this item will be deleted on next save.\n"), StaticItemId.ToString());
                 }
             }
-        }
 
-        ApplyDataMapHook.call(self, NewMap);
+            ApplyDataMapHook.call(self, NewMap);
+        }
+        else
+        {
+            ApplyDataMapHook.call(self, MapToApply);
+        }
     }
 }
