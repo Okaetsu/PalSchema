@@ -25,24 +25,26 @@ namespace Palworld {
         virtual bool CanInitialize(const EEngineLifecyclePhase& engineLifecyclePhase) override final;
         virtual bool OnInitialize() override final;
 	private:
-        void LoadItems(const nlohmann::json& data);
+        void LoadItems(const nlohmann::json& Data);
 
-		void Add(const RC::Unreal::FName& itemId, const nlohmann::json& data);
+		void Add(const RC::Unreal::FName& ItemId, const nlohmann::json& Data);
 
-		void Edit(const RC::Unreal::FName& itemId, UPalStaticItemDataBase* item, const nlohmann::json& data);
+		void Edit(const RC::Unreal::FName& ItemId, UPalStaticItemDataBase* Item, const nlohmann::json& Data);
 
-		void AddRecipe(const RC::Unreal::FName& itemId, const nlohmann::json& recipe);
+		void AddRecipe(const RC::Unreal::FName& ItemId, const nlohmann::json& Recipe);
 
-		void EditRecipe(const RC::Unreal::FName& itemId, const nlohmann::json& recipe);
+		void EditRecipe(const RC::Unreal::FName& ItemId, const nlohmann::json& Recipe);
 
-		void AddTranslations(const RC::Unreal::FName& itemId, const nlohmann::json& data);
+		void AddTranslations(const RC::Unreal::FName& ItemId, const nlohmann::json& Data);
 
-		void EditTranslations(const RC::Unreal::FName& itemId, const nlohmann::json& data);
+		void EditTranslations(const RC::Unreal::FName& ItemId, const nlohmann::json& Data);
 
         // Handles DT_ItemDataTable stuff
-        void AddItemData(const RC::Unreal::FName& itemId, const nlohmann::json& data);
+        void AddItemData(const RC::Unreal::FName& ItemId, const nlohmann::json& Data);
 
         void SetupHooks();
+
+        bool IsCustomProperty(const std::string& Key);
 
 		RC::Unreal::UDataTable* m_itemDataTable{};
 		RC::Unreal::UDataTable* m_itemRecipeTable{};
@@ -62,7 +64,7 @@ namespace Palworld {
         static inline SafetyHookInline ApplyDataMapHook;
 
         static bool IsValidItem(RC::Unreal::UObject* worldContextObject, const RC::Unreal::FName& staticId);
-        static void UpdateItem_Detour(RC::Unreal::UObject* self, FPalItemId* itemId, int amount, bool param4, bool param5);
+        static void UpdateItem_Detour(RC::Unreal::UObject* self, FPalItemId* ItemId, int amount, bool param4, bool param5);
         static UPalDynamicItemDataBase* CreateDynamicItemDatabase_Detour(RC::Unreal::UObject* self, FPalDynamicItemId* dynamicItemId, RC::Unreal::FName staticId, void* itemCreateParam);
         static bool ValidateWorldSaveDynamicItemStaticIds(RC::Unreal::UObject* idk, RC::Unreal::UObject* SaveGame, RC::Unreal::FString& idk3, RC::Unreal::FString& idk4);
         static bool ValidateDynamicItemSaveData(void* idk, RC::Unreal::UObject* DynamicItemDataBase, RC::Unreal::UObject* ItemIDManager, const RC::StringType& idk2);
