@@ -68,24 +68,21 @@ Firstly, find your Palworld installation location. This will vary from person to
   </TabItem>
 </Tabs>
 
-## UE4SS Settings & Mod Settings
-Before moving forward, you'll want to make sure that your settings for UE4SS and your Mods folder are correct. For UE4SS, check the UE4SS-settings.ini file.
-![](https://i.gyazo.com/db0632ec3346f1264587163082247c72.png)
-
-This can be edited with any text editor, such as Windows notepad or Notepad++. In here, the most common two adjustments that have to be made are setting GraphicsAPI to dx11, and setting bUseUObjectArrayCache to false.
-
-![](assets/bUseUObjectArrayCache.png)
-
-![](assets/GraphicsAPI.png)
+## UE4SS Mod Settings
+Before moving forward, you'll want to make sure that your settings for your Mods folder are correct.
 
 Within your Mods folder under UE4SS, you'll see two files at the bottom: mods.json, and mods.txt.
 ![](https://i.gyazo.com/2e748d9a93866388b947b2762cf03b6f.png)
 
 Both of these files need to be modified the same way. Using mods.txt as an example:
 
-![](https://i.gyazo.com/7e5308a40fe5d58a152f25f6f1978c04.png)
+![](assets/modstxt.png)
 
-In mods.txt here, a value of 0 equates to a value of "false" in mods.json, while a value of 1 equates to a value of true. CheatManagerEnablerMod, ConsoleCommandsMod, ConsoleEnablerMod, BPModLoaderMod, and BPML_Genericfunctions should all be set to 1 or "true" across both files.
+In mods.txt here, a value of 0 equates to a value of "false" in mods.json, while a value of 1 equates to a value of true. BPModLoaderMod, Keybinds, and BPML_GenericFunctions should all be set to 1 or "true" across both files.
+
+mods.json, and mods.txt basically control if a mod should be enabled or disabled.
+
+If you are using a mod manager like Vortex, then you might see extra entries that you don't see in the picture, and that's perfectly fine. The only other thing you care about is making sure that CheatManagerEnablerMod, ConsoleCommandsMod and ConsoleEnablerMod are disabled because they can cause crashes, although these should be disabled by default.
 
 ## Installing PalSchema
 Now that UE4SS is ready to go, we're ready for the long and arduous journey to install PalSchema!

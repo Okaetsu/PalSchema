@@ -9,11 +9,14 @@ namespace RC::Unreal {
     struct FRotator;
     struct FVector;
     class FName;
+    class FString;
 }
 
 namespace PS::JsonHelpers {
     bool FieldExists(const nlohmann::json& data, const std::string& fieldName);
     void ValidateFieldExists(const nlohmann::json& data, const std::string& fieldName);
+
+    bool GetString(const nlohmann::json& Data, const std::string& FieldName, RC::Unreal::FString& OutValue);
 
     void ParseRotator(const nlohmann::json& value, const std::string& fieldName, RC::Unreal::FRotator& outValue);
     void ParseVector(const nlohmann::json& value, const std::string& fieldName, RC::Unreal::FVector& outValue);

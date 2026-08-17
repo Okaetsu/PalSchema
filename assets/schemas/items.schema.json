@@ -111,9 +111,9 @@
           },
           "WorkableAttribute": {
             "type": "integer",
-            "minimum": 1,
-            "default": 1,
-            "description": "Unsure what this is, leave it at 1."
+            "minimum": 0,
+            "default": 0,
+            "description": "Unsure what this is, leave it at 0."
           },
           "UnlockItemID": {
             "type": "string",
