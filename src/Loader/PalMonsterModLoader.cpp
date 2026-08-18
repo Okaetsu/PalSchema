@@ -178,6 +178,7 @@ namespace Palworld {
 
         m_monsterDataTable->AddRow(CharacterId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(MonsterRowData));
 
+        HandleRanchSuitability(static_cast<uint8_t*>(MonsterRowData), CharacterId, properties);
         AddTranslations(CharacterId, properties);
 
         PS::Log<RC::LogLevel::Normal>(STR("Added new Pal '{}'\n"), CharacterId.ToString());
