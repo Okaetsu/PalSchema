@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <filesystem>
+#include <vector>
 #include "Utility/JsonHelpers.h"
 #include "Unreal/Core/HAL/Platform.hpp"
 #include "Unreal/NameTypes.hpp"
@@ -163,19 +165,48 @@ namespace PS::JsonHelpers {
             return;
         }
 
-        for (const auto& file : fs::directory_iterator(path))
+        std::vector<std::filesystem::path> jsonPaths{};
+        for (const auto& file : fs::recursive_directory_iterator(path, fs::directory_options::skip_permission_denied))
         {
             try
             {
-                auto filePath = file.path();
-                if (filePath.has_extension())
+                if (!file.is_regular_file())
                 {
-                    ParseJsonFileInPath(filePath, callback);
+                    continue;
+                }
+
+                auto filePath = file.path();
+                if (filePath.extension() == ".json" || filePath.extension() == ".jsonc")
+                {
+                    jsonPaths.emplace_back(filePath);
                 }
             }
             catch (const std::exception& e)
             {
                 throw std::runtime_error(std::format("Failed parsing mod file {} - {}.\n", file.path().string(), e.what()));
+            }
+        }
+
+        std::sort(jsonPaths.begin(), jsonPaths.end(), [](const std::filesystem::path& left, const std::filesystem::path& right) {
+            auto leftDepth = std::distance(left.begin(), left.end());
+            auto rightDepth = std::distance(right.begin(), right.end());
+            if (leftDepth != rightDepth)
+            {
+                return leftDepth < rightDepth;
+            }
+
+            return left.string() < right.string();
+        });
+
+        for (const auto& jsonPath : jsonPaths)
+        {
+            try
+            {
+                ParseJsonFileInPath(jsonPath, callback);
+            }
+            catch (const std::exception& e)
+            {
+                throw std::runtime_error(std::format("Failed parsing mod file {} - {}.\n", jsonPath.string(), e.what()));
             }
         }
     }
