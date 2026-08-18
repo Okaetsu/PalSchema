@@ -40,7 +40,7 @@ namespace Palworld {
 		void EditTranslations(const RC::Unreal::FName& ItemId, const nlohmann::json& Data);
 
         // Handles DT_ItemDataTable stuff
-        void AddItemData(const RC::Unreal::FName& ItemId, const nlohmann::json& Data);
+        void AddItemData(const RC::Unreal::FName& ItemId, const RC::Unreal::FString& Type, const nlohmann::json& Data);
 
         void SetupHooks();
 

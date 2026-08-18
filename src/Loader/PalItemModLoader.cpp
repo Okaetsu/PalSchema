@@ -207,7 +207,7 @@ namespace Palworld {
             AddRecipe(ItemId, Data.at("Recipe"));
         }
 
-        AddItemData(ItemId, Data);
+        AddItemData(ItemId, Type, Data);
 
         AddTranslations(ItemId, Data);
 
@@ -416,17 +416,9 @@ namespace Palworld {
 		}
 	}
 
-    void PalItemModLoader::AddItemData(const RC::Unreal::FName& ItemId, const nlohmann::json& Data)
+    void PalItemModLoader::AddItemData(const RC::Unreal::FName& ItemId, const FString& Type, const nlohmann::json& Data)
     {
         auto RowStruct = m_itemDataTable->GetRowStruct().Get();
-
-        auto LegalProp = RowStruct->GetPropertyByName(TEXT("bLegalInGame"));
-        if (!LegalProp)
-        {
-            PS::Log<LogLevel::Error>(TEXT("Property 'bLegalInGame' does not exist in DT_ItemDataTable, skipping addition of Data for {}.\n"), ItemId.ToString());
-            return;
-        }
-
         FManagedStruct RowData{ RowStruct };
 
         auto SortIdProp = RowStruct->GetPropertyByName(TEXT("SortID"));
@@ -434,15 +426,30 @@ namespace Palworld {
         {
             PropertyHelper::CopyJsonValueToContainer(RowData.GetData(), SortIdProp, Data.at("SortID"));
         }
-
-        if (Data.contains("bLegalInGame"))
+        else if (SortIdProp && Data.contains("SortId"))
         {
-            PropertyHelper::CopyJsonValueToContainer(RowData.GetData(), LegalProp, Data.at("bLegalInGame"));
+            PropertyHelper::CopyJsonValueToContainer(RowData.GetData(), SortIdProp, Data.at("SortId"));
         }
-        else
+
+        auto ItemActorClassProp = RowStruct->GetPropertyByName(TEXT("ItemActorClass"));
+        if (ItemActorClassProp && Type == TEXT("Armor"))
         {
-            bool LegalValue = true;
-            FMemory::Memcpy(LegalProp->ContainerPtrToValuePtr<void>(RowData.GetData()), &LegalValue, sizeof(bool));
+            FName ItemActorClassValue = ItemId;
+            FMemory::Memcpy(ItemActorClassProp->ContainerPtrToValuePtr<void>(RowData.GetData()), &ItemActorClassValue, sizeof(FName));
+        }
+
+        auto LegalProp = RowStruct->GetPropertyByName(TEXT("bLegalInGame"));
+        if (LegalProp)
+        {
+            if (Data.contains("bLegalInGame"))
+            {
+                PropertyHelper::CopyJsonValueToContainer(RowData.GetData(), LegalProp, Data.at("bLegalInGame"));
+            }
+            else
+            {
+                bool LegalValue = true;
+                FMemory::Memcpy(LegalProp->ContainerPtrToValuePtr<void>(RowData.GetData()), &LegalValue, sizeof(bool));
+            }
         }
 
         m_itemDataTable->AddRow(ItemId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData.GetData()));
