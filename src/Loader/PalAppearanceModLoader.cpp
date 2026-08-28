@@ -6,6 +6,7 @@
 #include "SDK/Classes/KismetInternationalizationLibrary.h"
 #include "SDK/Classes/TSoftObjectPtr.h"
 #include "SDK/Classes/TSoftClassPtr.h"
+#include "SDK/Structs/Custom/FManagedStruct.h"
 #include "SDK/Structs/FLinearColor.h"
 #include "SDK/Helper/PropertyHelper.h"
 #include "Utility/Logging.h"
@@ -137,7 +138,7 @@ namespace Palworld {
 		{
 			if (!RowStruct->GetPropertyByName(RC::to_generic_string(RequiredField).c_str()))
 			{
-				throw std::runtime_error(std::format("Property {} has changed name in {}, update is required", RC::to_string(RowStruct->GetName()), RequiredField));
+				throw std::runtime_error(std::format("Property {} has changed name in {}, update is required", RequiredField, RC::to_string(RowStruct->GetName())));
 			}
 			if (!Data.contains(RequiredField))
 			{
@@ -145,8 +146,7 @@ namespace Palworld {
 			}
 		}
 
-		auto RowData = FMemory::Malloc(RowStruct->GetStructureSize());
-		RowStruct->InitializeStruct(RowData);
+        FManagedStruct NewRow(RowStruct);
 
 		for (FProperty* Property : TFieldRange<FProperty>(RowStruct, EFieldIterationFlags::Default))
 		{
@@ -155,70 +155,68 @@ namespace Palworld {
 			{
 				try
 				{
-					PropertyHelper::CopyJsonValueToContainer(RowData, Property, Data.at(PropertyName));
+					PropertyHelper::CopyJsonValueToContainer(NewRow.GetData(), Property, Data.at(PropertyName));
 				}
 				catch (const std::exception& e)
 				{
-					FMemory::Free(RowData);
 					throw std::runtime_error(std::format("{} in {}", e.what(), RC::to_string(RowId.ToString())));
 				}
 			}
 		}
 
-		DataTable->AddRow(RowId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData));
+		DataTable->AddRow(RowId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(NewRow.GetData()));
 	}
 
-	//Presets use a sub-struct. I do not know enough of the unreal internals to be able to perform verifications on said struct, but this method remains here so someone else in the future may implement them.
 	void PalAppearanceModLoader::AddPreset(const RC::Unreal::FName& PresetId, const nlohmann::json& Data)
 	{
 		auto RowStruct = m_presetTable->GetRowStruct().Get();
 
-		//IconTexture checks
-		if (!RowStruct->GetPropertyByName(RC::to_generic_string("IconTexture").c_str())) //check for property in data table
+		if (!RowStruct->GetPropertyByName(TEXT("IconTexture")))
 		{
-			throw std::runtime_error(std::format("Property {} has changed name in IconTexture, update is required", RC::to_string(RowStruct->GetName())));
+			throw std::runtime_error(std::format("Property IconTexture has changed name in {}, update is required", RC::to_string(RowStruct->GetName())));
 		}
-		if (!Data.contains("IconTexture")) //check for value in JSON
+		if (!Data.contains("IconTexture"))
 		{
 			throw std::runtime_error(std::format("Missing required field IconTexture in {}", RC::to_string(PresetId.ToString())));
 		}
-		if (!Data.at("IconTexture").is_string()) //check that value is string
+		if (!Data.at("IconTexture").is_string())
 		{
 			throw std::runtime_error(std::format("IconTexture field in {} must be a string", RC::to_string(PresetId.ToString())));
 		}
 
-		//MakeInfo checks
-		if (!RowStruct->GetPropertyByName(RC::to_generic_string("MakeInfo").c_str())) //check for property in data table
+        FStructProperty* MakeInfoProperty = static_cast<FStructProperty*>(RowStruct->GetPropertyByName(TEXT("MakeInfo")));
+		if (!MakeInfoProperty)
 		{
-			throw std::runtime_error(std::format("Property {} has changed name in MakeInfo, update is required", RC::to_string(RowStruct->GetName())));
+			throw std::runtime_error(std::format("Property MakeInfo has changed name in {}, update is required", RC::to_string(RowStruct->GetName())));
 		}
-		if (!Data.contains("MakeInfo")) //check for value in JSON
+		if (!Data.contains("MakeInfo"))
 		{
 			throw std::runtime_error(std::format("Missing required field MakeInfo in {}", RC::to_string(PresetId.ToString())));
 		}
-		if (!Data.at("MakeInfo").is_object()) //check that value is object
+        auto& MakeInfoData = Data.at("MakeInfo");
+		if (!MakeInfoData.is_object())
 		{
 			throw std::runtime_error(std::format("MakeInfo field in {} must be an object", RC::to_string(PresetId.ToString())));
 		}
 
-		//MakeInfo field checks TODO how to verify the properties of a sub-struct
-		/*
-		nlohmann::json MakeInfo = Data["MakeInfo"];
-		for (auto& RequiredField : { "BodyMeshName", "HeadMeshName", "EquipmentBodyMeshName", "EquipmentHeadMeshName", "EyeMaterialName" })
+        UScriptStruct* MakeInfoStruct = MakeInfoProperty->GetStruct().Get();
+
+        const std::vector<std::string> RequiredSubFields = 
+            { "BodyMeshName", "HeadMeshName", "HairMeshName", "EquipmentBodyMeshName", "EquipmentHeadMeshName", "EyeMaterialName" };
+
+		for (auto& RequiredSubField : RequiredSubFields)
 		{
-			if (!MakeInfoProperty->GetPropertyByName(RC::to_generic_string(RequiredField).c_str()))
-			{
-				throw std::runtime_error(std::format("Property {} has changed name in MakeInfo.{}, update is required", RC::to_string(RowStruct->GetName()), RequiredField));
-			}
-			if (!MakeInfo.contains(RequiredField))
-			{
-				throw std::runtime_error(std::format("Missing required field MakeInfo.{} in {}", RequiredField, RC::to_string(PresetId.ToString())));
+			if (!MakeInfoStruct->GetPropertyByName(RC::to_generic_string(RequiredSubField).c_str()))
+            {
+                throw std::runtime_error(std::format("Property {} has changed name in MakeInfo, update is required", RequiredSubField));
+            }
+            if (!MakeInfoData.contains(RequiredSubField))
+            {
+                throw std::runtime_error(std::format("Missing required field {} in MakeInfo", RequiredSubField));
 			}
 		}
-		*/
 		
-		auto RowData = FMemory::Malloc(RowStruct->GetStructureSize());
-		RowStruct->InitializeStruct(RowData);
+        FManagedStruct NewRow(RowStruct);
 
 		for (FProperty* Property : TFieldRange<FProperty>(RowStruct, EFieldIterationFlags::Default))
 		{
@@ -227,18 +225,16 @@ namespace Palworld {
 			{
 				try
 				{
-					PropertyHelper::CopyJsonValueToContainer(RowData, Property, Data.at(PropertyName));
+					PropertyHelper::CopyJsonValueToContainer(NewRow.GetData(), Property, Data.at(PropertyName));
 				}
 				catch (const std::exception& e)
 				{
-					FMemory::Free(RowData);
 					throw std::runtime_error(std::format("{} in {}", e.what(), RC::to_string(PresetId.ToString())));
 				}
 			}
 		}
 
-		m_presetTable->AddRow(PresetId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(RowData));
-		
+		m_presetTable->AddRow(PresetId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(NewRow.GetData()));
 	}
 
 	void PalAppearanceModLoader::AddColorPreset(const RC::Unreal::FName& ColorPresetId, const nlohmann::json& Data)
@@ -336,19 +332,11 @@ namespace Palworld {
 			throw std::runtime_error("Property ABPAssetMap has changed name in DT_CharacterCreationMeshPresetTable_Equipments, update is required");
 		}
 
-		//Allow for editing of existing equipment tables, required for modded character bodies
-		bool Created = false;
-		void *EquipmentRowData = m_equipmentTable->FindRowUnchecked(EquipmentId);
-		if (EquipmentRowData == nullptr)
-		{
-			Created = true;
-			EquipmentRowData = FMemory::Malloc(EquipmentRowStruct->GetStructureSize());
-			EquipmentRowStruct->InitializeStruct(EquipmentRowData);
-		}
+        FManagedStruct NewRow(EquipmentRowStruct);
 
 		// Skeletal Mesh Map
 
-		void* SkeletalMeshMapContainer = SkeletalMeshMapProperty->ContainerPtrToValuePtr<void>(EquipmentRowData);
+		void* SkeletalMeshMapContainer = SkeletalMeshMapProperty->ContainerPtrToValuePtr<void>(NewRow.GetData());
 		TMap<FName, UECustom::TSoftObjectPtr<UObject>>& SkeletalMeshMap = *reinterpret_cast<TMap<FName, UECustom::TSoftObjectPtr<UObject>>*>(SkeletalMeshMapContainer);
 
 		auto JsonSkeletalMeshMap = Data.at("SkeletalMeshMap").get<std::vector<nlohmann::json>>();
@@ -356,12 +344,10 @@ namespace Palworld {
 		{
 			if (!SkeletalMesh.contains("Key") || !SkeletalMesh.contains("Value"))
 			{
-				FMemory::Free(EquipmentRowData);
 				throw std::runtime_error("Entry in SkeletalMeshMap was missing a Key or Value");
 			}
 			if (!SkeletalMesh.at("Key").is_string() || !SkeletalMesh.at("Value").is_string())
 			{
-				FMemory::Free(EquipmentRowData);
 				throw std::runtime_error("SkeletalMeshMap entry Key and Value must be a string");
 			}
 
@@ -374,7 +360,7 @@ namespace Palworld {
 
 		// ABP Asset Map
 
-		void* ABPAssetMapContainer = ABPAssetMapProperty->ContainerPtrToValuePtr<void>(EquipmentRowData);
+		void* ABPAssetMapContainer = ABPAssetMapProperty->ContainerPtrToValuePtr<void>(NewRow.GetData());
 		TMap<FName, UECustom::TSoftClassPtr<UClass>>& ABPAssetMap = *reinterpret_cast<TMap<FName, UECustom::TSoftClassPtr<UClass>>*>(ABPAssetMapContainer);
 
 		auto JsonABPAssetMap = Data.at("ABPAssetMap").get<std::vector<nlohmann::json>>();
@@ -382,12 +368,10 @@ namespace Palworld {
 		{
 			if (!ABPAsset.contains("Key") || !ABPAsset.contains("Value"))
 			{
-				FMemory::Free(EquipmentRowData);
 				throw std::runtime_error("Entry in ABPAssetMap was missing a Key or Value");
 			}
 			if (!ABPAsset.at("Key").is_string() || !ABPAsset.at("Value").is_string())
 			{
-				FMemory::Free(EquipmentRowData);
 				throw std::runtime_error("ABPAssetMap entry Key and Value must be a string");
 			}
 
@@ -405,22 +389,20 @@ namespace Palworld {
 			auto IsHairAttachAccessoryProperty = EquipmentRowStruct->GetPropertyByName(STR("IsHairAttachAccessory"));
 			if (!IsHairAttachAccessoryProperty)
 			{
-				FMemory::Free(EquipmentRowData);
 				throw std::runtime_error("Property IsHairAttachAccessory has changed name in DT_CharacterCreationMeshPresetTable_Equipments, update is required");
 			}
 
-			PropertyHelper::CopyJsonValueToContainer(EquipmentRowData, IsHairAttachAccessoryProperty, Data.at("IsHairAttachAccessory"));
+			PropertyHelper::CopyJsonValueToContainer(NewRow.GetData(), IsHairAttachAccessoryProperty, Data.at("IsHairAttachAccessory"));
 
 			if (Data.at("IsHairAttachAccessory").get<bool>() == true)
 			{
 				auto HairAttachSocketNameMapProperty = EquipmentRowStruct->GetPropertyByName(STR("HairAttachSocketNameMap"));
 				if (!HairAttachSocketNameMapProperty)
 				{
-					FMemory::Free(EquipmentRowData);
 					throw std::runtime_error("Property HairAttachSocketNameMap has changed name in DT_CharacterCreationMeshPresetTable_Equipments, update is required");
 				}
 
-				void* HairAttachSocketNameMapContainer = HairAttachSocketNameMapProperty->ContainerPtrToValuePtr<void>(EquipmentRowData);
+				void* HairAttachSocketNameMapContainer = HairAttachSocketNameMapProperty->ContainerPtrToValuePtr<void>(NewRow.GetData());
 				TMap<FName, FName>& HairAttachSocketNameMap = *reinterpret_cast<TMap<FName, FName>*>(HairAttachSocketNameMapContainer);
 
 				auto JsonHairAttachSocketNameMap = Data.at("HairAttachSocketNameMap").get<std::vector<nlohmann::json>>();
@@ -428,12 +410,10 @@ namespace Palworld {
 				{
 					if (!HairAttachSocketName.contains("Key") || !HairAttachSocketName.contains("Value"))
 					{
-						FMemory::Free(EquipmentRowData);
 						throw std::runtime_error("Entry in ABPAssetMap was missing a Key or Value");
 					}
 					if (!HairAttachSocketName.at("Key").is_string() || !HairAttachSocketName.at("Value").is_string())
 					{
-						FMemory::Free(EquipmentRowData);
 						throw std::runtime_error("ABPAssetMap entry Key and Value must be a string");
 					}
 
@@ -445,9 +425,6 @@ namespace Palworld {
 			}
 		}
 
-		if (Created)
-		{
-			m_equipmentTable->AddRow(EquipmentId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(EquipmentRowData));
-		}
+        m_equipmentTable->AddRow(EquipmentId, *reinterpret_cast<RC::Unreal::FTableRowBase*>(NewRow.GetData()));
 	}
 }

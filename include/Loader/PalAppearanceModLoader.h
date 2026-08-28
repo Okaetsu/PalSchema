@@ -42,7 +42,6 @@ namespace Palworld {
 
 		void AddColorPreset(const RC::Unreal::FName& ColorPresetId, const nlohmann::json& Data);
 
-		// This is its own function due to it using TMap properties which I haven't figured out yet how to dynamically set
 		void AddEquipment(const RC::Unreal::FName& EquipmentId, const nlohmann::json& Data);
 	};
 }
