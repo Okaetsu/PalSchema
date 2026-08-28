@@ -159,8 +159,7 @@ namespace Palworld {
         }
 
         FString TypeB;
-        if (PS::JsonHelpers::GetString(Data, "TypeB", TypeB) &&
-            (TypeB == TEXT("EPalItemTypeB::WeaponThrowObject") || TypeB == TEXT("WeaponThrowObject")))
+        if (PS::JsonHelpers::GetString(Data, "TypeB", TypeB) && IsThrowableWeapon(TypeB))
         {
             DynamicDatabaseClass = nullptr;
         }
@@ -534,8 +533,20 @@ namespace Palworld {
 
     bool PalItemModLoader::IsCustomProperty(const std::string& Key)
     {
-        const std::unordered_set<std::string> CustomProps = { "Type", "Name", "Description", "Recipe" };
+        const std::unordered_set<std::string> CustomProps = { "Type", "Name", "Description", "Recipe", "bLegalInGame" };
         return CustomProps.contains(Key);
+    }
+
+    bool PalItemModLoader::IsThrowableWeapon(const RC::Unreal::FString& TypeB)
+    {
+        if (TypeB == TEXT("EPalItemTypeB::WeaponThrowObject") || TypeB == TEXT("WeaponThrowObject") ||
+            TypeB == TEXT("EPalItemTypeB::SPWeaponCaptureRope") || TypeB == TEXT("SPWeaponCaptureRope") ||
+            TypeB == TEXT("EPalItemTypeB::SPWeaponCaptureBall") || TypeB == TEXT("SPWeaponCaptureBall"))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     bool PalItemModLoader::IsValidItem(RC::Unreal::UObject* worldContextObject, const RC::Unreal::FName& staticId)

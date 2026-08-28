@@ -19,9 +19,18 @@
         "description": "Type to use, must be either Weapon, Armor, Consumable or Generic"
       },
       "IconTexture": {
-        "type": "string",
-        "pattern": "^/Game(?:/[^/]+)*/([A-Za-z0-9_]+)\\.\\1$",
-        "description": "Example of a correct path format: /Game/Others/InventoryItemIcon/Texture/T_itemicon_Food_Berries.T_itemicon_Food_Berries\nIn FModel or Unreal Editor, the path would look like Pal/Content/Pal/Others/InventoryItemIcon/Texture/T_itemicon_Food_Berries"
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^/Game(?:/[^/]+)*/([A-Za-z0-9_]+)\\.\\1$",
+            "description": "Example of a correct path format: /Game/Others/InventoryItemIcon/Texture/T_itemicon_Food_Berries.T_itemicon_Food_Berries\nIn FModel or Unreal Editor, the path would look like Pal/Content/Pal/Others/InventoryItemIcon/Texture/T_itemicon_Food_Berries"
+          },
+          {
+            "type": "string",
+            "pattern": "^\\$resource/",
+            "description": "Example of a correct path format: $resource/YourModName/NameOfYourImageWithoutExtension"
+          }
+        ]
       },
       "TypeA": {
         "type": "string",
@@ -90,6 +99,11 @@
       "OverrideDescMsgID": {
         "type": "string",
         "description": "Manually determines which translation entry should be used for this item. This is generally used for tiered items with different rarities like weapons or armor.\nExample: AssaultRifle_Default1 has no override for this, but AssaultRifle_Default2 has an override since it's essentially the same item, but better, so it just uses the same item description."
+      },
+      "bLegalInGame": {
+        "type": "boolean",
+        "description": "Controls if an item should be visible to the game's UI systems like in Flea Market. This is set to true by default by PalSchema for new custom items.",
+        "default": true
       },
       "Recipe": {
         "type": "object",
@@ -166,9 +180,14 @@
         "properties": {
           "Type": { "const": "Consumable" },
           "RestoreHP": { "type": "integer" },
-          "RestoreSatiety": { "type": "integer", "description": "This is the amount of hunger that is recovered." }
+          "RestoreSatiety": { "type": "integer", "description": "This is the amount of hunger that is recovered." },
+          "WazaID": {
+            "type": "string",
+            "$ref": "enums.schema.json#/definitions/EPalWazaID",
+            "description": "Typically used with skill fruits."
+          }
         },
-        "required": ["Type", "RestoreHP", "RestoreSatiety"]
+        "required": ["Type"]
       },
       {
         "properties": {
@@ -185,7 +204,7 @@
           "PassiveSkill3": { "type": "string" },
           "PassiveSkill4": { "type": "string" }
         },
-        "required": ["Type", "AttackValue", "SneakAttackRate", "Durability", "actorClass"]
+        "required": ["Type"]
       },
       {
         "properties": {
@@ -199,7 +218,7 @@
           "PassiveSkill3": { "type": "string" },
           "PassiveSkill4": { "type": "string" }
         },
-        "required": ["Type", "DefenseValue", "HPValue", "ShieldValue", "Durability"]
+        "required": ["Type"]
       }
     ]
   }
