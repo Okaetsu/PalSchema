@@ -533,7 +533,7 @@ namespace Palworld {
 
     bool PalItemModLoader::IsCustomProperty(const std::string& Key)
     {
-        const std::unordered_set<std::string> CustomProps = { "Type", "Name", "Description", "Recipe" };
+        const std::unordered_set<std::string> CustomProps = { "Type", "Name", "Description", "Recipe", "bLegalInGame" };
         return CustomProps.contains(Key);
     }
 
