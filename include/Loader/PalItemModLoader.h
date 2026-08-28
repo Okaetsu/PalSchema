@@ -46,6 +46,8 @@ namespace Palworld {
 
         bool IsCustomProperty(const std::string& Key);
 
+        bool IsThrowableWeapon(const RC::Unreal::FString& TypeB);
+
 		RC::Unreal::UDataTable* m_itemDataTable{};
 		RC::Unreal::UDataTable* m_itemRecipeTable{};
 		RC::Unreal::UDataTable* m_nameTranslationTable{};
