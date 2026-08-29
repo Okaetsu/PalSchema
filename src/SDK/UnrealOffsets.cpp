@@ -146,7 +146,7 @@ void Palworld::UnrealOffsets::ApplyMemberVariableLayout()
             if (auto val = parser.get_int64(STR("UObjectBase"), STR("ClassPrivate"), -1); val != -1)
                 Unreal::UObjectBase::MemberOffsets.emplace(STR("ClassPrivate"), static_cast<int32_t>(val));
             if (auto val = parser.get_int64(STR("UObjectBase"), STR("InternalIndex"), -1); val != -1)
-                Unreal::UObjectBase::MemberOffsets.emplace(STR("InternalIndex"), static_cast<int32_t>(val));
+                Unreal::UObjectBase::MemberOffsets.emplace(STR("InternalIndex_Private"), static_cast<int32_t>(val));
             if (auto val = parser.get_int64(STR("UObjectBase"), STR("Name"), -1); val != -1)
                 Unreal::UObjectBase::MemberOffsets.emplace(STR("Name"), static_cast<int32_t>(val));
             if (auto val = parser.get_int64(STR("UObjectBase"), STR("NamePrivate"), -1); val != -1)

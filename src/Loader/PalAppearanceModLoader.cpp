@@ -3,9 +3,8 @@
 #include "Unreal/UScriptStruct.hpp"
 #include "Unreal/FProperty.hpp"
 #include "Unreal/Engine/UDataTable.hpp"
+#include "Unreal/SoftObjectPtr.hpp"
 #include "SDK/Classes/KismetInternationalizationLibrary.h"
-#include "SDK/Classes/TSoftObjectPtr.h"
-#include "SDK/Classes/TSoftClassPtr.h"
 #include "SDK/Structs/Custom/FManagedStruct.h"
 #include "SDK/Structs/FLinearColor.h"
 #include "SDK/Helper/PropertyHelper.h"
@@ -337,7 +336,7 @@ namespace Palworld {
 		// Skeletal Mesh Map
 
 		void* SkeletalMeshMapContainer = SkeletalMeshMapProperty->ContainerPtrToValuePtr<void>(NewRow.GetData());
-		TMap<FName, UECustom::TSoftObjectPtr<UObject>>& SkeletalMeshMap = *reinterpret_cast<TMap<FName, UECustom::TSoftObjectPtr<UObject>>*>(SkeletalMeshMapContainer);
+		TMap<FName, RC::Unreal::FSoftObjectPtr>& SkeletalMeshMap = *reinterpret_cast<TMap<FName, RC::Unreal::FSoftObjectPtr>*>(SkeletalMeshMapContainer);
 
 		auto JsonSkeletalMeshMap = Data.at("SkeletalMeshMap").get<std::vector<nlohmann::json>>();
 		for (auto& SkeletalMesh : JsonSkeletalMeshMap)
@@ -353,7 +352,7 @@ namespace Palworld {
 
 			auto Key = RC::to_generic_string(SkeletalMesh.at("Key").get<std::string>());
 			auto Value = RC::to_generic_string(SkeletalMesh.at("Value").get<std::string>());
-			auto MeshPath = UECustom::TSoftObjectPtr<UObject>(UECustom::FSoftObjectPath(Value));
+			auto MeshPath = RC::Unreal::FSoftObjectPtr(RC::Unreal::FSoftObjectPath(FString(Value)));
 
 			SkeletalMeshMap.Add(FName(Key, FNAME_Add), MeshPath);
 		}
@@ -361,7 +360,7 @@ namespace Palworld {
 		// ABP Asset Map
 
 		void* ABPAssetMapContainer = ABPAssetMapProperty->ContainerPtrToValuePtr<void>(NewRow.GetData());
-		TMap<FName, UECustom::TSoftClassPtr<UClass>>& ABPAssetMap = *reinterpret_cast<TMap<FName, UECustom::TSoftClassPtr<UClass>>*>(ABPAssetMapContainer);
+		TMap<FName, RC::Unreal::FSoftObjectPtr>& ABPAssetMap = *reinterpret_cast<TMap<FName, RC::Unreal::FSoftObjectPtr>*>(ABPAssetMapContainer);
 
 		auto JsonABPAssetMap = Data.at("ABPAssetMap").get<std::vector<nlohmann::json>>();
 		for (auto& ABPAsset : JsonABPAssetMap)
@@ -377,7 +376,7 @@ namespace Palworld {
 
 			auto Key = RC::to_generic_string(ABPAsset.at("Key").get<std::string>());
 			auto Value = RC::to_generic_string(ABPAsset.at("Value").get<std::string>());
-			auto ABPPath = UECustom::TSoftClassPtr<UClass>(UECustom::FSoftObjectPath(Value));
+			auto ABPPath = RC::Unreal::FSoftObjectPtr(RC::Unreal::FSoftObjectPath(FString(Value)));
 
 			ABPAssetMap.Add(FName(Key, FNAME_Add), ABPPath);
 		}

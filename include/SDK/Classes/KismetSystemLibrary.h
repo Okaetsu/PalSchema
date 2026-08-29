@@ -1,8 +1,7 @@
 #pragma once
 
 #include "Unreal/UObject.hpp"
-#include "SDK/Structs/FSoftObjectPath.h"
-#include "SDK/Classes/TSoftObjectPtr.h"
+#include "Unreal/SoftObjectPtr.hpp"
 
 
 namespace UECustom {
@@ -10,9 +9,7 @@ namespace UECustom {
 	public:
         static void CollectGarbage();
 
-		static FSoftObjectPath MakeSoftObjectPath(const RC::Unreal::FString& Path);
-
-		static RC::Unreal::UObject* LoadAsset_Blocking(UECustom::TSoftObjectPtr<RC::Unreal::UObject> Asset, bool bSetRootSet = false);
+		static RC::Unreal::UObject* LoadAsset_Blocking(const RC::Unreal::TSoftObjectPtr<UObject>& Asset, bool bSetRootSet = false);
 
 		static RC::Unreal::UObject* LoadAsset_Blocking(const RC::StringType& AssetPath, bool bSetRootSet = false);
 	private:

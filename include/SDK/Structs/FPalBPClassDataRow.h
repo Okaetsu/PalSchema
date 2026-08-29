@@ -1,15 +1,15 @@
 #pragma once
 
 #include "Unreal/Engine/UDataTable.hpp"
-#include "SDK/Classes/TSoftClassPtr.h"
-#include "SDK/Classes/Texture2D.h"
+#include "Unreal/SoftObjectPtr.hpp"
 
 namespace Palworld {
     struct FPalBPClassDataRow : public RC::Unreal::FTableRowBase
     {
-        FPalBPClassDataRow(const RC::StringType& Path) : BPClass(UECustom::TSoftClassPtr<RC::Unreal::UClass>(UECustom::FSoftObjectPath(Path)))
+        FPalBPClassDataRow(const RC::StringType& Path) 
+            : BPClass(RC::Unreal::TSoftObjectPtr<RC::Unreal::UObject>(RC::Unreal::FSoftObjectPath(RC::Unreal::FString(Path))))
         {
         }
-        UECustom::TSoftClassPtr<RC::Unreal::UClass> BPClass;
+        RC::Unreal::TSoftObjectPtr<RC::Unreal::UObject> BPClass;
     };
 }

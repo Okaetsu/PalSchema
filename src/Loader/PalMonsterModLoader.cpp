@@ -68,7 +68,7 @@ namespace Palworld {
             m_palLongDescTable = GetDatatableByName("DT_PalLongDescriptionText");
 
             auto assetPath = TEXT("/Game/Pal/Blueprint/Action/Common/SpawnItem/Base/BP_Action_SpawnItemBase.BP_Action_SpawnItemBase_C");
-            auto softObjectPtr = UECustom::TSoftObjectPtr<UObject>(UECustom::FSoftObjectPath(assetPath));
+            auto softObjectPtr = RC::Unreal::TSoftObjectPtr<UObject>(RC::Unreal::FSoftObjectPath(FString(assetPath)));
             auto loadedAsset = static_cast<UClass*>(UECustom::UKismetSystemLibrary::LoadAsset_Blocking(softObjectPtr));
             if (!loadedAsset)
             {
@@ -196,7 +196,7 @@ namespace Palworld {
 				if (IconTableRow)
 				{
 					auto IconPath = RC::to_generic_string(value.get<std::string>());
-					IconTableRow->Icon = UECustom::TSoftObjectPtr<UECustom::UTexture2D>(UECustom::FSoftObjectPath(IconPath));
+                    IconTableRow->Icon = RC::Unreal::TSoftObjectPtr<UObject>(RC::Unreal::FSoftObjectPath(FString(IconPath)));
 				}
 			}
 			else if (KeyName == STR("ActorClassPath"))
@@ -205,7 +205,7 @@ namespace Palworld {
 				if (BlueprintTableRow)
 				{
 					auto BlueprintPath = RC::to_generic_string(value.get<std::string>());
-					BlueprintTableRow->BPClass = UECustom::TSoftClassPtr<RC::Unreal::UClass>(UECustom::FSoftObjectPath(BlueprintPath));
+                    BlueprintTableRow->BPClass = RC::Unreal::TSoftObjectPtr<UObject>(RC::Unreal::FSoftObjectPath(FString(BlueprintPath)));
 				}
 			}
             else if (KeyName == STR("Loot"))
@@ -252,14 +252,15 @@ namespace Palworld {
             return;
         }
 
-        auto bpCharacterPath = UECustom::TSoftObjectPtr<UObject>(UECustom::FSoftObjectPath(bpCharacterRow->BPClass.ToSoftObjectPath()));
-        auto bpCharacterClass = static_cast<UClass*>(UECustom::UKismetSystemLibrary::LoadAsset_Blocking(bpCharacterPath, true));
+        auto bpCharacterClass = static_cast<UClass*>(UECustom::UKismetSystemLibrary::LoadAsset_Blocking(bpCharacterRow->BPClass));
         if (!bpCharacterClass)
         {
             PS::Log<LogLevel::Error>(
                 TEXT("Unable to create a Spawn Item Action Class for {}, failed to load character blueprint."), characterId.ToString());
             return;
         }
+
+        bpCharacterClass->SetRootSet();
 
         auto bpCharacterCDO = static_cast<UObject*>(bpCharacterClass->GetClassDefaultObject().Get());
         auto actionComponentProp = PropertyHelper::GetPropertyByName(bpCharacterClass, TEXT("ActionComponent"));

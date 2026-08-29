@@ -149,16 +149,16 @@ namespace Palworld {
 				if (IconTableRow)
 				{
 					auto IconPath = RC::to_generic_string(value.get<std::string>());
-					IconTableRow->Icon = UECustom::TSoftObjectPtr<UECustom::UTexture2D>(UECustom::FSoftObjectPath(IconPath));
-				}
-			}
-			else if (key == "BlueprintAssetPath")
-			{
-				auto BlueprintTableRow = std::bit_cast<FPalBPClassDataRow*>(m_palBpClassTable->FindRowUnchecked(CharacterId));
-				if (BlueprintTableRow)
-				{
-					auto BlueprintPath = RC::to_generic_string(value.get<std::string>());
-					BlueprintTableRow->BPClass = UECustom::TSoftClassPtr<RC::Unreal::UClass>(UECustom::FSoftObjectPath(BlueprintPath));
+					IconTableRow->Icon = RC::Unreal::TSoftObjectPtr<UObject>(RC::Unreal::FSoftObjectPath(FString(IconPath)));
+                }
+            }
+            else if (key == "BlueprintAssetPath")
+            {
+                auto BlueprintTableRow = std::bit_cast<FPalBPClassDataRow*>(m_palBpClassTable->FindRowUnchecked(CharacterId));
+                if (BlueprintTableRow)
+                {
+                    auto BlueprintPath = RC::to_generic_string(value.get<std::string>());
+                    BlueprintTableRow->BPClass = RC::Unreal::TSoftObjectPtr<UObject>(RC::Unreal::FSoftObjectPath(FString(BlueprintPath)));
 				}
 			}
             else if (key == "Loot")

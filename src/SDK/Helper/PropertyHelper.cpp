@@ -4,9 +4,8 @@
 #include "Unreal/Property/FTextProperty.hpp"
 #include "Unreal/CoreUObject/UObject/UnrealType.hpp"
 #include "Unreal/CoreUObject/UObject/Class.hpp"
+#include "Unreal/SoftObjectPtr.hpp"
 #include "Helpers/Casting.hpp"
-#include "SDK/Classes/TSoftObjectPtr.h"
-#include "SDK/Classes/TSoftClassPtr.h"
 #include "SDK/Classes/KismetSystemLibrary.h"
 #include "SDK/Structs/Custom/FManagedValue.h"
 #include "SDK/Structs/Custom/FScriptMapHelper.h"
@@ -251,7 +250,7 @@ namespace Palworld {
 
         auto StringValue = Value.get<std::string>();
         auto StringValueWide = RC::to_generic_string(StringValue);
-        auto SoftObjectPtr = UECustom::TSoftObjectPtr<UObject>(UECustom::FSoftObjectPath(StringValueWide));
+        auto SoftObjectPtr = RC::Unreal::TSoftObjectPtr<UObject>(RC::Unreal::FSoftObjectPath(FString(StringValueWide)));
         auto Asset = UECustom::UKismetSystemLibrary::LoadAsset_Blocking(SoftObjectPtr);
 
         if (!Asset)
@@ -322,8 +321,8 @@ namespace Palworld {
         auto String = RC::to_generic_string(ParsedValue);
         if (!String.ends_with(STR("_C"))) String += STR("_C");
 
-        auto SoftClassPtr = UECustom::TSoftClassPtr<UClass>(UECustom::FSoftObjectPath(String));
-        FMemory::Memcpy(Data, &SoftClassPtr, sizeof(UECustom::TSoftClassPtr<UClass>));
+        auto SoftClassPtr = RC::Unreal::FSoftObjectPtr(RC::Unreal::FSoftObjectPath(FString(String)));
+        Property->SetPropertyValue(Data, SoftClassPtr);
     }
 
     void PropertyHelper::SetSoftObjectPropertyValueFromJsonValue(void* Data, RC::Unreal::FSoftObjectProperty* Property, const nlohmann::json& Value)
@@ -333,20 +332,20 @@ namespace Palworld {
 
         auto ParsedValue = Value.get<std::string>();
 
-        RC::StringType PackagePath = RC::to_generic_string(ParsedValue);
+        RC::StringType SoftObjectPath = RC::to_generic_string(ParsedValue);
 
         if (ParsedValue.starts_with(resourcePrefix))
         {
             // Before: "$resource/modname/resourcename"
             // After:  "modname/resourcename"
-            PackagePath = PackagePath.erase(0, resourcePrefix.length());
+            SoftObjectPath = SoftObjectPath.erase(0, resourcePrefix.length());
 
             // "/Engine/Transient.PalSchema/Resources/modname/resourcename"
-            PackagePath = std::format(TEXT("/Engine/Transient.PalSchema/Resources/{}"), PackagePath);
+            SoftObjectPath = std::format(TEXT("/Engine/Transient.PalSchema/Resources/{}"), SoftObjectPath);
         }
 
-        auto SoftObjectPtr = UECustom::TSoftObjectPtr<UObject>(UECustom::FSoftObjectPath(PackagePath));
-        FMemory::Memcpy(Data, &SoftObjectPtr, sizeof(UECustom::TSoftObjectPtr<UObject>));
+        auto SoftObjectPtr = RC::Unreal::FSoftObjectPtr(RC::Unreal::FSoftObjectPath(FString(SoftObjectPath)));
+        Property->SetPropertyValue(Data, SoftObjectPtr);
     }
 
     void PropertyHelper::SetStructPropertyValueFromJsonValue(void* Data, RC::Unreal::FStructProperty* Property, const nlohmann::json& Value)
