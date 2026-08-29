@@ -1,6 +1,6 @@
 #include <fstream>
-#include "SDK/Structs/FTopLevelAssetPath.h"
 #include "UE4SSProgram.hpp"
+#include "Unreal/SoftObjectPtr.hpp"
 #include "Unreal/CoreUObject/UObject/UnrealType.hpp"
 #include "Unreal/Engine/UDataTable.hpp"
 #include "Unreal/Property/FEnumProperty.hpp"
@@ -29,7 +29,7 @@ namespace PS::JsonSchemaGenerator {
     void ParseClassPropertyInfo(FProperty* Property, nlohmann::ordered_json& Json);
     // Fwd decl END
 
-    void LoadAssetsByClass(UECustom::FTopLevelAssetPath ClassName, const std::function<void(UObject*)>& AssetCallback)
+    void LoadAssetsByClass(RC::Unreal::FTopLevelAssetPath ClassName, const std::function<void(UObject*)>& AssetCallback)
     {
         UAssetRegistry* AssetRegistry = static_cast<UAssetRegistry*>(UAssetRegistryHelpers::GetAssetRegistry().ObjectPointer);
         if (!AssetRegistry)
@@ -57,7 +57,7 @@ namespace PS::JsonSchemaGenerator {
 
         struct GetAssetsByClass_Params
         {
-            UECustom::FTopLevelAssetPath ClassName;
+            RC::Unreal::FTopLevelAssetPath ClassName;
             TArray<FAssetData> OutAssetData;
             bool bSearchSubClasses;
             bool ReturnValue;
@@ -332,7 +332,7 @@ namespace PS::JsonSchemaGenerator {
 
         /* User Defined Enums (BP) */
 
-        UECustom::FTopLevelAssetPath TopLevelAssetPath;
+        RC::Unreal::FTopLevelAssetPath TopLevelAssetPath;
         TopLevelAssetPath.TrySetPath(FName(TEXT("/Script/Engine")), FName(TEXT("UserDefinedEnum")));
 
         LoadAssetsByClass(TopLevelAssetPath, [&](UObject* EnumObject) {
@@ -354,7 +354,7 @@ namespace PS::JsonSchemaGenerator {
             std::filesystem::create_directories(RawSchemaPath);
         }
 
-        UECustom::FTopLevelAssetPath TopLevelAssetPath;
+        RC::Unreal::FTopLevelAssetPath TopLevelAssetPath;
         TopLevelAssetPath.TrySetPath(FName(TEXT("/Script/Engine")), FName(TEXT("DataTable")));
 
         nlohmann::ordered_json RawSchemaJson = {
