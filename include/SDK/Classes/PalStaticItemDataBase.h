@@ -1,8 +1,6 @@
 #pragma once
 
 #include "Unreal/UObject.hpp"
-#include "SDK/Classes/TSoftObjectPtr.h"
-#include "SDK/Classes/TSoftClassPtr.h"
 #include "SDK/Classes/Texture2D.h"
 #include "StaticMesh.h"
 

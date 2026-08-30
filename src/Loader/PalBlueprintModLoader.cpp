@@ -166,7 +166,7 @@ namespace Palworld {
                 static const std::wregex Pattern(LR"(^(.*/)([^/.]+)$)");
                 assetNameWide = std::regex_replace(assetNameWide, Pattern, TEXT("$1$2.$2_C"));
 
-                auto softObjectPtr = UECustom::TSoftObjectPtr<UObject>(UECustom::FSoftObjectPath(assetNameWide));
+                auto softObjectPtr = RC::Unreal::TSoftObjectPtr<UObject>(RC::Unreal::FSoftObjectPath(FString(assetNameWide)));
                 auto asset = UECustom::UKismetSystemLibrary::LoadAsset_Blocking(softObjectPtr);
                 if (!asset)
                 {
