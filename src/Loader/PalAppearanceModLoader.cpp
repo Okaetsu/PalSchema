@@ -319,13 +319,13 @@ namespace Palworld {
 
 		auto EquipmentRowStruct = m_equipmentTable->GetRowStruct().Get();
 
-		auto SkeletalMeshMapProperty = EquipmentRowStruct->GetPropertyByName(STR("SkeletalMeshMap"));
+		auto SkeletalMeshMapProperty = Palworld::PropertyHelper::CastProperty<FMapProperty>(EquipmentRowStruct->GetPropertyByName(STR("SkeletalMeshMap")));
 		if (!SkeletalMeshMapProperty)
 		{
 			throw std::runtime_error("Property SkeletalMeshMap has changed name in DT_CharacterCreationMeshPresetTable_Equipments, update is required");
 		}
 
-		auto ABPAssetMapProperty = EquipmentRowStruct->GetPropertyByName(STR("ABPAssetMap"));
+		auto ABPAssetMapProperty = Palworld::PropertyHelper::CastProperty<FMapProperty>(EquipmentRowStruct->GetPropertyByName(STR("ABPAssetMap")));
 		if (!ABPAssetMapProperty)
 		{
 			throw std::runtime_error("Property ABPAssetMap has changed name in DT_CharacterCreationMeshPresetTable_Equipments, update is required");
@@ -335,51 +335,13 @@ namespace Palworld {
 
 		// Skeletal Mesh Map
 
-		void* SkeletalMeshMapContainer = SkeletalMeshMapProperty->ContainerPtrToValuePtr<void>(NewRow.GetData());
-		TMap<FName, RC::Unreal::FSoftObjectPtr>& SkeletalMeshMap = *reinterpret_cast<TMap<FName, RC::Unreal::FSoftObjectPtr>*>(SkeletalMeshMapContainer);
-
-		auto JsonSkeletalMeshMap = Data.at("SkeletalMeshMap").get<std::vector<nlohmann::json>>();
-		for (auto& SkeletalMesh : JsonSkeletalMeshMap)
-		{
-			if (!SkeletalMesh.contains("Key") || !SkeletalMesh.contains("Value"))
-			{
-				throw std::runtime_error("Entry in SkeletalMeshMap was missing a Key or Value");
-			}
-			if (!SkeletalMesh.at("Key").is_string() || !SkeletalMesh.at("Value").is_string())
-			{
-				throw std::runtime_error("SkeletalMeshMap entry Key and Value must be a string");
-			}
-
-			auto Key = RC::to_generic_string(SkeletalMesh.at("Key").get<std::string>());
-			auto Value = RC::to_generic_string(SkeletalMesh.at("Value").get<std::string>());
-			auto MeshPath = RC::Unreal::FSoftObjectPtr(RC::Unreal::FSoftObjectPath(FString(Value)));
-
-			SkeletalMeshMap.Add(FName(Key, FNAME_Add), MeshPath);
-		}
+		auto& JsonSkeletalMeshMap = Data.at("SkeletalMeshMap");
+        Palworld::PropertyHelper::CopyJsonValueToContainer(NewRow.GetData(), SkeletalMeshMapProperty, JsonSkeletalMeshMap);
 
 		// ABP Asset Map
 
-		void* ABPAssetMapContainer = ABPAssetMapProperty->ContainerPtrToValuePtr<void>(NewRow.GetData());
-		TMap<FName, RC::Unreal::FSoftObjectPtr>& ABPAssetMap = *reinterpret_cast<TMap<FName, RC::Unreal::FSoftObjectPtr>*>(ABPAssetMapContainer);
-
-		auto JsonABPAssetMap = Data.at("ABPAssetMap").get<std::vector<nlohmann::json>>();
-		for (auto& ABPAsset : JsonABPAssetMap)
-		{
-			if (!ABPAsset.contains("Key") || !ABPAsset.contains("Value"))
-			{
-				throw std::runtime_error("Entry in ABPAssetMap was missing a Key or Value");
-			}
-			if (!ABPAsset.at("Key").is_string() || !ABPAsset.at("Value").is_string())
-			{
-				throw std::runtime_error("ABPAssetMap entry Key and Value must be a string");
-			}
-
-			auto Key = RC::to_generic_string(ABPAsset.at("Key").get<std::string>());
-			auto Value = RC::to_generic_string(ABPAsset.at("Value").get<std::string>());
-			auto ABPPath = RC::Unreal::FSoftObjectPtr(RC::Unreal::FSoftObjectPath(FString(Value)));
-
-			ABPAssetMap.Add(FName(Key, FNAME_Add), ABPPath);
-		}
+		auto& JsonABPAssetMap = Data.at("ABPAssetMap");
+        Palworld::PropertyHelper::CopyJsonValueToContainer(NewRow.GetData(), ABPAssetMapProperty, JsonABPAssetMap);
 
 		// Hair Attach Socket Name Map
 
