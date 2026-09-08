@@ -8,9 +8,9 @@ NOTE: Make sure to check `Add "Open with Code"` for both checkboxes as seen in t
 
 ![Visual Studio Code necessary checkboxes](assets/vscode_install.png)
 
-* [UE4SS Palworld](https://github.com/Okaetsu/RE-UE4SS/releases/tag/experimental-palworld) - You'll want to get the linked version for two reasons: 
+* [Latest UE4SS Palworld](https://github.com/Okaetsu/RE-UE4SS/releases/latest) - You'll want to get the linked version for two reasons: 
   1. Palworld did some engine modifications which now requires a `MemberVariableLayout.ini` with UE4SS. If you don't get the linked version you will experience crashes with certain mods and PalSchema is one of them. See issue [here](https://github.com/UE4SS-RE/RE-UE4SS/issues/802).
-  2. PalSchema is specifically built on the linked version of UE4SS. If you get the latest experimental that isn't the linked version, PalSchema will simply not work due to potential API incompatibility.
+  2. PalSchema must match the appropriate UE4SS version specified in the release notes for whichever PalSchema version you're using. If you get the wrong version, PalSchema will simply not work due to potential API incompatibility.
 
 * [FModel](https://fmodel.app/) - Very useful for exploring Palworld files in general, you'll want this for referencing different data tables and assets in the game. Setup guide for FModel can be found [here](https://pwmodding.wiki/docs/developers/useful-tools/fmodel).
 
