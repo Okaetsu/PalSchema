@@ -33,7 +33,7 @@ file(GLOB SRC_FILES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/FileWatchWrapper.cpp"
 )
 
-add_library(${TARGET} SHARED ${SRC_FILES})
+add_library(${TARGET} SHARED ${SRC_FILES} version.rc)
 target_include_directories(${TARGET} PRIVATE 
     include/
 )
