@@ -2,6 +2,12 @@
 
 #include "Json/Property/JsonProperty.h"
 
+namespace RC::Unreal
+{
+    class FArrayProperty;
+    class FMapProperty;
+}
+
 namespace PS
 {
     enum class EArrayOperationMode : RC::Unreal::uint8
@@ -17,6 +23,8 @@ namespace PS
         JsonArrayProperty(const RC::Unreal::FString& InName);
         virtual ~JsonArrayProperty() {};
 
+        virtual bool Parse(const nlohmann::ordered_json& Data) override final;
+
         virtual void CopyValue(RC::Unreal::FProperty* Property, void* Container) override final;
 
         EArrayOperationMode GetArrayOperationMode() const;
@@ -27,11 +35,13 @@ namespace PS
     protected:
         virtual void Print(RC::Unreal::FString& OutString, int Indent) override final;
     private:
-        void ParseAsArray(const nlohmann::json& Data);
-        void ParseAsObject(const nlohmann::json& Data);
-        virtual bool Parse(const nlohmann::json& Data) override final;
+        void ParseAsArray(const nlohmann::ordered_json& Data);
+        void ParseAsObject(const nlohmann::ordered_json& Data);
     private:
         EArrayOperationMode ArrayOperationMode = EArrayOperationMode::Replace;
         RC::Unreal::TArray<std::unique_ptr<JsonProperty>> Items;
+
+        void CopyArrayValue(RC::Unreal::FArrayProperty* Property, void* Container);
+        void CopyMapValue(RC::Unreal::FMapProperty* Property, void* Container);
     };
 }

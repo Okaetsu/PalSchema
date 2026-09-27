@@ -1,4 +1,8 @@
 #include "Json/Property/JsonArrayProperty.h"
+#include "Json/Property/JsonObjectProperty.h"
+#include "SDK/Helper/PropertyHelper.h"
+#include "SDK/Structs/Custom/FScriptMapHelper.h"
+#include "Unreal/CoreUObject/UObject/UnrealType.hpp"
 
 using namespace RC;
 using namespace RC::Unreal;
@@ -13,9 +17,37 @@ namespace PS
     {
     }
 
-    void JsonArrayProperty::CopyValue(RC::Unreal::FProperty* Property, void* Container)
+    bool JsonArrayProperty::Parse(const nlohmann::ordered_json& Data)
     {
-        
+        if (Data.is_array())
+        {
+            ParseAsArray(Data);
+        }
+        else if (Data.is_object() && Data.contains("Items"))
+        {
+            ParseAsObject(Data);
+        }
+
+        return false;
+    }
+
+    void JsonArrayProperty::CopyValue(FProperty* Property, void* Container)
+    {
+        using namespace Palworld::PropertyHelper;
+
+        if (FArrayProperty* ArrayProperty = CastProperty<FArrayProperty>(Property))
+        {
+            CopyArrayValue(ArrayProperty, Container);
+        }
+        else if (FMapProperty* MapProperty = CastProperty<FMapProperty>(Property))
+        {
+            CopyMapValue(MapProperty, Container);
+        }
+        else
+        {
+            throw std::runtime_error(RC::fmt("Unsupported Type '%S' for Property '%S'",
+                *GetTypeString(), Property->GetName().c_str()));
+        }
     }
 
     EArrayOperationMode JsonArrayProperty::GetArrayOperationMode() const
@@ -36,7 +68,7 @@ namespace PS
         }
     }
 
-    void JsonArrayProperty::Print(RC::Unreal::FString& OutString, int Indent)
+    void JsonArrayProperty::Print(FString& OutString, int Indent)
     {
         Indent++;
         for (auto& Item : Items)
@@ -47,16 +79,16 @@ namespace PS
         }
     }
 
-    void JsonArrayProperty::ParseAsArray(const nlohmann::json& Data)
+    void JsonArrayProperty::ParseAsArray(const nlohmann::ordered_json& Data)
     {
-        for (const nlohmann::json& Item : Data)
+        for (const nlohmann::ordered_json& Item : Data)
         {
             std::unique_ptr<JsonProperty> NewProperty = CreateProperty(Item);
             AddProperty(std::move(NewProperty));
         }
     }
 
-    void JsonArrayProperty::ParseAsObject(const nlohmann::json& Data)
+    void JsonArrayProperty::ParseAsObject(const nlohmann::ordered_json& Data)
     {
         if (!Data.at("Items").is_array())
         {
@@ -81,21 +113,61 @@ namespace PS
             }
         }
 
-        auto Items = Data.at("Items").get<nlohmann::json::array_t>();
+        auto Items = Data.at("Items").get<nlohmann::ordered_json::array_t>();
         ParseAsArray(Items);
     }
 
-    bool JsonArrayProperty::Parse(const nlohmann::json& Data)
+    void JsonArrayProperty::CopyArrayValue(FArrayProperty* Property, void* Container)
     {
-        if (Data.is_array())
+        FScriptArrayHelper ArrayHelper(Property, Container);
+        FProperty* InnerProp = Property->GetInner();
+
+        if (ArrayOperationMode == EArrayOperationMode::Replace)
         {
-            ParseAsArray(Data);
-        }
-        else if (Data.is_object() && Data.contains("Items"))
-        {
-            ParseAsObject(Data);
+            ArrayHelper.EmptyValues(Items.Num());
         }
 
-        return false;
+        for (std::unique_ptr<JsonProperty>& ItemProp : Items)
+        {
+            int32 NewIndex = ArrayHelper.AddValue();
+            uint8* RawPtr = ArrayHelper.GetRawPtr(NewIndex);
+            ItemProp->CopyValue(InnerProp, RawPtr);
+        }
+    }
+
+    void JsonArrayProperty::CopyMapValue(FMapProperty* Property, void* Container)
+    {
+        FProperty* KeyProp = Property->GetKeyProp();
+        FProperty* ValueProp = Property->GetValueProp();
+
+        FScriptMapLayout& MapLayout = Property->GetMapLayout();
+        FScriptMap* ScriptMap = static_cast<FScriptMap*>(Container);
+        auto ScriptMapHelper = UECustom::FScriptMapHelper(ScriptMap, MapLayout, KeyProp, ValueProp);
+
+        for (auto& ItemProp : Items)
+        {
+            if (ItemProp->GetType() != JsonProperty::Type::Object)
+            {
+                throw std::runtime_error(RC::fmt("Expected an Object value for %S", Property->GetName().c_str()));
+            }
+
+            JsonObjectProperty* ObjectItemProp = static_cast<JsonObjectProperty*>(ItemProp.get());
+            JsonProperty* KeyItemProp = ObjectItemProp->GetPropertyByName(FName(TEXT("Key"), FNAME_Add));
+            JsonProperty* ValueItemProp = ObjectItemProp->GetPropertyByName(FName(TEXT("Value"), FNAME_Add));
+
+            if (!KeyItemProp || !ValueItemProp)
+            {
+                throw std::runtime_error(RC::fmt("Ensure that all your map entries have both a 'Key' and 'Value' field within %S", 
+                    Property->GetName().c_str()));
+            }
+
+            UECustom::FManagedValue ScopedPair;
+            ScriptMapHelper.InitializePair(ScopedPair);
+
+            KeyItemProp->CopyValue(KeyProp, ScopedPair.GetData());
+            ValueItemProp->CopyValue(ValueProp, static_cast<uint8*>(ScopedPair.GetData()) + MapLayout.ValueOffset);
+
+            ScriptMapHelper.Add(ScopedPair);
+        }
     }
 }

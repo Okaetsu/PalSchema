@@ -4,6 +4,11 @@
 #include "Unreal/NameTypes.hpp"
 #include "Unreal/Core/Containers/FString.hpp"
 
+namespace RC::Unreal
+{
+    class FProperty;
+}
+
 namespace PS
 {
     class JsonProperty
@@ -28,11 +33,13 @@ namespace PS
 
         JsonProperty::Type GetType() const;
 
+        RC::Unreal::FString GetTypeString() const;
+
         void Dump(RC::Unreal::FString& OutString);
     protected:
         void PrintIndents(RC::Unreal::FString& OutString, int Indent);
     public:
-        virtual bool Parse(const nlohmann::json& Data) = 0;
+        virtual bool Parse(const nlohmann::ordered_json& Data) = 0;
 
         virtual void CopyValue(RC::Unreal::FProperty* Property, void* Container) = 0;
     public:

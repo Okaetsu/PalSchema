@@ -12,12 +12,12 @@ namespace PS
         virtual ~JsonBoolProperty() {};
 
         const bool& GetValue() const;
+        
+        virtual bool Parse(const nlohmann::ordered_json& Data) override final;
 
         virtual void CopyValue(RC::Unreal::FProperty* Property, void* Container) override final;
     protected:
         virtual void Print(RC::Unreal::FString& OutString, int Indent) override final;
-    private:
-        virtual bool Parse(const nlohmann::json& Data) override final;
     private:
         bool InnerValue{};
     };

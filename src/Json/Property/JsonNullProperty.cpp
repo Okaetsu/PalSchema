@@ -13,17 +13,7 @@ namespace PS
     {
     }
 
-    void JsonNullProperty::CopyValue(RC::Unreal::FProperty* Property, void* Container)
-    {
-
-    }
-
-    void JsonNullProperty::Print(RC::Unreal::FString& OutString, int Indent)
-    {
-        OutString += TEXT("NULL");
-    }
-
-    bool JsonNullProperty::Parse(const nlohmann::json& Data)
+    bool JsonNullProperty::Parse(const nlohmann::ordered_json& Data)
     {
         if (Data.is_null())
         {
@@ -31,5 +21,14 @@ namespace PS
         }
 
         return false;
+    }
+
+    void JsonNullProperty::CopyValue(FProperty* Property, void* Container)
+    {
+    }
+
+    void JsonNullProperty::Print(FString& OutString, int Indent)
+    {
+        OutString += TEXT("NULL");
     }
 }

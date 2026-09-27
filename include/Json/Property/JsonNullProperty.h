@@ -11,10 +11,10 @@ namespace PS
         JsonNullProperty(const RC::Unreal::FString& InName);
         virtual ~JsonNullProperty() {};
 
+        virtual bool Parse(const nlohmann::ordered_json& Data) override final;
+
         virtual void CopyValue(RC::Unreal::FProperty* Property, void* Container) override final;
     protected:
         virtual void Print(RC::Unreal::FString& OutString, int Indent) override final;
-    private:
-        virtual bool Parse(const nlohmann::json& Data) override final;
     };
 }

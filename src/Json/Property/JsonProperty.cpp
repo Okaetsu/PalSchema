@@ -33,12 +33,35 @@ namespace PS
         return PropertyType;
     }
 
-    void JsonProperty::Dump(RC::Unreal::FString& OutString)
+    FString JsonProperty::GetTypeString() const
+    {
+        switch (PropertyType)
+        {
+        case PS::JsonProperty::Type::String:
+            return FString(TEXT("String"));
+        case PS::JsonProperty::Type::Integer:
+            return FString(TEXT("Integer"));
+        case PS::JsonProperty::Type::Float:
+            return FString(TEXT("Float"));
+        case PS::JsonProperty::Type::Bool:
+            return FString(TEXT("Bool"));
+        case PS::JsonProperty::Type::Null:
+            return FString(TEXT("Null"));
+        case PS::JsonProperty::Type::Object:
+            return FString(TEXT("Object"));
+        case PS::JsonProperty::Type::Array:
+            return FString(TEXT("Array"));
+        }
+
+        return FString(TEXT("Undefined"));
+    }
+
+    void JsonProperty::Dump(FString& OutString)
     {
         Print(OutString, 0);
     }
 
-    void JsonProperty::PrintIndents(RC::Unreal::FString& OutString, int Indent)
+    void JsonProperty::PrintIndents(FString& OutString, int Indent)
     {
         for (int i = 0; i < Indent; i++)
         {
