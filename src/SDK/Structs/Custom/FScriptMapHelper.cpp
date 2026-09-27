@@ -79,8 +79,7 @@ namespace UECustom {
 
             if (KeyProperty->Identical(KeyPtr, KeyPtrToUpdate))
             {
-                FMemory::Memcpy(KeyPtr, KeyPtrToUpdate, KeyProperty->GetElementSize());
-                FMemory::Memcpy(ValuePtr, ValuePtrToUpdate, ValueProperty->GetElementSize());
+                ValueProperty->CopySingleValue(ValuePtr, ValuePtrToUpdate);
                 return true;
             }
         }
@@ -98,20 +97,16 @@ namespace UECustom {
             throw std::runtime_error("Failed to remove TMap entry due to invalid ScriptMap.");
         }
 
-        for (auto Index = 0; Index < Num; ++Index)
+        if (uint8* Entry = ScriptMap->FindValue(
+            KeyToRemove,
+            MapLayout,
+            [this](const void* ElementKey) { return KeyProperty->GetValueTypeHash(ElementKey); },
+            [this](const void* A, const void* B) { return KeyProperty->Identical(A, B); }
+        ))
         {
-            if (!ScriptMap->IsValidIndex(Index)) {
-                continue;
-            }
-
-            uint8* PairPtr = (uint8*)ScriptMap->GetData(Index, MapLayout);
-            void* KeyPtr = PairPtr;
-
-            if (KeyProperty->Identical(KeyPtr, KeyToRemove))
-            {
-                ScriptMap->RemoveAt(Index, MapLayout);
-                return true;
-            }
+            int32 Index = (int32)((Entry - (uint8*)ScriptMap->GetData(0, MapLayout)) / MapLayout.SetLayout.Size);
+            ScriptMap->RemoveAt(Index, MapLayout);
+            return true;
         }
 
         return false;
@@ -119,13 +114,10 @@ namespace UECustom {
 
     void FScriptMapHelper::InitializePair(UECustom::FManagedValue& PairPtr)
     {
-        uint8* Pair = static_cast<uint8*>(FMemory::Malloc(KeyProperty->GetElementSize() + ValueProperty->GetElementSize()));
+        uint8* Pair = static_cast<uint8*>(FMemory::Malloc(MapLayout.ValueOffset + ValueProperty->GetElementSize()));
 
-        void* KeyPtr = Pair;
-        KeyProperty->InitializeValue(KeyPtr);
-
-        void* ValuePtr = Pair + MapLayout.ValueOffset;
-        ValueProperty->InitializeValue(ValuePtr);
+        KeyProperty->InitializeValue(Pair);
+        ValueProperty->InitializeValue(Pair + MapLayout.ValueOffset);
 
         PairPtr.Copy(Pair);
     }
