@@ -137,6 +137,25 @@ namespace PS::JsonHelpers {
         outValue = field.get<std::string>();
     }
 
+    bool ParseJsonFileInPath(const fs::path& path, nlohmann::json& outData)
+    {
+        if (!fs::exists(path))
+        {
+            return false;
+        }
+
+        if (path.extension() != ".json" && path.extension() != ".jsonc")
+        {
+            return false;
+        }
+
+        auto ignoreComments = path.extension() == ".jsonc";
+        std::ifstream f(path);
+
+        outData = nlohmann::json::parse(f, nullptr, true, ignoreComments);
+        return true;
+    }
+
     void ParseJsonFileInPath(const std::filesystem::path& path, const std::function<void(const nlohmann::json&)>& callback)
     {
         if (!fs::exists(path))
@@ -177,6 +196,30 @@ namespace PS::JsonHelpers {
             {
                 throw std::runtime_error(std::format("Failed parsing mod file {} - {}.\n", file.path().string(), e.what()));
             }
+        }
+    }
+
+    void IterateJsonFilesInPath(const std::filesystem::path& path, const std::function<void(const std::filesystem::path&)>& callback)
+    {
+        if (!fs::is_directory(path))
+        {
+            return;
+        }
+
+        for (const auto& file : fs::directory_iterator(path))
+        {
+            auto& filePath = file.path();
+            if (!filePath.has_extension())
+            {
+                continue;
+            }
+
+            if (filePath.extension() != ".json" && filePath.extension() != ".jsonc")
+            {
+                continue;
+            }
+
+            callback(filePath);
         }
     }
 }

@@ -26,6 +26,8 @@ namespace PS::JsonHelpers {
     void ParseUInt8(const nlohmann::json& value, const std::string& fieldName, RC::Unreal::uint8& outValue);
     void ParseString(const nlohmann::json& value, const std::string& fieldName, std::string& outValue);
 
+    bool ParseJsonFileInPath(const std::filesystem::path& path, nlohmann::json& outData);
     void ParseJsonFileInPath(const std::filesystem::path& path, const std::function<void(const nlohmann::json&)>& callback);
     void ParseJsonFilesInPath(const std::filesystem::path& path, const std::function<void(const nlohmann::json&)>& callback);
+    void IterateJsonFilesInPath(const std::filesystem::path& path, const std::function<void(const std::filesystem::path&)>& callback);
 }
