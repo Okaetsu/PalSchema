@@ -32,6 +32,7 @@ file(GLOB SRC_FILES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Utility/Config.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Utility/JsonHelpers.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Utility/EnumHelpers.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Utility/StringHelpers.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/FileWatchWrapper.cpp"
 )
 

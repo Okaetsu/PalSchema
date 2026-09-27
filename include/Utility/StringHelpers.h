@@ -1,9 +1,10 @@
 #pragma once
 
-#include "File/Macros.hpp"
+#include <vector>
+#include <string>
 
-namespace Palworld::StringHelpers {
-    void Replace(RC::StringType& string, const RC::StringType& match, const RC::StringType& replaceWith) {
-        string.replace(string.find(match), match.size(), replaceWith);
-    }
+namespace PS::StringHelpers
+{
+    void ToLowerCase(std::vector<std::string>& StringList);
+    void ToLowerCase(std::string& String);
 }
