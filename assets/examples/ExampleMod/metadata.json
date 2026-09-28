@@ -1,8 +1,11 @@
 {
+    "mod_id": "examplemod",
     "name":"ExampleMod",
     "authors": [
         "You"
     ],
     "description": "",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "dependencies": [],
+    "enabled": true
 }
