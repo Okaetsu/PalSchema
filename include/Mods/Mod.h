@@ -40,6 +40,8 @@ namespace PS
         void CollectModFilesByLoaderType(const ESchemaLoaderType::Type& LoaderType, std::vector<FModFile*>& ModFiles);
 
         bool Load(const std::vector<std::string>& RegisteredLoaderFolderNames);
+
+        void LoadLocalizationFiles(const RC::Unreal::FString& LanguageCode);
     private:
         std::filesystem::path FolderPath{};
         FModMetadata Metadata{};
@@ -47,7 +49,10 @@ namespace PS
         RC::Unreal::uint32 TotalFileCount = 0;
 
         void LoadMetadata();
-        bool LoadLoaderFiles(const std::vector<std::string>& RegisteredLoaderFolderNames);
-        void LoadLoaderFile(const ESchemaLoaderType::Type& LoaderType, const std::filesystem::path& File);
+        bool LoadFiles(const std::vector<std::string>& RegisteredLoaderFolderNames);
+        void LoadFile(const ESchemaLoaderType::Type& LoaderType, const std::filesystem::path& File);
+
+        void LoadGlobalLocalizationFiles();
+        void LoadLocalizationFile(const std::filesystem::path& File);
     };
 }

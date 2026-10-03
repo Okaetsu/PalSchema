@@ -73,6 +73,14 @@ namespace PS
         return ModFiles.size() > 0;
     }
 
+    void FModRegistry::LoadLocalizationFiles(const RC::Unreal::FString& LanguageCode)
+    {
+        for (std::unique_ptr<FMod>& Mod : ModList)
+        {
+            Mod->LoadLocalizationFiles(LanguageCode);
+        }
+    }
+
     void FModRegistry::IterateModsFolder(const std::function<void(const fs::path&, const RC::StringType&)>& Callback)
     {
         for (const auto& Entry : fs::directory_iterator(ModsPath)) {

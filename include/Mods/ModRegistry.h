@@ -13,6 +13,8 @@ namespace PS
         void RegisterLoaderFolder(const std::string& LoaderFolderName);
 
         bool CollectModFilesByLoaderType(const ESchemaLoaderType::Type& LoaderType, std::vector<FModFile*>& ModFiles);
+
+        void LoadLocalizationFiles(const RC::Unreal::FString& LanguageCode);
     private:
         std::filesystem::path ModsPath;
         std::vector<std::unique_ptr<FMod>> ModList;

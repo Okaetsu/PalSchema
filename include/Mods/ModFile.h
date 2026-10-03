@@ -21,23 +21,29 @@ namespace PS
     class FModFile
     {
     public:
-        FModFile(const FModMetadata& InMetadata, const nlohmann::json& Data);
+        FModFile(const FModMetadata& InMetadata, const std::filesystem::path& InFilePath);
 
         FModFile(FModFile&& Other) noexcept :
             Properties(std::move(Other.Properties)),
             FileType(Other.FileType),
-            Metadata(Other.Metadata)
+            Metadata(Other.Metadata),
+            FilePath(Other.FilePath)
         {
         };
+
+        const std::filesystem::path& GetFilePath() const;
 
         FModMetadata GetMetadata() const;
 
         EModFileType GetFileType() const;
 
+        // Returns the root property as a JsonArrayProperty if the file is an array, otherwise returns nullptr.
         JsonArrayProperty* GetAsArray();
 
+        // Returns the root property as a JsonObjectProperty if the file is an object, otherwise returns nullptr.
         JsonObjectProperty* GetAsObject();
     private:
+        std::filesystem::path FilePath;
         const FModMetadata& Metadata;
         EModFileType FileType{};
         std::unique_ptr<JsonProperty> Properties;

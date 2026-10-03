@@ -9,9 +9,19 @@ using namespace RC::Unreal;
 
 namespace PS
 {
-    FModFile::FModFile(const FModMetadata& InMetadata, const nlohmann::json& Data) : Metadata(InMetadata)
+    FModFile::FModFile(const FModMetadata& InMetadata, const std::filesystem::path& InFilePath)
+        : Metadata(InMetadata), FilePath(InFilePath)
     {
-        Read(Data);
+        nlohmann::ordered_json OutData;
+        if (JsonHelpers::ParseJsonFileInPath(InFilePath, OutData))
+        {
+            Read(OutData);
+        }
+    }
+
+    const std::filesystem::path& FModFile::GetFilePath() const
+    {
+        return FilePath;
     }
 
     FModMetadata FModFile::GetMetadata() const

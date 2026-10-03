@@ -80,7 +80,7 @@ namespace PS
     {
         LoadMetadata();
 
-        bool bSuccess = LoadLoaderFiles(RegisteredLoaderFolderNames);
+        bool bSuccess = LoadFiles(RegisteredLoaderFolderNames);
         return bSuccess;
     }
 
@@ -112,19 +112,30 @@ namespace PS
         StringHelpers::ToLowerCase(Metadata.mod_id);
     }
 
-    bool FMod::LoadLoaderFiles(const std::vector<std::string>& RegisteredLoaderFolderNames)
+    bool FMod::LoadFiles(const std::vector<std::string>& RegisteredLoaderFolderNames)
     {
         bool bSuccess = true;
 
         for (auto& RegisteredLoaderFolderName : RegisteredLoaderFolderNames)
         {
             const fs::path LoaderPath = FolderPath / RegisteredLoaderFolderName;
-            ESchemaLoaderType::Type LoaderType = ESchemaLoaderType::GetTypeFromString(RegisteredLoaderFolderName);
+            if (!fs::exists(LoaderPath))
+            {
+                continue;
+            }
 
-            JsonHelpers::IterateJsonFilesInPath(LoaderPath, [&](const fs::path& File) {
+            if (RegisteredLoaderFolderName == "translations")
+            {
+                LoadGlobalLocalizationFiles();
+                continue;
+            }
+
+            ESchemaLoaderType::Type LoaderType = ESchemaLoaderType::GetTypeFromString(RegisteredLoaderFolderName);
+            JsonHelpers::IterateJsonFilesInPath(LoaderPath, [&](const fs::path& File)
+            {
                 try
                 {
-                    LoadLoaderFile(LoaderType, File);
+                    LoadFile(LoaderType, File);
                 }
                 catch (const std::exception& e)
                 {
@@ -138,18 +149,51 @@ namespace PS
         return bSuccess;
     }
 
-    void FMod::LoadLoaderFile(const ESchemaLoaderType::Type& LoaderType, const std::filesystem::path& File)
+    void FMod::LoadFile(const ESchemaLoaderType::Type& LoaderType, const std::filesystem::path& File)
     {
-        nlohmann::json OutData;
-        if (!JsonHelpers::ParseJsonFileInPath(File, OutData))
-        {
-            return;
-        }
-
-        auto ModFile = FModFile(Metadata, OutData);
+        auto ModFile = FModFile(Metadata, File);
         auto [It, WasInserted] = FilesByLoaderType.try_emplace(LoaderType);
         It->second.push_back(std::move(ModFile));
+        TotalFileCount++;
+    }
 
+    void FMod::LoadGlobalLocalizationFiles()
+    {
+        LoadLocalizationFiles(FString(TEXT("global")));
+    }
+
+    void FMod::LoadLocalizationFiles(const RC::Unreal::FString& LanguageCode)
+    {
+        const fs::path LocalizationPath = FolderPath / "translations" / *LanguageCode;
+        int32 LocalizationFileCount = 0;
+
+        JsonHelpers::IterateJsonFilesInPath(LocalizationPath, [&](const fs::path& File)
+        {
+            try
+            {
+                LoadLocalizationFile(File);
+                LocalizationFileCount++;
+            }
+            catch (const std::exception& e)
+            {
+                PS::Log<LogLevel::Error>(STR("[{}] Failed to load {} - {}\n"),
+                    RC::to_generic_string(GetId()), RC::to_generic_string(File), RC::to_generic_string(e.what()));
+            }
+        });
+
+        if (LocalizationFileCount > 0)
+        {
+            RC::StringType Plural = LocalizationFileCount > 1 ? TEXT("s") : TEXT("");
+            PS::Log<LogLevel::Normal>(STR("[{}] Registered {} localization file{} for language '{}'.\n"),
+                RC::to_generic_string(GetId()), LocalizationFileCount, Plural, *LanguageCode);
+        }
+    }
+
+    void FMod::LoadLocalizationFile(const std::filesystem::path& File)
+    {
+        auto ModFile = FModFile(Metadata, File);
+        auto [It, WasInserted] = FilesByLoaderType.try_emplace(ESchemaLoaderType::Type::Language);
+        It->second.push_back(std::move(ModFile));
         TotalFileCount++;
     }
 }
