@@ -56,6 +56,46 @@ namespace PS
         return FString(TEXT("Undefined"));
     }
 
+    bool JsonProperty::IsString() const
+    {
+        return PropertyType == PS::JsonProperty::Type::String;
+    }
+
+    bool JsonProperty::IsNumeric() const
+    {
+        return PropertyType == PS::JsonProperty::Type::Integer || PropertyType == PS::JsonProperty::Type::Float;
+    }
+
+    bool JsonProperty::IsInteger() const
+    {
+        return PropertyType == PS::JsonProperty::Type::Integer;
+    }
+
+    bool JsonProperty::IsFloat() const
+    {
+        return PropertyType == PS::JsonProperty::Type::Float;
+    }
+
+    bool JsonProperty::IsBool() const
+    {
+        return PropertyType == PS::JsonProperty::Type::Bool;
+    }
+
+    bool JsonProperty::IsNull() const
+    {
+        return PropertyType == PS::JsonProperty::Type::Null;
+    }
+
+    bool JsonProperty::IsObject() const
+    {
+        return PropertyType == PS::JsonProperty::Type::Object;
+    }
+
+    bool JsonProperty::IsArray() const
+    {
+        return PropertyType == PS::JsonProperty::Type::Array;
+    }
+
     void JsonProperty::Dump(FString& OutString)
     {
         Print(OutString, 0);

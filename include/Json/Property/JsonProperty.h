@@ -35,6 +35,15 @@ namespace PS
 
         RC::Unreal::FString GetTypeString() const;
 
+        bool IsString() const;
+        bool IsNumeric() const;
+        bool IsInteger() const;
+        bool IsFloat() const;
+        bool IsBool() const;
+        bool IsNull() const;
+        bool IsObject() const;
+        bool IsArray() const;
+
         void Dump(RC::Unreal::FString& OutString);
     protected:
         void PrintIndents(RC::Unreal::FString& OutString, int Indent);
