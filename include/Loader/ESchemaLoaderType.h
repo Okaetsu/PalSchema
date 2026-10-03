@@ -19,7 +19,8 @@ namespace PS
             Blueprint,
             HelpGuide,
             Spawn,
-            Language
+            Language,
+            DataAsset
         };
 
         static inline ESchemaLoaderType::Type GetTypeFromString(const std::string& TypeString)
@@ -75,6 +76,10 @@ namespace PS
             else if (TypeString == "translations")
             {
                 return ESchemaLoaderType::Type::Language;
+            }
+            else if (TypeString == "dataasset")
+            {
+                return ESchemaLoaderType::Type::DataAsset;
             }
 
             return ESchemaLoaderType::Type::Unknown;
