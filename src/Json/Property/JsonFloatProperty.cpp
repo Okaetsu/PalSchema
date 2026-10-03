@@ -50,4 +50,9 @@ namespace PS
     {
         OutString = FString::Printf(TEXT("%s %f"), *OutString, InnerValue);
     }
+
+    JsonProperty::Type JsonFloatProperty::StaticType()
+    {
+        return JsonProperty::Type::Float;
+    }
 }

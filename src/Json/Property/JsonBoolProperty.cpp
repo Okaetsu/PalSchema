@@ -50,4 +50,9 @@ namespace PS
     {
         OutString = FString::Printf(TEXT("%s %s"), *OutString, InnerValue ? TEXT("true") : TEXT("false"));
     }
+
+    JsonProperty::Type JsonBoolProperty::StaticType()
+    {
+        return JsonProperty::Type::Bool;
+    }
 }

@@ -160,4 +160,9 @@ namespace PS
         FNumericProperty* UnderlyingProp = EnumProperty->GetUnderlyingProp();
         UnderlyingProp->SetIntPropertyValue(Container, EnumValue);
     }
+
+    JsonProperty::Type JsonStringProperty::StaticType()
+    {
+        return JsonProperty::Type::String;
+    }
 }

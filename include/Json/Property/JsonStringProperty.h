@@ -33,5 +33,7 @@ namespace PS
         void CopyObjectValue(RC::Unreal::FObjectProperty* ObjectProperty, void* Container);
         void CopySoftObjectValue(RC::Unreal::FSoftObjectProperty* SoftObjectProperty, void* Container);
         void CopyEnumValue(RC::Unreal::FEnumProperty* EnumProperty, void* Container);
+    private:
+        inline static JsonProperty::Type StaticType();
     };
 }

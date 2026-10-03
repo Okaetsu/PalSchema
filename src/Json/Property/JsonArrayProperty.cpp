@@ -170,4 +170,9 @@ namespace PS
             ScriptMapHelper.Add(ScopedPair);
         }
     }
+
+    JsonProperty::Type JsonArrayProperty::StaticType()
+    {
+        return JsonProperty::Type::Array;
+    }
 }

@@ -129,4 +129,9 @@ namespace PS
             Pair.Value->CopyValue(InnerProperty, InnerValuePtr);
         }
     }
+
+    JsonProperty::Type JsonObjectProperty::StaticType()
+    {
+        return JsonProperty::Type::Object;
+    }
 }

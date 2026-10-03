@@ -43,5 +43,7 @@ namespace PS
 
         void CopyArrayValue(RC::Unreal::FArrayProperty* Property, void* Container);
         void CopyMapValue(RC::Unreal::FMapProperty* Property, void* Container);
+    private:
+        inline static JsonProperty::Type StaticType();
     };
 }

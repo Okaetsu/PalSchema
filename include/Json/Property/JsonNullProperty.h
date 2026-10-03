@@ -16,5 +16,7 @@ namespace PS
         virtual void CopyValue(RC::Unreal::FProperty* Property, void* Container) override final;
     protected:
         virtual void Print(RC::Unreal::FString& OutString, int Indent) override final;
+    private:
+        inline static JsonProperty::Type StaticType();
     };
 }

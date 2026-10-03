@@ -20,5 +20,7 @@ namespace PS
         virtual void Print(RC::Unreal::FString& OutString, int Indent) override final;
     private:
         RC::Unreal::int64 InnerValue{};
+    private:
+        inline static JsonProperty::Type StaticType();
     };
 }

@@ -51,4 +51,9 @@ namespace PS
     {
         OutString = FString::Printf(TEXT("%s %d"), *OutString, InnerValue);
     }
+
+    JsonProperty::Type JsonIntProperty::StaticType()
+    {
+        return JsonProperty::Type::Integer;
+    }
 }

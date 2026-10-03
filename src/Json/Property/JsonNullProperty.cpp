@@ -31,4 +31,9 @@ namespace PS
     {
         OutString += TEXT("NULL");
     }
+
+    JsonProperty::Type JsonNullProperty::StaticType()
+    {
+        return JsonProperty::Type::Null;
+    }
 }

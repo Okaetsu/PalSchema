@@ -34,5 +34,7 @@ namespace PS
 
         void CopyStructValue(RC::Unreal::FStructProperty* Property, void* Container);
         void CopyObjectValue(RC::Unreal::FObjectProperty* Property, void* Container);
+    private:
+        inline static JsonProperty::Type StaticType();
     };
 }
